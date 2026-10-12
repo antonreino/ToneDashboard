@@ -8,7 +8,8 @@ struct LogsView: View {
         ("organizer_out", "Organizer"),
         ("organizer_err", "Organizer · errores"),
         ("telegram_out", "Telegram"),
-        ("telegram_err", "Telegram · errores")
+        ("telegram_err", "Telegram · errores"),
+        ("ps5_out", "PS5")
     ]
 
     var body: some View {
