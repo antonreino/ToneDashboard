@@ -57,6 +57,7 @@ LOGS = {
     "organizer_err": LOG_DIR / "emby-organizer.err.log",
     "telegram_out": LOG_DIR / "telegram-download-bot.out.log",
     "telegram_err": LOG_DIR / "telegram-download-bot.err.log",
+    "ps5_out": PRICE_BOT_LOG,
 }
 SERVICES = {
     "organizer": "com.tone.emby-organizer",
@@ -1036,6 +1037,7 @@ async function loadLogs(){
   const d=await r.json();
   for(const [k,v] of Object.entries(d.logs)){
     const el=document.getElementById(k);
+    if(!el)continue;
     const near=el.scrollHeight-el.scrollTop-el.clientHeight<80;
     el.textContent=v||'(vacío)';
     if(near)el.scrollTop=el.scrollHeight;
