@@ -205,6 +205,16 @@ def collect(source, cfg, diagnostics=None):
 def command_reply(message, username, allowed, store, cfg):
     chat = str(message.get('chat', {}).get('id', ''))
     if chat not in allowed:
+        sender = message.get('from', {}) or {}
+        command = (message.get('text') or '').strip().split(maxsplit=1)[0] if message.get('text') else ''
+        LOG.warning(
+            'Chat Telegram no autorizado: chat_id=%s user_id=%s username=%s nombre=%s comando=%s',
+            chat,
+            sender.get('id', ''),
+            sender.get('username', ''),
+            ' '.join(x for x in (sender.get('first_name', ''), sender.get('last_name', '')) if x).strip(),
+            command,
+        )
         return None
     text = message.get('text', '').strip().split()
     if not text:
