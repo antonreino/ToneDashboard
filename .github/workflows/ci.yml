@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build iOS and macOS
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build macOS
+        run: |
+          xcodebuild             -project EmbyDashboard.xcodeproj             -scheme "EmbyDashboard macOS"             -configuration Debug             -destination 'platform=macOS'             CODE_SIGNING_ALLOWED=NO             build
+
+      - name: Build iOS Simulator
+        run: |
+          xcodebuild             -project EmbyDashboard.xcodeproj             -scheme "EmbyDashboard iOS"             -configuration Debug             -sdk iphonesimulator             -destination 'generic/platform=iOS Simulator'             CODE_SIGNING_ALLOWED=NO             build
