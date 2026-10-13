@@ -35,3 +35,7 @@ DerivedData/
 *.tmp
 *.swp
 *~
+
+# Local backups
+*.bak
+*.bak.*

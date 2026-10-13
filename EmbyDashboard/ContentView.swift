@@ -15,10 +15,17 @@ struct ContentView: View {
                     .tabItem { Label("Actividad", systemImage: "clock.arrow.circlepath") }
                 NavigationStack { DealsView() }
                     .tabItem { Label("Ofertas", systemImage: "tag.fill") }
+#if os(macOS)
+                NavigationStack { LogsView() }
+                    .tabItem { Label("Logs", systemImage: "terminal.fill") }
+                NavigationStack { SettingsView() }
+                    .tabItem { Label("Ajustes", systemImage: "gearshape.fill") }
+#else
                 LogsView()
                     .tabItem { Label("Logs", systemImage: "terminal.fill") }
                 SettingsView()
                     .tabItem { Label("Ajustes", systemImage: "gearshape.fill") }
+#endif
             }
             .tint(DashboardPalette.accent)
         }

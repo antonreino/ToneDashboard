@@ -15,6 +15,7 @@ final class DashboardSession: ObservableObject {
     @Published var password: String
 
     private var refreshTask: Task<Void, Never>?
+    private var persistedUsername: String
 
     init() {
         let defaults = UserDefaults.standard
@@ -25,6 +26,7 @@ final class DashboardSession: ObservableObject {
         baseURLString = savedBaseURL
         username = savedUsername
         password = savedPassword
+        persistedUsername = savedUsername
     }
 
     var configured: Bool {
@@ -58,7 +60,12 @@ final class DashboardSession: ObservableObject {
         username = username.trimmingCharacters(in: .whitespacesAndNewlines)
         UserDefaults.standard.set(baseURLString, forKey: "baseURL")
         UserDefaults.standard.set(username, forKey: "username")
+
+        if persistedUsername != username {
+            KeychainStore.deletePassword(account: persistedUsername)
+        }
         KeychainStore.savePassword(password, account: username)
+        persistedUsername = username
 
         guard let client else {
             lastError = "Configura una URL HTTPS válida, usuario y contraseña en Ajustes."
