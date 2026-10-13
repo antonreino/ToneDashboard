@@ -45,3 +45,6 @@ data/
 NoClasificado/
 # Archive metadata
 __MACOSX/
+
+# Backups locales de actualizaciones
+.update-backups/
