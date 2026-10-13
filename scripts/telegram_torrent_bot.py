@@ -81,7 +81,7 @@ def send_message(chat_id, text):
             timeout=15,
         ).raise_for_status()
     except Exception as exc:
-        log(f"Error enviando mensaje Telegram: {exc}")
+        log(f"Error enviando mensaje Telegram: {redact_secrets(str(exc))}")
 
 
 def is_allowed(chat_id):
@@ -381,7 +381,7 @@ def run_game_download(job: dict):
                 log(f"Descarga completada #{job['id']}: {target}")
                 return
 
-            error = (stderr or stdout or "Error desconocido").strip()[-500:]
+            error = redact_secrets((stderr or stdout or "Error desconocido").strip()[-500:])
             update_download(job["id"], error=error, attempt=attempt)
             log(f"Descarga #{job['id']} intento {attempt}/{GAME_MAX_RETRIES} falló: {error}")
             send_message(
@@ -407,13 +407,14 @@ def run_game_download(job: dict):
             f"Se agotaron los {GAME_MAX_RETRIES} intentos.",
         )
     except Exception as exc:
-        update_download(job["id"], status="failed", finished_at=time.time(), error=str(exc))
+        safe_error = redact_secrets(str(exc))
+        update_download(job["id"], status="failed", finished_at=time.time(), error=safe_error)
         add_history(
             "download", "failed", title=name, destination=str(target),
-            details=str(exc), size_bytes=file_size(target), job_id=job["id"],
+            details=safe_error, size_bytes=file_size(target), job_id=job["id"],
         )
-        log(f"Error inesperado en descarga #{job['id']}: {exc}")
-        send_message(chat_id, f"❌ Error inesperado en descarga #{job['id']}:\n{name}\n{exc}")
+        log(f"Error inesperado en descarga #{job['id']}: {safe_error}")
+        send_message(chat_id, f"❌ Error inesperado en descarga #{job['id']}:\n{name}\n{safe_error}")
     finally:
         finish_job(job)
 
@@ -495,10 +496,11 @@ def dashboard_request_loop():
                         finish_download_request(request["id"], status="accepted")
                         log(f"Dashboard -> descarga #{job_id} aceptada")
                 except Exception as exc:
-                    finish_download_request(request["id"], status="error", error=str(exc))
-                    log(f"Error procesando solicitud del dashboard #{request['id']}: {exc}")
+                    safe_error = redact_secrets(str(exc))
+                    finish_download_request(request["id"], status="error", error=safe_error)
+                    log(f"Error procesando solicitud del dashboard #{request['id']}: {safe_error}")
         except Exception as exc:
-            log(f"Error leyendo solicitudes del dashboard: {exc}")
+            log(f"Error leyendo solicitudes del dashboard: {redact_secrets(str(exc))}")
             time.sleep(3)
 
 
@@ -626,8 +628,9 @@ def handle_message(msg):
     try:
         target, rejected = download_torrent_file(file_id, filename)
     except Exception as exc:
-        send_message(chat_id, f"❌ Error descargando archivo: {exc}")
-        log(f"Error descargando archivo: {exc}")
+        safe_error = redact_secrets(str(exc))
+        send_message(chat_id, f"❌ Error descargando archivo: {safe_error}")
+        log(f"Error descargando archivo: {safe_error}")
         return
 
     if rejected:
@@ -673,7 +676,7 @@ def main():
                 if msg:
                     handle_message(msg)
         except Exception as exc:
-            log(f"Error loop Telegram: {exc}")
+            log(f"Error loop Telegram: {redact_secrets(str(exc))}")
             time.sleep(5)
 
 

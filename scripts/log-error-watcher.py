@@ -147,7 +147,7 @@ def main():
                                 recent[fingerprint] = now
                                 print(f"Alerta enviada: {entry['label']}", flush=True)
                             except Exception as exc:
-                                print(f"Error enviando alerta: {exc}", flush=True)
+                                print(f"Error enviando alerta: {redact(str(exc))}", flush=True)
 
                 now = time.time()
                 recent = {
@@ -156,7 +156,7 @@ def main():
                     if now - sent_at < DEDUP_SECONDS
                 }
             except Exception as exc:
-                print(f"Error vigilando {entry['label']}: {exc}", flush=True)
+                print(f"Error vigilando {entry['label']}: {redact(str(exc))}", flush=True)
 
         time.sleep(POLL_SECONDS)
 

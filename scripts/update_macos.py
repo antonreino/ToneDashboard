@@ -10,19 +10,31 @@ SOURCE = Path(__file__).resolve().parent.parent
 TARGET = Path(sys.argv[1]).expanduser().resolve() if len(sys.argv) > 1 else Path('/Volumes/Datos/Proyectos/Scripts/emby-organizer')
 FILES = [
     '.env.example',
+    '.gitignore',
     'README.md',
+    'MACOS_MIGRATION.md',
+    'requirements.txt',
     'emby_organizer.py',
     'state_db.py',
     'torrent_utils.py',
     'static/app-icon.png',
     'scripts/log-viewer.py',
     'scripts/telegram_torrent_bot.py',
+    'scripts/log-error-watcher.py',
+    'scripts/install-macos-services.sh',
+    'scripts/status-macos.sh',
+    'scripts/open-logs-macos.sh',
     'scripts/update_macos.py',
+    'launchd/com.tone.emby-organizer.plist.template',
+    'launchd/com.tone.telegram-download-bot.plist.template',
+    'launchd/com.tone.emby-log-viewer.plist.template',
+    'launchd/com.tone.emby-log-alerts.plist.template',
 ]
 SERVICES = [
     'com.tone.emby-organizer',
     'com.tone.telegram-download-bot',
     'com.tone.emby-log-viewer',
+    'com.tone.emby-log-alerts',
 ]
 
 if not TARGET.is_dir():
@@ -57,6 +69,8 @@ subprocess.run([
     str(TARGET / 'emby_organizer.py'),
     str(TARGET / 'scripts/log-viewer.py'),
     str(TARGET / 'scripts/telegram_torrent_bot.py'),
+    str(TARGET / 'scripts/log-error-watcher.py'),
+    str(TARGET / 'scripts/update_macos.py'),
 ], check=True)
 
 uid = subprocess.check_output(['id', '-u'], text=True).strip()

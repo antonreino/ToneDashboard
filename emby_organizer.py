@@ -48,6 +48,23 @@ TMDB_CACHE_FILE = STATE_DIR / "tmdb_cache.json"
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+EMBY_SFTP_KNOWN_HOSTS = Path(
+    os.environ.get("EMBY_SFTP_KNOWN_HOSTS", str(Path.home() / ".ssh" / "known_hosts"))
+).expanduser()
+
+
+def redact_secrets(text: str) -> str:
+    value = str(text)
+    secrets = (
+        TELEGRAM_BOT_TOKEN or "",
+        TMDB_API_KEY or "",
+        os.environ.get("EMBY_API_KEY", ""),
+        os.environ.get("EMBY_SFTP_PASSWORD", ""),
+    )
+    for secret in secrets:
+        if secret and len(secret) >= 6:
+            value = value.replace(secret, "[REDACTADO]")
+    return value
 
 VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi", ".mov", ".m4v", ".ts"}
 IGNORE_EXTENSIONS = {".part", ".tmp", ".crdownload", ".!qB", ".aria2"}
@@ -138,6 +155,7 @@ class SftpUploader:
                 "Falta la librería 'paramiko'. Instálala con: python3 -m pip install paramiko"
             )
         self.targets = {name: self._parse_sftp_url(url) for name, url in targets.items()}
+        self._ssh = None
         self._transport = None
         self._sftp = None
         self._active_key = None
@@ -167,66 +185,66 @@ class SftpUploader:
     def _connect(self, category: str):
         target = self.targets[category]
         key = (target.username, target.host, target.port)
-        if self._sftp and self._active_key == key:
+        if (
+            self._sftp
+            and self._transport
+            and self._transport.is_active()
+            and self._active_key == key
+        ):
             return self._sftp, target
 
         self.close()
 
-        ssh_dir = Path.home() / ".ssh"
-        private_key_candidates = [
-            ssh_dir / "id_ed25519",
-            ssh_dir / "id_rsa",
-        ]
-
-        last_error = None
-
-        for key_path in private_key_candidates:
-            if not key_path.exists():
-                continue
-
-            transport = paramiko.Transport((target.host, target.port))
-            try:
-                if key_path.name == "id_ed25519":
-                    pkey = paramiko.Ed25519Key.from_private_key_file(str(key_path))
-                else:
-                    pkey = paramiko.RSAKey.from_private_key_file(str(key_path))
-
-                transport.connect(username=target.username, pkey=pkey)
-                self._transport = transport
-                self._sftp = paramiko.SFTPClient.from_transport(transport)
-                self._active_key = key
-                return self._sftp, target
-
-            except Exception as exc:
-                last_error = exc
-                try:
-                    transport.close()
-                except Exception:
-                    pass
-
-        if self._password is None:
-            self._password = getpass.getpass(
-                f"Contraseña SFTP para {target.username}@{target.host}:{target.port}: "
+        if not EMBY_SFTP_KNOWN_HOSTS.is_file():
+            raise OrganizerError(
+                f"No existe el archivo known_hosts: {EMBY_SFTP_KNOWN_HOSTS}. "
+                "Conéctate una vez por SSH al servidor y verifica su huella antes de usar el Organizer."
             )
 
-        transport = paramiko.Transport((target.host, target.port))
+        client = paramiko.SSHClient()
         try:
-            transport.connect(username=target.username, password=self._password)
+            client.load_host_keys(str(EMBY_SFTP_KNOWN_HOSTS))
+            client.set_missing_host_key_policy(paramiko.RejectPolicy())
+            client.connect(
+                hostname=target.host,
+                port=target.port,
+                username=target.username,
+                password=self._password,
+                look_for_keys=True,
+                allow_agent=True,
+                timeout=10,
+                banner_timeout=10,
+                auth_timeout=10,
+            )
+            transport = client.get_transport()
+            if transport is None or not transport.is_active():
+                raise OrganizerError("La conexión SSH no quedó activa")
+
+            self._ssh = client
             self._transport = transport
-            self._sftp = paramiko.SFTPClient.from_transport(transport)
+            self._sftp = client.open_sftp()
             self._active_key = key
             return self._sftp, target
+        except paramiko.BadHostKeyException as exc:
+            client.close()
+            raise OrganizerError(
+                f"La clave SSH del servidor {target.host}:{target.port} ha cambiado. "
+                "No se establece la conexión por seguridad."
+            ) from exc
+        except paramiko.SSHException as exc:
+            client.close()
+            message = redact_secrets(str(exc))
+            if "not found in known_hosts" in message.lower() or "known_hosts" in message.lower():
+                raise OrganizerError(
+                    f"El servidor {target.host}:{target.port} no está validado en "
+                    f"{EMBY_SFTP_KNOWN_HOSTS}. Verifica su huella y añádelo a known_hosts."
+                ) from exc
+            raise OrganizerError(f"No se pudo abrir la conexión SSH/SFTP: {message}") from exc
         except Exception as exc:
-            last_error = exc
-            try:
-                transport.close()
-            except Exception:
-                pass
-
-        raise OrganizerError(
-            "No se pudo abrir la conexión SFTP ni por clave ni por contraseña. "
-            f"Último error: {last_error}"
-        )
+            client.close()
+            raise OrganizerError(
+                f"No se pudo abrir la conexión SSH/SFTP: {redact_secrets(str(exc))}"
+            ) from exc
 
     def close(self):
         if self._sftp:
@@ -234,13 +252,19 @@ class SftpUploader:
                 self._sftp.close()
             except Exception:
                 pass
-        if self._transport:
+        if self._ssh:
+            try:
+                self._ssh.close()
+            except Exception:
+                pass
+        elif self._transport:
             try:
                 self._transport.close()
             except Exception:
                 pass
         self._sftp = None
         self._transport = None
+        self._ssh = None
         self._active_key = None
 
     def _with_reconnect(self, category: str, operation):
@@ -474,8 +498,9 @@ class MediaOrganizer:
                 info["total"] / 1_000_000_000_000,
             )
         except Exception as exc:
-            mark_emby_storage_error(str(exc))
-            logging.warning("No se pudo actualizar el espacio de Emby: %s", exc)
+            safe_error = redact_secrets(str(exc))
+            mark_emby_storage_error(safe_error)
+            logging.warning("No se pudo actualizar el espacio de Emby: %s", safe_error)
 
     def refresh_emby_system(self, force: bool = False):
         now = time.monotonic()
@@ -495,8 +520,9 @@ class MediaOrganizer:
                 (info["ram_used"] * 100 / info["ram_total"]) if info["ram_total"] else 0,
             )
         except Exception as exc:
-            mark_emby_system_error(str(exc))
-            logging.warning("No se pudieron actualizar CPU/RAM de Emby: %s", exc)
+            safe_error = redact_secrets(str(exc))
+            mark_emby_system_error(safe_error)
+            logging.warning("No se pudieron actualizar CPU/RAM de Emby: %s", safe_error)
 
     def shutdown(self):
         self.uploader.close()
@@ -810,8 +836,12 @@ class MediaOrganizer:
             self.save_tmdb_cache(cache)
             return result
 
-        except Exception:
-            logging.exception("Error consultando TMDb para query=%s", query)
+        except Exception as exc:
+            logging.error(
+                "Error consultando TMDb para query=%s: %s",
+                query,
+                redact_secrets(str(exc)),
+            )
             return None
 
     def classify_with_tmdb(self, path: Path) -> Optional[MediaInfo]:
@@ -1086,8 +1116,11 @@ class MediaOrganizer:
             )
             response.raise_for_status()
             logging.info("Notificación Telegram enviada")
-        except Exception:
-            logging.exception("Error enviando notificación Telegram")
+        except Exception as exc:
+            logging.error(
+                "Error enviando notificación Telegram: %s",
+                redact_secrets(str(exc)),
+            )
 
     def process_file(self, path: Path):
         if self.should_ignore(path):

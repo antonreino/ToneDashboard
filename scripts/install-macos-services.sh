@@ -14,16 +14,7 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-set -a
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
-
-INBOX_DIR="${INBOX_DIR:-$HOME/Documents/Torrent}"
-TORRENT_DROP_DIR="${TORRENT_DROP_DIR:-$HOME/Downloads}"
-GAME_DOWNLOAD_DIR="${GAME_DOWNLOAD_DIR:-$HOME/Downloads/Games}"
-
-mkdir -p "$LAUNCH_AGENTS" "$HOME/Library/Logs" "$INBOX_DIR" "$TORRENT_DROP_DIR" "$GAME_DOWNLOAD_DIR" "$(dirname "$VENV_DIR")"
+mkdir -p "$LAUNCH_AGENTS" "$HOME/Library/Logs" "$(dirname "$VENV_DIR")"
 
 if [ ! -x "$PYTHON" ]; then
   echo "📦 Creando entorno virtual..."
@@ -31,6 +22,26 @@ if [ ! -x "$PYTHON" ]; then
 fi
 
 "$PYTHON" -m pip install -r "$PROJECT_ROOT/requirements.txt"
+
+read_env_path() {
+  local key="$1"
+  local fallback="$2"
+  "$PYTHON" - "$ENV_FILE" "$key" "$fallback" <<'PY2'
+from pathlib import Path
+import sys
+from dotenv import dotenv_values
+
+env_file, key, fallback = sys.argv[1:]
+value = dotenv_values(env_file).get(key) or fallback
+print(Path(value).expanduser())
+PY2
+}
+
+INBOX_DIR="$(read_env_path INBOX_DIR "$HOME/Documents/Torrent")"
+TORRENT_DROP_DIR="$(read_env_path TORRENT_DROP_DIR "$HOME/Downloads")"
+GAME_DOWNLOAD_DIR="$(read_env_path GAME_DOWNLOAD_DIR "$HOME/Downloads/Games")"
+
+mkdir -p "$INBOX_DIR" "$TORRENT_DROP_DIR" "$GAME_DOWNLOAD_DIR"
 
 render_plist() {
   local template="$1"
