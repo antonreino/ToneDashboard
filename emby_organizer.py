@@ -1031,6 +1031,7 @@ class MediaOrganizer:
             counter += 1
 
     def cleanup_download_folder(self, source_path: Path):
+        """Elimina la carpeta contenedora solo si está realmente vacía."""
         folder = source_path.parent
 
         if folder == INBOX_DIR:
@@ -1041,22 +1042,31 @@ class MediaOrganizer:
         except ValueError:
             return
 
-        remaining_video_files = [
-            p for p in folder.rglob("*")
-            if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS
-        ]
-        if remaining_video_files:
-            logging.info("Se conserva la carpeta porque aún contiene vídeos: %s", folder)
+        if not folder.exists():
             return
 
         if self.dry_run:
-            logging.info("[DRY-RUN] Se eliminaría la carpeta contenedora: %s", folder)
+            try:
+                next(folder.iterdir())
+            except StopIteration:
+                logging.info("[DRY-RUN] Se eliminaría la carpeta vacía: %s", folder)
+            except OSError:
+                pass
+            else:
+                logging.info(
+                    "[DRY-RUN] Se conservaría la carpeta porque contiene otros elementos: %s",
+                    folder,
+                )
             return
 
-        shutil.rmtree(folder, ignore_errors=False)
-        logging.info("Carpeta contenedora eliminada: %s", folder)
+        try:
+            folder.rmdir()
+            logging.info("Carpeta vacía eliminada: %s", folder)
+        except OSError:
+            logging.debug("Carpeta conservada porque contiene otros elementos: %s", folder)
 
     def cleanup_empty_folders(self):
+        """Elimina únicamente directorios realmente vacíos."""
         folders = [p for p in INBOX_DIR.rglob("*") if p.is_dir()]
         folders.sort(key=lambda p: len(p.parts), reverse=True)
 
@@ -1066,19 +1076,20 @@ class MediaOrganizer:
             if folder.name in IGNORE_DIR_NAMES:
                 continue
 
-            has_video = any(
-                f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS
-                for f in folder.rglob("*")
-            )
-
-            if has_video:
+            if self.dry_run:
+                try:
+                    next(folder.iterdir())
+                except StopIteration:
+                    logging.info("[DRY-RUN] Se eliminaría carpeta vacía: %s", folder)
+                except OSError:
+                    pass
                 continue
 
-            if self.dry_run:
-                logging.info("[DRY-RUN] Se eliminaría carpeta sin vídeos: %s", folder)
-            else:
-                shutil.rmtree(folder, ignore_errors=True)
-                logging.info("Carpeta sin vídeos eliminada: %s", folder)
+            try:
+                folder.rmdir()
+                logging.info("Carpeta vacía eliminada: %s", folder)
+            except OSError:
+                pass
 
     def notify_telegram(self, media: MediaInfo, remote_path: str):
         if not TELEGRAM_BOT_TOKEN:

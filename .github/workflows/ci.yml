@@ -44,3 +44,6 @@ jobs:
           bash -n scripts/status-macos.sh
           bash -n scripts/open-logs-macos.sh
           bash -n scripts/emby-watch-refresh.sh
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
