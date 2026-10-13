@@ -15,9 +15,9 @@ struct ContentView: View {
                     .tabItem { Label("Actividad", systemImage: "clock.arrow.circlepath") }
                 NavigationStack { DealsView() }
                     .tabItem { Label("Ofertas", systemImage: "tag.fill") }
-                NavigationStack { LogsView() }
+                LogsView()
                     .tabItem { Label("Logs", systemImage: "terminal.fill") }
-                NavigationStack { SettingsView() }
+                SettingsView()
                     .tabItem { Label("Ajustes", systemImage: "gearshape.fill") }
             }
             .tint(DashboardPalette.accent)
