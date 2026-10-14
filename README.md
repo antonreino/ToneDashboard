@@ -9,7 +9,7 @@ Panel de control personal para **Mac mini, automatización Emby, descargas, Tele
 | Sección | Funciones |
 | --- | --- |
 | Inicio | Servicios, CPU/GPU/RAM/temperatura y red del Mac mini; métricas y almacenamiento de Emby |
-| Descargas | Cola persistente de descargas directas (`curl`), progreso, velocidad, ETA, carga de `.torrent` y notificaciones Telegram |
+| Descargas | Cola persistente de descargas HTTP/HTTPS con conexiones verificadas, progreso, velocidad, ETA, carga de `.torrent` y notificaciones Telegram |
 | Actividad y estadísticas | Historial SQLite, 24 horas/7 días/30 días, movimientos a Emby por biblioteca |
 | Chollos | Bot hermano `ps5-price-bot`: precios PS5 y Switch, alertas y registros |
 | Orbit Zero | Catálogo y progreso de Orbit desde el Mac mini mediante proxy autenticado de mismo origen |
@@ -58,14 +58,13 @@ Utiliza `.env.example` para el resto (Emby/SFTP/TMDb/Telegram). `.env` no debe s
 
 ## Instalación / actualización sobre el Mac existente
 
-El paquete incluye `instalar.py`, que por defecto **actualiza la ruta actualmente activa** `/Volumes/Datos/Proyectos/Scripts/emby-organizer` para no romper los servicios de `launchd`.
+Para actualizar desde una copia nueva del proyecto, ejecuta el actualizador desde esa copia indicando la instalación existente:
 
 ```bash
-python3 ToneDashboard/instalar.py --dry-run
-python3 ToneDashboard/instalar.py --apply
+python3 /ruta/a/la/copia-nueva/scripts/update_macos.py /Volumes/Datos/Proyectos/Scripts/emby-organizer
 ```
 
-El instalador comprueba el origen conocido, crea una copia de seguridad de los archivos sustituidos y del `.env`, retira el código de catálogo antiguo, su configuración obsoleta y su LaunchAgent antiguo, **sin borrar bases de datos ni archivos descargados**. Si los ficheros locales ya no coinciden con los enviados para esta actualización, se detiene para que revises el cambio. En `--dry-run` no escribe nada.
+El origen y el destino deben ser carpetas distintas. El actualizador valida todos los archivos Python antes de sustituir código, prepara una copia en `.update-backups/` y restaura los archivos sustituidos si falla la aplicación. Conserva `.env`, bases de datos y descargas. Reinicia los servicios después de copiar; informa si algún reinicio falla. No ejecutes este script al editar directamente el clon activo.
 
 Para instalar desde cero puedes utilizar `./scripts/install-macos-services.sh`. En instalaciones existentes **no lo ejecutes solo para cambiar el nombre**, pues recrea LaunchAgents. Las etiquetas `com.tone.emby-log-viewer`, `com.tone.emby-organizer`, etc., se conservan por compatibilidad.
 
@@ -122,3 +121,11 @@ El ZIP contiene la nueva estructura **ToneDashboard**. Renombrar el repositorio 
 ## Licencia
 
 Véase `LICENSE`. Orbit Zero pertenece a sus desarrolladores y se instala por separado: [saawant12/orbit-store-ps5](https://github.com/saawant12/orbit-store-ps5).
+
+## Endurecimiento de seguridad
+
+Las descargas directas solo aceptan destinos públicos HTTP/HTTPS en puertos 80 o 443, sin credenciales incrustadas. Cada salto de redirección vuelve a comprobar DNS y utiliza una IP validada para la conexión; TLS conserva la validación del certificado y del nombre original. Se rechazan redes privadas, loopback, link-local, multicast, respuestas DNS mixtas y redirecciones de HTTPS a HTTP. La descarga y la consulta de cabeceras comparten estos controles; los errores de validación no recurren a `curl`. Se conserva la reanudación y la prevención de suspensión del Mac.
+
+Las acciones POST y las mutaciones de Orbit comprueban `Origin` contra `Host`. Los clientes nativos sin `Origin` deben enviar `X-Dashboard-Action: write`. Las conexiones WebSocket de Orbit exigen un origen coincidente. El proxy inverso debe conservar el Host público. Actualiza la app junto con el servidor: los clientes antiguos sin la cabecera deberán actualizarse para descargar o subir torrents.
+
+El dashboard consulta cada 12 segundos y solo carga ofertas en Chollos y logs en Inicio. Orbit sigue siendo una aplicación de confianza que comparte origen con el dashboard; estos controles no aíslan un script comprometido servido por Orbit. Mantén el acceso privado y Orbit actualizado.

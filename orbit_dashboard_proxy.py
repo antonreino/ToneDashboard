@@ -7,11 +7,13 @@ red enviados por el navegador. Soporta HTTP y WebSockets.
 from __future__ import annotations
 
 import http.client
+import io
 import os
 import re
 import select
 import socket
 import urllib.parse
+from request_security import same_origin, allowed_mutation
 
 PROXY_PREFIX = "/orbit-bridge/"
 ZERO_HOST, ZERO_PORT = "127.0.0.1", 34179
@@ -70,7 +72,7 @@ def _rewrite_cookie(cookie, mode):
 
 def _proxy_headers(handler, mode, host, port):
     filtered = {}
-    excluded = {"host", "connection", "accept-encoding", "transfer-encoding", "content-length", "proxy-authorization", "authorization", "cookie", "origin", "referer", "forwarded", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-for"}
+    excluded = {"host", "connection", "accept-encoding", "transfer-encoding", "content-length", "proxy-authorization", "authorization", "x-orbit-control-password", "x-dashboard-action", "cookie", "origin", "referer", "forwarded", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-for"}
     for key, val in handler.headers.items():
         if key.lower() not in excluded and not key.lower().startswith("sec-websocket"):
             filtered[key] = val
@@ -139,6 +141,10 @@ def serve(handler):
     if not (user and password):
         _send_error(handler,503,'Para integrar Orbit configura DASHBOARD_USER y DASHBOARD_PASSWORD en el .env del dashboard.');return True
     if not handler._require_auth(): return True
+    websocket = handler.headers.get('Upgrade', '').lower() == 'websocket'
+    if ((websocket and not same_origin(handler.headers))
+            or (handler.command not in ('GET', 'HEAD', 'OPTIONS') and not allowed_mutation(handler.headers))):
+        _send_error(handler, 403, 'Origen no autorizado'); return True
     if path.split('?',1)[0] == '/__bridge.js' and handler.command in ('GET','HEAD'):
         from pathlib import Path
         contents=(Path(__file__).resolve().with_name('orbit_bridge_shim.js')).read_bytes()
@@ -175,7 +181,9 @@ def _http(handler,mode,host,port,path):
         enc=response.getheader('Content-Encoding','').lower()
         if enc == 'gzip':
             import gzip
-            try: body=gzip.decompress(body)
+            try:
+                with gzip.GzipFile(fileobj=io.BytesIO(body)) as compressed:
+                    body=compressed.read(MAX_REQUEST_BYTES+1)
             except (OSError, ValueError):
                 _send_error(handler,502,'Respuesta comprimida invalida');return
             if len(body)>MAX_REQUEST_BYTES:

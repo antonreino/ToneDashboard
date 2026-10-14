@@ -2,6 +2,7 @@
 import os
 import re
 import subprocess
+import http.client
 import threading
 import sys
 import time
@@ -16,6 +17,7 @@ from dotenv import load_dotenv
 
 APP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(APP_DIR))
+from download_security import validate_url, open_public, close_public, download_public, UnsafeDownload
 from torrent_utils import is_torrent_file, safe_torrent_name, unique_target
 from state_db import (
     add_history,
@@ -203,22 +205,18 @@ def probe_game_url(url: str) -> dict:
     headers = {"User-Agent": "curl/8 (ps5-telegram-download-bot)", "Accept": "*/*"}
     response = None
     try:
-        response = requests.head(url, allow_redirects=True, timeout=(15, 30), headers=headers)
-        if response.status_code >= 400 or not (
+        response = open_public(url, method='HEAD', headers=headers)
+        if response.status >= 400 or not (
             response.headers.get("Content-Disposition")
             or response.headers.get("Content-Length")
             or response.headers.get("Accept-Ranges")
         ):
-            response.close()
-            response = requests.get(
-                url,
-                allow_redirects=True,
-                stream=True,
-                timeout=(15, 30),
-                headers={**headers, "Range": "bytes=0-0"},
-            )
+            close_public(response)
+            response = None
+            response = open_public(url, headers={**headers, 'Range': 'bytes=0-0'})
 
-        response.raise_for_status()
+        if response.status >= 400:
+            raise OSError(f'HTTP {response.status}')
         h = response.headers
         name = filename_from_content_disposition(h.get("Content-Disposition", "")) or filename_from_url(url)
 
@@ -232,14 +230,14 @@ def probe_game_url(url: str) -> dict:
             total_size = int(m.group(1))
 
         accept_ranges = h.get("Accept-Ranges", "").lower()
-        resume_supported = "bytes" in accept_ranges or response.status_code == 206
+        resume_supported = "bytes" in accept_ranges or response.status == 206
 
         return {
             "name": safe_filename(name),
             "size": total_size,
             "resume": resume_supported,
-            "status": response.status_code,
-            "final_url": str(response.url),
+            "status": response.status,
+            "final_url": response.public_url,
         }
     except Exception as exc:
         return {
@@ -252,7 +250,7 @@ def probe_game_url(url: str) -> dict:
         }
     finally:
         if response is not None:
-            response.close()
+            close_public(response)
 
 
 def human_size(size_bytes):
@@ -321,7 +319,11 @@ def run_game_download(job: dict):
     target = job["target"]
     resume = job.get("resume")
 
+    awake = None
     try:
+        if sys.platform == 'darwin':
+            awake = subprocess.Popen(['/usr/bin/caffeinate', '-i'], stdin=subprocess.DEVNULL,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if not GAME_DOWNLOAD_DIR.parent.exists():
             error = f"No está montado el volumen de destino: {GAME_DOWNLOAD_DIR.parent}"
             update_download(job["id"], status="failed", finished_at=time.time(), error=error)
@@ -337,33 +339,22 @@ def run_game_download(job: dict):
             f"♻️ Reanudación: {resume_text}"
         )
         if job.get("probe_error"):
-            start_text += "\n⚠️ No pude leer todas las cabeceras; curl lo intentará igualmente."
+            start_text += "\n⚠️ No pude leer todas las cabeceras; se intentará la descarga validada."
         send_message(chat_id, start_text)
         log(f"Juego #{job['id']}: {name} | Destino: {target}")
 
         for attempt in range(1, GAME_MAX_RETRIES + 1):
             job["attempt"] = attempt
             update_download(job["id"], attempt=attempt)
-            cmd = [
-                "/usr/bin/caffeinate",
-                "/usr/bin/curl",
-                "-L",
-                "--fail",
-                "--show-error",
-                "--silent",
-                "--connect-timeout", "30",
-                "-o", str(target),
-            ]
-            if resume is not False:
-                cmd += ["-C", "-"]
-            cmd.append(url)
+            error = None
+            try:
+                download_public(url, target, resume=resume is not False)
+            except UnsafeDownload:
+                raise
+            except (OSError, ValueError, http.client.HTTPException) as exc:
+                error = redact_secrets(str(exc))
 
-            process = subprocess.Popen(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            job["pid"] = process.pid
-            stdout, stderr = process.communicate()
-            job["pid"] = None
-
-            if process.returncode == 0:
+            if error is None:
                 final_size = file_size(target)
                 update_download(
                     job["id"], status="completed", finished_at=time.time(),
@@ -381,7 +372,6 @@ def run_game_download(job: dict):
                 log(f"Descarga completada #{job['id']}: {target}")
                 return
 
-            error = redact_secrets((stderr or stdout or "Error desconocido").strip()[-500:])
             update_download(job["id"], error=error, attempt=attempt)
             log(f"Descarga #{job['id']} intento {attempt}/{GAME_MAX_RETRIES} falló: {error}")
             send_message(
@@ -389,7 +379,7 @@ def run_game_download(job: dict):
                 f"⚠️ Descarga interrumpida #{job['id']}\n\n🎮 {name}\n"
                 f"📊 {progress_text(job)}\n"
                 f"🔁 Intento: {attempt}/{GAME_MAX_RETRIES}\n"
-                f"⚙️ curl: {process.returncode}\n\n"
+                f"⚙️ {error}\n\n"
                 f"Reintento en {GAME_RETRY_DELAY} s.",
             )
             if attempt < GAME_MAX_RETRIES:
@@ -416,6 +406,9 @@ def run_game_download(job: dict):
         log(f"Error inesperado en descarga #{job['id']}: {safe_error}")
         send_message(chat_id, f"❌ Error inesperado en descarga #{job['id']}:\n{name}\n{safe_error}")
     finally:
+        if awake is not None:
+            awake.terminate()
+            awake.wait()
         finish_job(job)
 
 
@@ -425,6 +418,11 @@ def enqueue_game_download(chat_id, raw_url: str):
         send_message(chat_id, "❌ URL no válida.\nUso: /juego https://...")
         return None
 
+    try:
+        validate_url(url)
+    except UnsafeDownload as exc:
+        send_message(chat_id, str(exc))
+        return None
     probe = probe_game_url(url)
     name = probe["name"]
     target = GAME_DOWNLOAD_DIR / name

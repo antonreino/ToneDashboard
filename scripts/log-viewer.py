@@ -33,6 +33,8 @@ from state_db import (
     recent_history,
 )
 from torrent_utils import save_torrent_bytes
+from download_security import validate_url, UnsafeDownload
+from request_security import allowed_mutation
 
 load_dotenv(APP_DIR / ".env")
 
@@ -1047,13 +1049,17 @@ function euroPrice(cents){if(cents==null)return "—";return new Intl.NumberForm
 function familyLabel(family){return family==="switch2"?"Switch 2 Zelda":"PS5"}
 function availabilityLabel(v){return {in_stock:"En stock",preorder:"Preventa / reserva",out_of_stock:"Agotado",unknown:"Stock por confirmar"}[v]||v||"—"}
 function kindLabel(v){return {retailer:"Tienda",comparison:"Comparador",deal:"Chollo"}[v]||v||"—"}
+function safeDealURL(raw){
+  try{const url=new URL(raw);return ['http:','https:'].includes(url.protocol)?url.href:'#';}
+  catch{return '#';}
+}
 function renderActiveDeals(rows,emptyText="No hay ofertas activas disponibles."){
   if(!rows.length)return `<div class="empty" style="grid-column:1/-1">${esc(emptyText)}</div>`;
   return rows.map(o=>`<article class="deal-card">
     <div class="deal-card__top"><div><div class="deal-card__family">${esc(familyLabel(o.family))} · ${esc(kindLabel(o.kind))}</div><div class="deal-card__price">${esc(euroPrice(o.price))}</div></div><span class="pill ${o.availability==='unknown'?'warn':'ok'}">${esc(availabilityLabel(o.availability))}</span></div>
     <div class="deal-card__title">${esc(o.title||'Sin título')}</div>
     <div class="deal-card__meta">${esc(o.source||'—')}${o.seller?' · '+esc(o.seller):''}<br>${o.shipping!=null?'Envío: '+esc(euroPrice(o.shipping)):'Envío por confirmar'}<br>Última lectura: ${formatHistoryDate(o.seen_iso)}</div>
-    <a class="deal-card__link" href="${esc(o.url||'#')}" target="_blank" rel="noopener noreferrer">Abrir oferta ↗</a>
+    <a class="deal-card__link" href="${esc(safeDealURL(o.url))}" target="_blank" rel="noopener noreferrer">Abrir oferta ↗</a>
   </article>`).join('');
 }
 async function loadDeals(){
@@ -1103,7 +1109,7 @@ downloadForm.addEventListener('submit',async e=>{
   try{
     const r=await fetch('/api/download',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},
       body:JSON.stringify({url})
     });
     const d=await r.json();
@@ -1127,7 +1133,7 @@ torrentForm.addEventListener('submit',async e=>{
   try{
     const r=await fetch('/api/torrent',{
       method:'POST',
-      headers:{'Content-Type':'application/x-bittorrent','X-Torrent-Filename':encodeURIComponent(file.name)},
+      headers:{'X-Dashboard-Action':'write','Content-Type':'application/x-bittorrent','X-Torrent-Filename':encodeURIComponent(file.name)},
       body:file
     });
     const d=await r.json();
@@ -1191,21 +1197,28 @@ document.querySelectorAll('.tab').forEach(tab=>{
     const target=document.getElementById(`view-${tab.dataset.view}`);
     if(target)target.classList.add('active');
     if(tab.dataset.view==='orbitzero')orbitEnsureLoaded();
+    else refreshAll();
   });
 });
 const linesEl=document.getElementById('lines');
 linesEl.addEventListener('change',()=>{loadLogs();loadDeals();});
+let refreshingWeb=false;
 async function refreshAll(){
+  if(refreshingWeb)return;
+  refreshingWeb=true;
   try{
     if(document.hidden||document.getElementById('view-orbitzero').classList.contains('active'))return;
-    await Promise.all([loadDashboard(),loadLogs(),loadDeals()]);
+    const tasks=[loadDashboard()];
+    if(document.getElementById('view-inicio').classList.contains('active'))tasks.push(loadLogs());
+    if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
+    await Promise.all(tasks);
   }catch(e){
     document.getElementById('updated').textContent='Error de actualización';
     console.error(e);
-  }
+  }finally{refreshingWeb=false;}
 }
 refreshAll();
-setInterval(refreshAll, 3000);
+setInterval(refreshAll, 12000);
 </script>
 </body>
 </html>'''
@@ -1636,7 +1649,7 @@ class Handler(BaseHTTPRequestHandler):
             user, password = decoded.split(":", 1)
         except Exception:
             return False
-        return hmac.compare_digest(user, DASHBOARD_USER) and hmac.compare_digest(password, DASHBOARD_PASSWORD)
+        return hmac.compare_digest(user.encode(), DASHBOARD_USER.encode()) and hmac.compare_digest(password.encode(), DASHBOARD_PASSWORD.encode())
 
     def _require_auth(self) -> bool:
         if self._authorized():
@@ -1726,6 +1739,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._require_auth():
             return
+        if not allowed_mutation(self.headers):
+            self.send_bytes(b'{"error":"Origen no autorizado"}', 'application/json', 403)
+            return
         from orbit_dashboard_proxy import serve as orbit_serve
         if orbit_serve(self):
             return
@@ -1807,6 +1823,11 @@ class Handler(BaseHTTPRequestHandler):
                     json.dumps({"error": "URL no válida"}, ensure_ascii=False).encode("utf-8"),
                     "application/json; charset=utf-8", 400,
                 )
+                return
+            try:
+                validate_url(url)
+            except UnsafeDownload as exc:
+                self.send_bytes(json.dumps({'error': str(exc)}).encode(), 'application/json', 400)
                 return
             request_id = queue_download_request(chat_id=TELEGRAM_CHAT_ID, url=url)
             self.send_bytes(

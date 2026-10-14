@@ -35,15 +35,7 @@ def get_status():
     }
 
 
-def _same_origin(headers):
-    origin = headers.get('Origin', '')
-    host = headers.get('Host', '')
-    try:
-        parsed = urlsplit(origin)
-        # Nginx Proxy Manager forwards the public Host; no external Origin allowed.
-        return parsed.scheme in ('https', 'http') and bool(host) and parsed.netloc.lower() == host.lower()
-    except ValueError:
-        return False
+from request_security import same_origin as _same_origin
 
 
 def start_app(headers, client_address):
@@ -54,7 +46,7 @@ def start_app(headers, client_address):
         return {'error': 'Petición JSON requerida.'}, 415
     expected = os.getenv('ORBIT_CONTROL_PASSWORD') or ''
     provided = headers.get('X-Orbit-Control-Password') or ''
-    if len(expected) < 12 or not provided or not hmac.compare_digest(provided, expected):
+    if len(expected) < 12 or not provided or not hmac.compare_digest(provided.encode(), expected.encode()):
         return {'error': 'Contraseña adicional incorrecta o no configurada.'}, 403
     if running():
         return {'running': True, 'message': 'Orbit ya está disponible.'}, 200
