@@ -1,5 +1,28 @@
 import Foundation
 
+// Keep credentials and action passwords inside the configured HTTPS origin.
+final class DashboardRedirectGuard: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    let baseURL: URL
+    init(baseURL: URL) { self.baseURL = baseURL }
+
+    static func trusted(_ url: URL, baseURL: URL) -> Bool {
+        url.scheme?.lowercased() == "https" && baseURL.scheme?.lowercased() == "https" &&
+        url.host != nil && url.host?.lowercased() == baseURL.host?.lowercased() &&
+        (url.port ?? 443) == (baseURL.port ?? 443) && url.user == nil && url.password == nil
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        guard let url = request.url, Self.trusted(url, baseURL: baseURL),
+              task.originalRequest?.httpMethod == "GET" else {
+            completionHandler(nil); return
+        }
+        completionHandler(request)
+    }
+}
+
 struct APIClient {
     var baseURL: URL
     var username: String
@@ -10,7 +33,9 @@ struct APIClient {
     }
 
     private func request(path: String, method: String = "GET", body: Data? = nil, contentType: String? = nil, extraHeaders: [String: String] = [:]) throws -> URLRequest {
-        guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL else {
+        guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL,
+              DashboardRedirectGuard.trusted(url, baseURL: baseURL),
+              baseURL.user == nil, baseURL.password == nil else {
             throw URLError(.badURL)
         }
         var req = URLRequest(url: url)
@@ -20,12 +45,16 @@ struct APIClient {
         req.setValue("Basic \(authHeader)", forHTTPHeaderField: "Authorization")
         if let contentType { req.setValue(contentType, forHTTPHeaderField: "Content-Type") }
         extraHeaders.forEach { req.setValue($1, forHTTPHeaderField: $0) }
+        if method != "GET" { req.setValue("write", forHTTPHeaderField: "X-Dashboard-Action") }
         req.httpBody = body
         return req
     }
 
     private func execute<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let session = URLSession(configuration: .ephemeral,
+                                 delegate: DashboardRedirectGuard(baseURL: baseURL), delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         guard (200..<300).contains(http.statusCode) else {
             if let ack = try? JSONDecoder().decode(APIAck.self, from: data), let error = ack.error {

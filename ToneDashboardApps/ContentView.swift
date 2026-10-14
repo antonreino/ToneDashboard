@@ -4,33 +4,51 @@ import WebKit
 struct ContentView: View {
     @EnvironmentObject private var session: DashboardSession
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         ZStack {
             DashboardBackground()
-            TabView {
+            TabView(selection: $session.selectedTab) {
                 NavigationStack { OverviewView() }
                     .tabItem { Label("Inicio", systemImage: "house.fill") }
+                    .tag("Inicio")
                 NavigationStack { DownloadsView() }
                     .tabItem { Label("Descargas", systemImage: "arrow.down.circle.fill") }
+                    .tag("Descargas")
                 NavigationStack { OrbitZeroView() }
                     .tabItem { Label("Orbit", systemImage: "gamecontroller.fill") }
+                    .tag("Orbit")
                 NavigationStack { ActivityView() }
                     .tabItem { Label("Actividad", systemImage: "clock.arrow.circlepath") }
+                    .tag("Actividad")
                 NavigationStack { DealsView() }
                     .tabItem { Label("Ofertas", systemImage: "tag.fill") }
+                    .tag("Ofertas")
 #if os(macOS)
                 NavigationStack { LogsView() }
                     .tabItem { Label("Logs", systemImage: "terminal.fill") }
+                    .tag("Logs")
                 NavigationStack { SettingsView() }
                     .tabItem { Label("Ajustes", systemImage: "gearshape.fill") }
+                    .tag("Ajustes")
 #else
                 LogsView()
                     .tabItem { Label("Logs", systemImage: "terminal.fill") }
+                    .tag("Logs")
                 SettingsView()
                     .tabItem { Label("Ajustes", systemImage: "gearshape.fill") }
+                    .tag("Ajustes")
 #endif
             }
             .tint(DashboardPalette.accent)
+            .onChange(of: session.selectedTab) { _, _ in
+                Task { await session.refreshAll() }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                session.isActive = phase == .active
+                if phase == .active { Task { await session.refreshAll() } }
+            }
         }
         .preferredColorScheme(.dark)
         .overlay(alignment: .top) {
@@ -148,9 +166,9 @@ struct OrbitWebView: View {
 // Datos compartidos por las dos plataformas. Jamás se envían credenciales
 // a hosts externos ni se aceptan certificados TLS no confiables.
 final class OrbitWebCoordinator: NSObject, WKNavigationDelegate {
-    private let baseURL: URL
-    private let username: String
-    private let password: String
+    private var baseURL: URL
+    private var username: String
+    private var password: String
 
     init(baseURL: URL, username: String, password: String) {
         self.baseURL = baseURL
@@ -158,10 +176,20 @@ final class OrbitWebCoordinator: NSObject, WKNavigationDelegate {
         self.password = password
     }
 
+    func update(_ webView: WKWebView, baseURL: URL, username: String, password: String) {
+        guard self.baseURL != baseURL || self.username != username || self.password != password else { return }
+        webView.stopLoading()
+        self.baseURL = baseURL
+        self.username = username
+        self.password = password
+        webView.load(orbitRequest(baseURL: baseURL, username: username, password: password))
+    }
+
     func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge,
                  completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         let space = challenge.protectionSpace
-        guard space.authenticationMethod == NSURLAuthenticationMethodHTTPBasic,
+        guard challenge.previousFailureCount == 0,
+              space.authenticationMethod == NSURLAuthenticationMethodHTTPBasic,
               space.protocol?.lowercased() == "https",
               space.host.caseInsensitiveCompare(baseURL.host ?? "") == .orderedSame,
               space.port == (baseURL.port ?? 443) else {
@@ -169,7 +197,7 @@ final class OrbitWebCoordinator: NSObject, WKNavigationDelegate {
             return
         }
         completionHandler(.useCredential, URLCredential(user: username, password: password,
-                                                       persistence: .forSession))
+                                                       persistence: .none))
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
@@ -203,12 +231,16 @@ struct OrbitWebKitMac: NSViewRepresentable {
         OrbitWebCoordinator(baseURL: baseURL, username: username, password: password)
     }
     func makeNSView(context: Context) -> WKWebView {
-        let web = WKWebView(frame: .zero)
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        let web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = context.coordinator
         web.load(orbitRequest(baseURL: baseURL, username: username, password: password))
         return web
     }
-    func updateNSView(_ nsView: WKWebView, context: Context) {}
+    func updateNSView(_ nsView: WKWebView, context: Context) {
+        context.coordinator.update(nsView, baseURL: baseURL, username: username, password: password)
+    }
 }
 #else
 struct OrbitWebKitMobile: UIViewRepresentable {
@@ -220,12 +252,16 @@ struct OrbitWebKitMobile: UIViewRepresentable {
         OrbitWebCoordinator(baseURL: baseURL, username: username, password: password)
     }
     func makeUIView(context: Context) -> WKWebView {
-        let web = WKWebView(frame: .zero)
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        let web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = context.coordinator
         web.scrollView.contentInsetAdjustmentBehavior = .never
         web.load(orbitRequest(baseURL: baseURL, username: username, password: password))
         return web
     }
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.update(uiView, baseURL: baseURL, username: username, password: password)
+    }
 }
 #endif

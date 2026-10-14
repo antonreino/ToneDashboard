@@ -16,6 +16,10 @@ final class DashboardSession: ObservableObject {
     @Published var username: String
     @Published var password: String
 
+    @Published var selectedTab = "Inicio"
+    var isActive = true
+    private var refreshing = false
+
     private var refreshTask: Task<Void, Never>?
     private var persistedUsername: String
 
@@ -34,7 +38,7 @@ final class DashboardSession: ObservableObject {
     var configured: Bool {
         guard let url = URL(string: baseURLString),
               url.scheme?.lowercased() == "https",
-              url.host != nil else {
+              url.host != nil, url.user == nil, url.password == nil else {
             return false
         }
         return !username.isEmpty && !password.isEmpty
@@ -50,8 +54,9 @@ final class DashboardSession: ObservableObject {
         refreshTask?.cancel()
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(12))
-                guard let self, self.configured else { continue }
+                do { try await Task.sleep(for: .seconds(20)) }
+                catch { return }
+                guard let self, self.configured, self.isActive else { continue }
                 await self.refreshAll(silent: true)
             }
         }
@@ -88,12 +93,24 @@ final class DashboardSession: ObservableObject {
     }
 
     func refreshAll(silent: Bool = false) async {
+        guard !refreshing else { return }
+        refreshing = true
+        defer { refreshing = false }
+        if selectedTab == "Ajustes" { return }
+        if selectedTab == "Orbit" {
+            await refreshOrbitStatus()
+            return
+        }
         guard let client else {
             if !silent { lastError = "Configura una URL HTTPS válida, usuario y contraseña en Ajustes." }
             return
         }
         if !silent { isLoading = true }
         defer { if !silent { isLoading = false } }
+        if selectedTab == "Ofertas" || selectedTab == "Logs" {
+            await refreshSecondary(client: client)
+            return
+        }
 
         do {
             dashboard = try await client.dashboard()
@@ -108,14 +125,11 @@ final class DashboardSession: ObservableObject {
     }
 
     private func refreshSecondary(client: APIClient) async {
-        async let dealsResult: DealsResponse? = try? client.deals()
-        async let logsResult: LogResponse? = try? client.logs()
-
-        if let fetchedDeals = await dealsResult {
-            deals = fetchedDeals
+        if selectedTab == "Ofertas", let fetched = try? await client.deals() {
+            deals = fetched
         }
-        if let fetchedLogs = await logsResult {
-            logs = fetchedLogs.logs
+        if selectedTab == "Logs", let fetched = try? await client.logs() {
+            logs = fetched.logs
         }
     }
 

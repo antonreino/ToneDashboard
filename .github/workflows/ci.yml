@@ -23,6 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Test API origin and redirect protection
+        run: |
+          swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift tests/APISecurityTests.swift -o /tmp/api-security-tests
+          /tmp/api-security-tests
+
       - name: Build macOS
         run: |
           xcodebuild             -project ToneDashboardApps.xcodeproj             -scheme "ToneDashboardApps macOS"             -configuration Debug             -destination 'platform=macOS'             CODE_SIGNING_ALLOWED=NO             build

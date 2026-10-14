@@ -63,3 +63,16 @@ xcodebuild -project ToneDashboardApps.xcodeproj -scheme 'ToneDashboardApps iOS' 
 ```
 
 La sintaxis Swift se puede validar fuera de macOS, pero para verificar realmente WebKit, permisos, empaquetado, firma e instalación hay que compilar con Xcode en un Mac. No se incluyen builds firmadas ni archivos de distribución de App Store.
+
+## Endurecimiento de conexión
+
+La API valida HTTPS, host y puerto antes de adjuntar credenciales. Rechaza redirecciones a otras autoridades o HTTP y no sigue redirecciones de acciones POST. Utiliza sesiones efímeras y envía `X-Dashboard-Action: write` para las acciones del servidor actualizado.
+
+Orbit utiliza almacenamiento WebKit no persistente, limita los reintentos de autenticación y recarga al cambiar URL, usuario o contraseña. Las consultas periódicas se realizan cada 20 segundos mientras la app está activa; ofertas y logs se consultan al usar sus pestañas.
+
+Pruebas de la política de origen y redirecciones:
+
+```bash
+swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift tests/APISecurityTests.swift -o /tmp/api-security-tests
+/tmp/api-security-tests
+```
