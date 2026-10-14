@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct EmbyDashboardApp: App {
+struct ToneDashboardAppsApp: App {
     @StateObject private var session = DashboardSession()
 
     var body: some Scene {

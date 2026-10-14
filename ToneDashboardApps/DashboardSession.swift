@@ -9,6 +9,8 @@ final class DashboardSession: ObservableObject {
     @Published var lastError: String?
     @Published var lastUpdated: Date?
     @Published var toast: String?
+    @Published var orbitStatus: OrbitStatus?
+    @Published var orbitError: String?
 
     @Published var baseURLString: String
     @Published var username: String
@@ -48,7 +50,7 @@ final class DashboardSession: ObservableObject {
         refreshTask?.cancel()
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
+                try? await Task.sleep(for: .seconds(12))
                 guard let self, self.configured else { continue }
                 await self.refreshAll(silent: true)
             }
@@ -145,4 +147,31 @@ final class DashboardSession: ObservableObject {
             return false
         }
     }
+    func refreshOrbitStatus() async {
+        guard let client else { orbitStatus = nil; return }
+        do {
+            orbitStatus = try await client.orbitStatus()
+            orbitError = nil
+        } catch {
+            orbitError = error.localizedDescription
+        }
+    }
+
+    func startOrbit(controlPassword: String) async -> Bool {
+        guard let client, controlPassword.count >= 12 else {
+            orbitError = "La contraseña de control debe tener al menos 12 caracteres."
+            return false
+        }
+        do {
+            let reply = try await client.startOrbit(controlPassword: controlPassword)
+            toast = reply.message ?? "Solicitud de arranque enviada"
+            orbitError = nil
+            await refreshOrbitStatus()
+            return true
+        } catch {
+            orbitError = error.localizedDescription
+            return false
+        }
+    }
+
 }

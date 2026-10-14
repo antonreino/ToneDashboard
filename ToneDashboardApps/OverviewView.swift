@@ -63,7 +63,7 @@ struct OverviewView: View {
         }
         .background(DashboardBackground())
         .foregroundStyle(DashboardPalette.text)
-        .navigationTitle("Emby Dashboard")
+        .navigationTitle("ToneDashboardApps")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { Task { await session.refreshAll() } } label: { Image(systemName: "arrow.clockwise") }

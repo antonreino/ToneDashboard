@@ -8,14 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		09F68D27FD65DD1468D0D1F0 /* DashboardSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 862370040BA2C9A7D6572B12 /* DashboardSession.swift */; };
-		1221C271A6E71511E0C983ED /* EmbyDashboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C450585BFEA10DB644BA1F9 /* EmbyDashboardApp.swift */; };
+		1221C271A6E71511E0C983ED /* ToneDashboardAppsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */; };
 		15F11F91DD068384295C99CE /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EA1506F6609ECD63A7D352 /* APIClient.swift */; };
 		1C2CC5BB54B8B4BE9F33DA6F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5F8A71D5156697717112741 /* Models.swift */; };
 		1F71F291A9EF5F205AE5E275 /* DealsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60AE69A88733BD87E928DAB /* DealsView.swift */; };
 		439C5435E94D75745DC93064 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EA1506F6609ECD63A7D352 /* APIClient.swift */; };
 		564CEEB4654F444C9BD4E52A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E896D4187B4663640BE5D1D4 /* ContentView.swift */; };
 		57A019BE72071589AC34A35E /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E022712B15654F85BB09E753 /* KeychainStore.swift */; };
-		5EA9A0384BE219A004EDA489 /* EmbyDashboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C450585BFEA10DB644BA1F9 /* EmbyDashboardApp.swift */; };
+		5EA9A0384BE219A004EDA489 /* ToneDashboardAppsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */; };
 		5EAFD0ED398CA43DA54192E2 /* DealsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60AE69A88733BD87E928DAB /* DealsView.swift */; };
 		6470A28B7CECD0F8249702E5 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5BAE77966572E0853A6F7F2 /* Components.swift */; };
 		6A3372FAEE2D3A416610A8EC /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A374189E818099574B1C4295 /* ActivityView.swift */; };
@@ -44,7 +44,7 @@
 		2874E6DDAD4727F1711134EA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		6A985D1B463542D048E17FCF /* LogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogsView.swift; sourceTree = "<group>"; };
 		862370040BA2C9A7D6572B12 /* DashboardSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSession.swift; sourceTree = "<group>"; };
-		8C450585BFEA10DB644BA1F9 /* EmbyDashboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbyDashboardApp.swift; sourceTree = "<group>"; };
+		8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneDashboardAppsApp.swift; sourceTree = "<group>"; };
 		92EA1506F6609ECD63A7D352 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		953C73B9C09E35A59E2292EC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A374189E818099574B1C4295 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
@@ -54,9 +54,9 @@
 		D5F8A71D5156697717112741 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		E022712B15654F85BB09E753 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		E896D4187B4663640BE5D1D4 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		EACF94B8D347BE846E1CF6B2 /* Emby Dashboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Emby Dashboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		EACF94B8D347BE846E1CF6B2 /* ToneDashboardApps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ToneDashboardApps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE3E012FF059A136910E6717 /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
-		FE41F09D53D034A8EC446345 /* Emby Dashboard macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Emby Dashboard macOS.app"; path = "Emby Dashboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE41F09D53D034A8EC446345 /* ToneDashboardApps macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "ToneDashboardApps macOS.app"; path = ToneDashboardApps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,7 +80,7 @@
 		3C9D7F1ECE6B1C2C05B9A223 = {
 			isa = PBXGroup;
 			children = (
-				CC6A140804F390EB618F6366 /* EmbyDashboard */,
+				CC6A140804F390EB618F6366 /* ToneDashboardApps */,
 				7162250E0FAA4FDEE70FDEA1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,13 +88,13 @@
 		7162250E0FAA4FDEE70FDEA1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				EACF94B8D347BE846E1CF6B2 /* Emby Dashboard.app */,
-				FE41F09D53D034A8EC446345 /* Emby Dashboard macOS.app */,
+				EACF94B8D347BE846E1CF6B2 /* ToneDashboardApps.app */,
+				FE41F09D53D034A8EC446345 /* ToneDashboardApps macOS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		CC6A140804F390EB618F6366 /* EmbyDashboard */ = {
+		CC6A140804F390EB618F6366 /* ToneDashboardApps */ = {
 			isa = PBXGroup;
 			children = (
 				92EA1506F6609ECD63A7D352 /* APIClient.swift */,
@@ -104,7 +104,7 @@
 				862370040BA2C9A7D6572B12 /* DashboardSession.swift */,
 				C60AE69A88733BD87E928DAB /* DealsView.swift */,
 				EE3E012FF059A136910E6717 /* DownloadsView.swift */,
-				8C450585BFEA10DB644BA1F9 /* EmbyDashboardApp.swift */,
+				8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */,
 				C1BE648A3259EDEB1DD7974F /* Formatters.swift */,
 				E022712B15654F85BB09E753 /* KeychainStore.swift */,
 				6A985D1B463542D048E17FCF /* LogsView.swift */,
@@ -113,15 +113,15 @@
 				2874E6DDAD4727F1711134EA /* SettingsView.swift */,
 				953C73B9C09E35A59E2292EC /* Assets.xcassets */,
 			);
-			path = EmbyDashboard;
+			path = ToneDashboardApps;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		20E544863AF77FAF092ABFB3 /* EmbyDashboard iOS */ = {
+		20E544863AF77FAF092ABFB3 /* ToneDashboardApps iOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4701E2C0C8898C686A3B14BE /* Build configuration list for PBXNativeTarget "EmbyDashboard iOS" */;
+			buildConfigurationList = 4701E2C0C8898C686A3B14BE /* Build configuration list for PBXNativeTarget "ToneDashboardApps iOS" */;
 			buildPhases = (
 				B275D04F9D223BEE09F6792E /* Sources */,
 				BFB44C88AC5AF08DB96E0CD7 /* Frameworks */,
@@ -131,14 +131,14 @@
 			);
 			dependencies = (
 			);
-			name = "EmbyDashboard iOS";
-			productName = "Emby Dashboard";
-			productReference = EACF94B8D347BE846E1CF6B2 /* Emby Dashboard.app */;
+			name = "ToneDashboardApps iOS";
+			productName = ToneDashboardApps;
+			productReference = EACF94B8D347BE846E1CF6B2 /* ToneDashboardApps.app */;
 			productType = "com.apple.product-type.application";
 		};
-		C276F70E6D3FBCBBB24ADB95 /* EmbyDashboard macOS */ = {
+		C276F70E6D3FBCBBB24ADB95 /* ToneDashboardApps macOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 02C76DA5C80449378D6D7029 /* Build configuration list for PBXNativeTarget "EmbyDashboard macOS" */;
+			buildConfigurationList = 02C76DA5C80449378D6D7029 /* Build configuration list for PBXNativeTarget "ToneDashboardApps macOS" */;
 			buildPhases = (
 				77877B66617D6810402240F7 /* Sources */,
 				442FA6D35CE990BF5097CB87 /* Frameworks */,
@@ -148,9 +148,9 @@
 			);
 			dependencies = (
 			);
-			name = "EmbyDashboard macOS";
-			productName = "Emby Dashboard macOS";
-			productReference = FE41F09D53D034A8EC446345 /* Emby Dashboard macOS.app */;
+			name = "ToneDashboardApps macOS";
+			productName = "ToneDashboardApps macOS";
+			productReference = FE41F09D53D034A8EC446345 /* ToneDashboardApps macOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -170,7 +170,7 @@
 					};
 				};
 			};
-			buildConfigurationList = BFBF18BA719BB7358C67F723 /* Build configuration list for PBXProject "EmbyDashboard" */;
+			buildConfigurationList = BFBF18BA719BB7358C67F723 /* Build configuration list for PBXProject "ToneDashboardApps" */;
 			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -182,8 +182,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				20E544863AF77FAF092ABFB3 /* EmbyDashboard iOS */,
-				C276F70E6D3FBCBBB24ADB95 /* EmbyDashboard macOS */,
+				20E544863AF77FAF092ABFB3 /* ToneDashboardApps iOS */,
+				C276F70E6D3FBCBBB24ADB95 /* ToneDashboardApps macOS */,
 			);
 		};
 /* End PBXProject section */
@@ -219,7 +219,7 @@
 				8F7E327C7CC4DC1E23578F8A /* DashboardSession.swift in Sources */,
 				5EAFD0ED398CA43DA54192E2 /* DealsView.swift in Sources */,
 				97FBBCC8C9A2D2EBD0A33F10 /* DownloadsView.swift in Sources */,
-				5EA9A0384BE219A004EDA489 /* EmbyDashboardApp.swift in Sources */,
+				5EA9A0384BE219A004EDA489 /* ToneDashboardAppsApp.swift in Sources */,
 				9413DFCF13302C133B39843C /* Formatters.swift in Sources */,
 				C8D3217021E7E9AA6807FB61 /* KeychainStore.swift in Sources */,
 				D4A00B1DF84A6C23EF42D41C /* LogsView.swift in Sources */,
@@ -240,7 +240,7 @@
 				09F68D27FD65DD1468D0D1F0 /* DashboardSession.swift in Sources */,
 				1F71F291A9EF5F205AE5E275 /* DealsView.swift in Sources */,
 				DB4082E9821C0E68111D189A /* DownloadsView.swift in Sources */,
-				1221C271A6E71511E0C983ED /* EmbyDashboardApp.swift in Sources */,
+				1221C271A6E71511E0C983ED /* ToneDashboardAppsApp.swift in Sources */,
 				C50BAF042ED2C2CB4398BE28 /* Formatters.swift in Sources */,
 				57A019BE72071589AC34A35E /* KeychainStore.swift in Sources */,
 				73C5BC5B1A98E49AEBAC7F65 /* LogsView.swift in Sources */,
@@ -262,11 +262,11 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Emby Dashboard";
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.macos;
-				PRODUCT_NAME = "Emby Dashboard";
+				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -279,13 +279,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NXB5TD235A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Emby Dashboard";
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.ios;
-				PRODUCT_NAME = "Emby Dashboard";
+				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -300,13 +301,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NXB5TD235A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Emby Dashboard";
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.ios;
-				PRODUCT_NAME = "Emby Dashboard";
+				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -325,11 +327,11 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Emby Dashboard";
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.macos;
-				PRODUCT_NAME = "Emby Dashboard";
+				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
@@ -363,7 +365,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		02C76DA5C80449378D6D7029 /* Build configuration list for PBXNativeTarget "EmbyDashboard macOS" */ = {
+		02C76DA5C80449378D6D7029 /* Build configuration list for PBXNativeTarget "ToneDashboardApps macOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7604B0063A84072C3BF95D64 /* Debug */,
@@ -372,7 +374,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4701E2C0C8898C686A3B14BE /* Build configuration list for PBXNativeTarget "EmbyDashboard iOS" */ = {
+		4701E2C0C8898C686A3B14BE /* Build configuration list for PBXNativeTarget "ToneDashboardApps iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				81F995B9124D62CFA8FD9F82 /* Debug */,
@@ -381,7 +383,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		BFBF18BA719BB7358C67F723 /* Build configuration list for PBXProject "EmbyDashboard" */ = {
+		BFBF18BA719BB7358C67F723 /* Build configuration list for PBXProject "ToneDashboardApps" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				DA925284BA893A0B7CD58824 /* Debug */,

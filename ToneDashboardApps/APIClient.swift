@@ -29,26 +29,26 @@ struct APIClient {
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         guard (200..<300).contains(http.statusCode) else {
             if let ack = try? JSONDecoder().decode(APIAck.self, from: data), let error = ack.error {
-                throw NSError(domain: "EmbyDashboard", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: error])
+                throw NSError(domain: "ToneDashboardApps", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: error])
             }
             if http.statusCode == 401 {
-                throw NSError(domain: "EmbyDashboard", code: 401, userInfo: [NSLocalizedDescriptionKey: "Usuario o contraseña incorrectos"])
+                throw NSError(domain: "ToneDashboardApps", code: 401, userInfo: [NSLocalizedDescriptionKey: "Usuario o contraseña incorrectos"])
             }
-            throw NSError(domain: "EmbyDashboard", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode)"])
+            throw NSError(domain: "ToneDashboardApps", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode)"])
         }
         do {
             return try JSONDecoder().decode(type, from: data)
         } catch let DecodingError.typeMismatch(expected, context) {
             let path = context.codingPath.map(\.stringValue).joined(separator: ".")
             throw NSError(
-                domain: "EmbyDashboard",
+                domain: "ToneDashboardApps",
                 code: -2,
                 userInfo: [NSLocalizedDescriptionKey: "Formato inesperado en \(path.isEmpty ? "respuesta" : path): se esperaba \(expected). \(context.debugDescription)"]
             )
         } catch let DecodingError.valueNotFound(expected, context) {
             let path = context.codingPath.map(\.stringValue).joined(separator: ".")
             throw NSError(
-                domain: "EmbyDashboard",
+                domain: "ToneDashboardApps",
                 code: -3,
                 userInfo: [NSLocalizedDescriptionKey: "Valor ausente en \(path.isEmpty ? "respuesta" : path): \(expected). \(context.debugDescription)"]
             )
@@ -56,7 +56,7 @@ struct APIClient {
             let parent = context.codingPath.map(\.stringValue).joined(separator: ".")
             let path = parent.isEmpty ? key.stringValue : "\(parent).\(key.stringValue)"
             throw NSError(
-                domain: "EmbyDashboard",
+                domain: "ToneDashboardApps",
                 code: -4,
                 userInfo: [NSLocalizedDescriptionKey: "Falta el campo \(path) en la respuesta del servidor."]
             )
@@ -64,14 +64,14 @@ struct APIClient {
             let path = context.codingPath.map(\.stringValue).joined(separator: ".")
             let snippet = String(data: data.prefix(600), encoding: .utf8) ?? "<respuesta no textual>"
             throw NSError(
-                domain: "EmbyDashboard",
+                domain: "ToneDashboardApps",
                 code: -5,
                 userInfo: [NSLocalizedDescriptionKey: "JSON no válido en \(path.isEmpty ? "respuesta" : path). \(context.debugDescription)\n\nServidor: \(snippet)"]
             )
         } catch {
             let snippet = String(data: data.prefix(600), encoding: .utf8) ?? "<respuesta no textual>"
             throw NSError(
-                domain: "EmbyDashboard",
+                domain: "ToneDashboardApps",
                 code: -6,
                 userInfo: [NSLocalizedDescriptionKey: "No se pudo interpretar la respuesta del servidor: \(error.localizedDescription)\n\nServidor: \(snippet)"]
             )
@@ -106,4 +106,25 @@ struct APIClient {
         )
         return try await execute(req, as: APIAck.self)
     }
+    func orbitStatus() async throws -> OrbitStatus {
+        try await execute(try request(path: "/api/orbit/status"), as: OrbitStatus.self)
+    }
+
+    func startOrbit(controlPassword: String) async throws -> OrbitStartResponse {
+        guard let origin = URLComponents(url: baseURL, resolvingAgainstBaseURL: false),
+              origin.scheme?.lowercased() == "https", let host = origin.host else {
+            throw URLError(.badURL)
+        }
+        let hostname = host.contains(":") ? "[\(host)]" : host
+        let port = origin.port.map { ":\($0)" } ?? ""
+        // Nunca guardar la contraseña adicional: solo se usa en esta petición.
+        return try await execute(try request(
+            path: "/api/orbit/start", method: "POST", body: Data("{}".utf8),
+            contentType: "application/json",
+            extraHeaders: ["Origin": "https://\(hostname)\(port)",
+                           "X-Orbit-Action": "start",
+                           "X-Orbit-Control-Password": controlPassword]
+        ), as: OrbitStartResponse.self)
+    }
+
 }

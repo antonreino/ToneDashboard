@@ -1,0 +1,231 @@
+import SwiftUI
+import WebKit
+
+struct ContentView: View {
+    @EnvironmentObject private var session: DashboardSession
+
+    var body: some View {
+        ZStack {
+            DashboardBackground()
+            TabView {
+                NavigationStack { OverviewView() }
+                    .tabItem { Label("Inicio", systemImage: "house.fill") }
+                NavigationStack { DownloadsView() }
+                    .tabItem { Label("Descargas", systemImage: "arrow.down.circle.fill") }
+                NavigationStack { OrbitZeroView() }
+                    .tabItem { Label("Orbit", systemImage: "gamecontroller.fill") }
+                NavigationStack { ActivityView() }
+                    .tabItem { Label("Actividad", systemImage: "clock.arrow.circlepath") }
+                NavigationStack { DealsView() }
+                    .tabItem { Label("Ofertas", systemImage: "tag.fill") }
+#if os(macOS)
+                NavigationStack { LogsView() }
+                    .tabItem { Label("Logs", systemImage: "terminal.fill") }
+                NavigationStack { SettingsView() }
+                    .tabItem { Label("Ajustes", systemImage: "gearshape.fill") }
+#else
+                LogsView()
+                    .tabItem { Label("Logs", systemImage: "terminal.fill") }
+                SettingsView()
+                    .tabItem { Label("Ajustes", systemImage: "gearshape.fill") }
+#endif
+            }
+            .tint(DashboardPalette.accent)
+        }
+        .preferredColorScheme(.dark)
+        .overlay(alignment: .top) {
+            if let toast = session.toast {
+                Text(toast)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(DashboardPalette.text)
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .background(DashboardPalette.panel, in: Capsule())
+                    .overlay { Capsule().stroke(DashboardPalette.border, lineWidth: 1) }
+                    .padding(.top, 8)
+                    .onAppear {
+                        Task {
+                            try? await Task.sleep(for: .seconds(3))
+                            await MainActor.run { session.toast = nil }
+                        }
+                    }
+            }
+        }
+    }
+}
+
+
+// MARK: - Orbit Zero en la app nativa (Mac / iOS / iPadOS)
+// Se usa el proxy SAME-ORIGIN de ToneDashboard; no expone el puerto 34179
+// ni accede a las ventanas o al escritorio del Mac.
+struct OrbitZeroView: View {
+    @EnvironmentObject private var session: DashboardSession
+    @State private var showStartDialog = false
+    @State private var controlPassword = ""
+    @State private var starting = false
+    @State private var reloadIdentity = UUID()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Orbit Zero").font(.headline)
+                    Text(session.orbitStatus?.running == true ? "Servicio conectado" : "Servicio sin confirmar")
+                        .font(.caption)
+                        .foregroundStyle(session.orbitStatus?.running == true ? Color.green : Color.secondary)
+                }
+                Spacer()
+                Button("Comprobar", systemImage: "arrow.clockwise") {
+                    Task { await session.refreshOrbitStatus() }
+                }
+                .buttonStyle(.bordered)
+                if session.orbitStatus?.running == false && session.orbitStatus?.can_start == true {
+                    Button("Iniciar Orbit", systemImage: "play.fill") {
+                        showStartDialog = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                Button("Recargar", systemImage: "arrow.clockwise.circle") {
+                    reloadIdentity = UUID()
+                }
+                .buttonStyle(.bordered)
+            }
+            .font(.callout)
+            if let error = session.orbitError {
+                Text(error).font(.caption).foregroundStyle(.orange)
+            }
+            if let base = session.client?.baseURL,
+               base.scheme?.lowercased() == "https" {
+                OrbitWebView(baseURL: base,
+                             username: session.username,
+                             password: session.password)
+                    .id(reloadIdentity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                ContentUnavailableView("Configura ToneDashboard", systemImage: "lock.shield",
+                    description: Text("Introduce la URL HTTPS y las credenciales en Ajustes."))
+            }
+            Text("Las verificaciones externas de algunos proveedores siguen realizándose en el Mac. Esta pestaña no da acceso remoto al escritorio. Para acceder fuera de casa usa VPN y HTTPS.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .navigationTitle("Orbit Zero")
+        .task { await session.refreshOrbitStatus() }
+        .alert("Arrancar Orbit Zero", isPresented: $showStartDialog) {
+            SecureField("Contraseña adicional", text: $controlPassword)
+            Button("Cancelar", role: .cancel) { controlPassword = "" }
+            Button("Iniciar") {
+                let secret = controlPassword
+                controlPassword = ""
+                starting = true
+                Task {
+                    let success = await session.startOrbit(controlPassword: secret)
+                    if success { reloadIdentity = UUID() }
+                    starting = false
+                }
+            }
+            .disabled(starting || controlPassword.count < 12)
+        } message: {
+            Text("Se utiliza la contraseña adicional configurada en el servidor. No se guarda en el iPhone ni en el Mac.")
+        }
+    }
+}
+
+struct OrbitWebView: View {
+    let baseURL: URL
+    let username: String
+    let password: String
+
+    var body: some View {
+        #if os(macOS)
+        OrbitWebKitMac(baseURL: baseURL, username: username, password: password)
+        #else
+        OrbitWebKitMobile(baseURL: baseURL, username: username, password: password)
+        #endif
+    }
+}
+
+// Datos compartidos por las dos plataformas. Jamás se envían credenciales
+// a hosts externos ni se aceptan certificados TLS no confiables.
+final class OrbitWebCoordinator: NSObject, WKNavigationDelegate {
+    private let baseURL: URL
+    private let username: String
+    private let password: String
+
+    init(baseURL: URL, username: String, password: String) {
+        self.baseURL = baseURL
+        self.username = username
+        self.password = password
+    }
+
+    func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge,
+                 completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        let space = challenge.protectionSpace
+        guard space.authenticationMethod == NSURLAuthenticationMethodHTTPBasic,
+              space.protocol?.lowercased() == "https",
+              space.host.caseInsensitiveCompare(baseURL.host ?? "") == .orderedSame,
+              space.port == (baseURL.port ?? 443) else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        completionHandler(.useCredential, URLCredential(user: username, password: password,
+                                                       persistence: .forSession))
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel); return
+        }
+        // No permitir que Orbit navegue a otros servidores desde la app.
+        let trusted = url.scheme?.lowercased() == "https" &&
+            url.host?.caseInsensitiveCompare(baseURL.host ?? "") == .orderedSame &&
+            (url.port ?? 443) == (baseURL.port ?? 443)
+        decisionHandler(trusted || url.scheme == "about" ? .allow : .cancel)
+    }
+}
+
+func orbitRequest(baseURL: URL, username: String, password: String) -> URLRequest {
+    var request = URLRequest(url: URL(string: "/orbit-bridge/zero/", relativeTo: baseURL)!.absoluteURL)
+    request.cachePolicy = .reloadIgnoringLocalCacheData
+    request.setValue("Basic " + Data("\(username):\(password)".utf8).base64EncodedString(),
+                     forHTTPHeaderField: "Authorization")
+    return request
+}
+
+#if os(macOS)
+struct OrbitWebKitMac: NSViewRepresentable {
+    let baseURL: URL
+    let username: String
+    let password: String
+
+    func makeCoordinator() -> OrbitWebCoordinator {
+        OrbitWebCoordinator(baseURL: baseURL, username: username, password: password)
+    }
+    func makeNSView(context: Context) -> WKWebView {
+        let web = WKWebView(frame: .zero)
+        web.navigationDelegate = context.coordinator
+        web.load(orbitRequest(baseURL: baseURL, username: username, password: password))
+        return web
+    }
+    func updateNSView(_ nsView: WKWebView, context: Context) {}
+}
+#else
+struct OrbitWebKitMobile: UIViewRepresentable {
+    let baseURL: URL
+    let username: String
+    let password: String
+
+    func makeCoordinator() -> OrbitWebCoordinator {
+        OrbitWebCoordinator(baseURL: baseURL, username: username, password: password)
+    }
+    func makeUIView(context: Context) -> WKWebView {
+        let web = WKWebView(frame: .zero)
+        web.navigationDelegate = context.coordinator
+        web.scrollView.contentInsetAdjustmentBehavior = .never
+        web.load(orbitRequest(baseURL: baseURL, username: username, password: password))
+        return web
+    }
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+}
+#endif

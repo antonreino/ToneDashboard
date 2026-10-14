@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "20E544863AF77FAF092ABFB3"
-               BuildableName = "Emby Dashboard.app"
-               ReferencedContainer = "container:EmbyDashboard.xcodeproj">
+               BuildableName = "ToneDashboardApps.app"
+               ReferencedContainer = "container:ToneDashboardApps.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,8 +45,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "20E544863AF77FAF092ABFB3"
-            BuildableName = "Emby Dashboard.app"
-            ReferencedContainer = "container:EmbyDashboard.xcodeproj">
+            BuildableName = "ToneDashboardApps.app"
+            ReferencedContainer = "container:ToneDashboardApps.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -61,8 +61,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "20E544863AF77FAF092ABFB3"
-            BuildableName = "Emby Dashboard.app"
-            ReferencedContainer = "container:EmbyDashboard.xcodeproj">
+            BuildableName = "ToneDashboardApps.app"
+            ReferencedContainer = "container:ToneDashboardApps.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
