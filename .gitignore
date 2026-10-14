@@ -48,3 +48,6 @@ __MACOSX/
 
 # Backups locales de actualizaciones
 .update-backups/
+
+# Copias locales creadas por los scripts de migración
+.patch-backups/

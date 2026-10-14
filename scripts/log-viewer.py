@@ -76,11 +76,11 @@ HTML = r'''<!doctype html>
 <meta name="theme-color" content="#07111f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Emby Dashboard">
+<meta name="apple-mobile-web-app-title" content="ToneDashboard">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/app-icon.png">
-<title>Emby Automation · Dashboard</title>
+<title>ToneDashboard</title>
 <style>
 :root{
   color-scheme: dark;
@@ -512,13 +512,32 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .host-metric[style*="grid-column"]{grid-column:auto!important}
   tbody td{grid-template-columns:1fr;gap:4px}
 }
+
+/* ── Orbit Zero: catálogo y descargas ──────────────────────────────────── */
+.tabs{max-width:100%;overflow-x:auto;scrollbar-width:thin}
+/* Orbit Zero: interfaz unificada y adaptable a escritorio/iPhone. */
+.orbit-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.orbit-toolbar h2{margin:0}
+.orbit-toolbar-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.orbit-toolbar-buttons .button{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;text-decoration:none}
+.orbit-status{font-size:13px;color:#adbed7;margin:8px 0 10px;line-height:1.5}
+.orbit-frame{display:block;width:100%;height:clamp(550px,78dvh,1250px);background:#101010;border:1px solid rgba(255,255,255,.1);border-radius:14px}
+.orbit-note{font-size:12px;line-height:1.55;color:#adbed7;margin:10px 0 0}
+.orbit-password-dialog{border:1px solid #62799d;border-radius:16px;color:#eef4ff;background:#142038;padding:22px;max-width:min(440px,calc(100vw - 28px))}
+.orbit-password-dialog::backdrop{background:rgba(0,0,0,.7)}
+.orbit-password-dialog form{display:grid;gap:12px}
+.orbit-password-dialog input{width:100%;background:#09182c;color:#fff;border-radius:9px;border:1px solid #61708c;padding:12px}
+.orbit-password-dialog menu{display:flex;gap:10px;justify-content:flex-end;margin:0;padding:0}
+#view-orbitzero .panel__body{padding:12px}
+@media(max-width:700px){#view-orbitzero .panel__body{padding:6px}.orbit-frame{height:calc(100dvh - 190px);min-height:470px;border-radius:8px}.orbit-toolbar-buttons{width:100%}.orbit-toolbar-buttons .button{flex:1}}
+
 </style>
 </head>
 <body>
 <div class="app">
   <header class="hero">
     <div class="hero__main">
-      <div class="eyebrow">Emby Automation · Dashboard</div>
+      <div class="eyebrow">ToneDashboard</div>
       <h1>Control total, limpio y moderno</h1>
       <p>Estado de servicios, descargas, historial y logs en tiempo real, optimizado para Mac, iPad y iPhone.</p>
     </div>
@@ -536,7 +555,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
            target="_blank"
            rel="noopener noreferrer"
            title="Abrir repositorio en GitHub"
-           aria-label="Abrir repositorio emby-organizer en GitHub">
+           aria-label="Abrir repositorio ToneDashboard en GitHub">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 .7a11.3 11.3 0 0 0-3.57 22c.57.1.78-.24.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.03 0 0 .96-.31 3.12 1.17A10.85 10.85 0 0 1 12 5.91c.97 0 1.94.13 2.85.38 2.16-1.48 3.11-1.17 3.11-1.17.63 1.57.24 2.74.12 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.05.78 2.12v3.17c0 .31.2.66.79.55A11.3 11.3 0 0 0 12 .7Z"/>
           </svg>
@@ -558,6 +577,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   <nav class="tabs" aria-label="Secciones del dashboard">
     <button class="tab active" data-view="inicio">Inicio</button>
     <button class="tab" data-view="estadisticas">Estadísticas</button>
+    <button class="tab" data-view="orbitzero">Orbit Zero</button>
     <button class="tab" data-view="chollos">Chollos</button>
   </nav>
 
@@ -768,6 +788,34 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
         <div class="panel__body" id="categoryStats"></div>
       </section>
     </div>
+  </div>
+
+
+  <div id="view-orbitzero" class="view">
+    <section class="panel" aria-label="Orbit Zero integrado">
+      <div class="panel__body">
+        <div class="orbit-toolbar">
+          <h2 class="section-title">🪐 Orbit Zero <small>Mac mini · PS5</small></h2>
+          <div class="orbit-toolbar-buttons">
+            <button class="button" id="orbitStart" type="button" hidden>Iniciar Orbit</button>
+            <button class="button" id="orbitRetry" type="button">Reconectar</button>
+            <a class="button" id="orbitOpen" href="/orbit-bridge/zero/" target="_blank" rel="noopener noreferrer">Abrir aparte ↗</a>
+          </div>
+        </div>
+        <p class="orbit-status" id="orbitStatus" role="status">Comprobando Orbit Zero…</p>
+        <iframe class="orbit-frame" id="orbitFrame" title="Orbit Zero integrado" loading="lazy" referrerpolicy="same-origin" src="about:blank"></iframe>
+        <p class="orbit-note">Para vincular un dispositivo utiliza el código que muestra Orbit Zero en <b>Consola → Cómo funciona</b> de la aplicación del Mac. Nuestro dashboard no lee ni guarda credenciales ni códigos de Orbit. Fuera de casa utiliza una VPN privada y HTTPS.</p>
+      </div>
+    </section>
+    <dialog id="orbitControlDialog" class="orbit-password-dialog" aria-labelledby="orbitControlTitle">
+      <form method="dialog" id="orbitControlForm">
+        <h3 id="orbitControlTitle">Arrancar Orbit Zero</h3>
+        <p class="orbit-note">Introduce la contraseña adicional para autorizar el inicio de Orbit en el Mac mini.</p>
+        <label for="orbitControlPassword">Contraseña de control</label>
+        <input id="orbitControlPassword" type="password" required autocomplete="off" minlength="8">
+        <menu><button class="button" value="cancel" type="button" id="orbitCancelStart">Cancelar</button><button class="button" type="submit">Iniciar Orbit</button></menu>
+      </form>
+    </dialog>
   </div>
 
   <div id="view-chollos" class="view">
@@ -1031,6 +1079,7 @@ async function loadDeals(){
   const near=log.scrollHeight-log.scrollTop-log.clientHeight<80;log.textContent=d.log||'(vacío)';if(near)log.scrollTop=log.scrollHeight;
 }
 
+
 async function loadLogs(){
   const lines=linesEl.value;
   const r=await fetch(`/api/logs?lines=${lines}`,{cache:'no-store'});
@@ -1091,18 +1140,64 @@ torrentForm.addEventListener('submit',async e=>{
   }
 });
 
+
+// orbit-catalog-proxy v2: proxy mismo origen para Safari/iPhone, sin direcciones LAN en el cliente.
+// Orbit Zero v3: cargar solo en la pestaña, sin comprobaciones HEAD.
+let orbitLoaded=false,orbitRefreshing=false;
+async function orbitRefreshStatus(loadFrame=false){
+ const status=document.getElementById('orbitStatus');
+ const start=document.getElementById('orbitStart');
+ try{
+  const r=await fetch('/api/orbit/status',{cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const d=await r.json();
+  start.hidden=Boolean(d.running)||!d.can_start;
+  if(d.running){
+    status.textContent='Orbit Zero disponible en el Mac mini.';
+    if(loadFrame&&!orbitLoaded){document.getElementById('orbitFrame').src='/orbit-bridge/zero/';orbitLoaded=true;}
+  }else{
+    status.textContent=d.can_start?'Orbit Zero no está iniciado. Pulsa «Iniciar Orbit» para abrirlo en el Mac mini.':'Orbit Zero no responde. Comprueba que está instalado y que el control de inicio está configurado.';
+    if(loadFrame){document.getElementById('orbitFrame').src='about:blank';orbitLoaded=false;}
+  }
+ }catch(err){status.textContent='No se pudo comprobar Orbit: '+err.message;start.hidden=true;}
+}
+function orbitEnsureLoaded(){
+ if(!orbitRefreshing){orbitRefreshing=true;orbitRefreshStatus(true).finally(()=>orbitRefreshing=false);}
+}
+document.getElementById('orbitRetry').addEventListener('click',()=>{orbitLoaded=false;orbitEnsureLoaded();});
+document.getElementById('orbitStart').addEventListener('click',()=>{
+ const dialog=document.getElementById('orbitControlDialog');
+ dialog.showModal();document.getElementById('orbitControlPassword').focus();
+});
+document.getElementById('orbitCancelStart').addEventListener('click',()=>document.getElementById('orbitControlDialog').close());
+document.getElementById('orbitControlForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const secret=document.getElementById('orbitControlPassword');
+ const password=secret.value; secret.value='';
+ document.getElementById('orbitControlDialog').close();
+ const status=document.getElementById('orbitStatus');status.textContent='Solicitando inicio de Orbit Zero…';
+ try{
+   const r=await fetch('/api/orbit/start',{method:'POST',headers:{'Content-Type':'application/json','X-Orbit-Control-Password':password,'X-Orbit-Action':'start'},body:'{}',credentials:'same-origin'});
+   const data=await r.json();if(!r.ok)throw new Error(data.error||'HTTP '+r.status);
+   status.textContent=data.running?'Orbit ya está disponible.':'Solicitud de inicio enviada. Espera unos segundos y pulsa Reconectar.';
+   orbitLoaded=false;await orbitRefreshStatus(true);
+ }catch(err){status.textContent='No se pudo iniciar Orbit: '+err.message;}
+});
+
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===tab));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     const target=document.getElementById(`view-${tab.dataset.view}`);
     if(target)target.classList.add('active');
+    if(tab.dataset.view==='orbitzero')orbitEnsureLoaded();
   });
 });
 const linesEl=document.getElementById('lines');
 linesEl.addEventListener('change',()=>{loadLogs();loadDeals();});
 async function refreshAll(){
   try{
+    if(document.hidden||document.getElementById('view-orbitzero').classList.contains('active'))return;
     await Promise.all([loadDashboard(),loadLogs(),loadDeals()]);
   }catch(e){
     document.getElementById('updated').textContent='Error de actualización';
@@ -1515,14 +1610,14 @@ def disk_info(path: Path) -> dict:
 
 
 PWA_MANIFEST = json.dumps({
-    "name": "Emby Automation Dashboard",
-    "short_name": "Emby",
+    "name": "ToneDashboard",
+    "short_name": "ToneDashboard",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
     "background_color": "#07111f",
     "theme_color": "#07111f",
-    "description": "Dashboard privado de Emby Automation",
+    "description": "Panel privado ToneDashboard",
     "icons": [
         {"src": "/app-icon.png", "sizes": "180x180", "type": "image/png"},
         {"src": "/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
@@ -1548,7 +1643,7 @@ class Handler(BaseHTTPRequestHandler):
             return True
         body = b"Authentication required"
         self.send_response(401)
-        self.send_header("WWW-Authenticate", 'Basic realm="Emby Dashboard", charset="UTF-8"')
+        self.send_header("WWW-Authenticate", 'Basic realm="ToneDashboard", charset="UTF-8"')
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
@@ -1567,7 +1662,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self._require_auth():
             return
+        from orbit_dashboard_proxy import serve as orbit_serve
+        if orbit_serve(self):
+            return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/orbit/status':
+            from orbit_dashboard_control import get_status
+            self.send_bytes(json.dumps(get_status(),ensure_ascii=False).encode('utf-8'),'application/json; charset=utf-8')
+            return
         if parsed.path == "/":
             self.send_bytes(HTML.encode("utf-8"), "text/html; charset=utf-8")
             return
@@ -1624,7 +1726,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._require_auth():
             return
+        from orbit_dashboard_proxy import serve as orbit_serve
+        if orbit_serve(self):
+            return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/orbit/start':
+            from orbit_dashboard_control import start_app
+            result,code=start_app(self.headers, self.client_address)
+            self.send_bytes(json.dumps(result,ensure_ascii=False).encode('utf-8'),'application/json; charset=utf-8',code)
+            return
 
         if parsed.path == "/api/torrent":
             try:
@@ -1706,6 +1816,27 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         self.send_error(404)
+
+    # El proxy permite los métodos que usa Orbit. Fuera de su namespace no hay cambios.
+    def do_HEAD(self):
+        from orbit_dashboard_proxy import serve as orbit_serve
+        if not orbit_serve(self): self.send_error(405)
+
+    def do_DELETE(self):
+        from orbit_dashboard_proxy import serve as orbit_serve
+        if not orbit_serve(self): self.send_error(405)
+
+    def do_PUT(self):
+        from orbit_dashboard_proxy import serve as orbit_serve
+        if not orbit_serve(self): self.send_error(405)
+
+    def do_PATCH(self):
+        from orbit_dashboard_proxy import serve as orbit_serve
+        if not orbit_serve(self): self.send_error(405)
+
+    def do_OPTIONS(self):
+        from orbit_dashboard_proxy import serve as orbit_serve
+        if not orbit_serve(self): self.send_error(405)
 
     def log_message(self, fmt, *args):
         pass

@@ -19,6 +19,9 @@ FILES = [
     'torrent_utils.py',
     'static/app-icon.png',
     'scripts/log-viewer.py',
+    'orbit_dashboard_proxy.py',
+    'orbit_bridge_shim.js',
+    'orbit_dashboard_control.py',
     'scripts/telegram_torrent_bot.py',
     'scripts/log-error-watcher.py',
     'scripts/install-macos-services.sh',
@@ -68,6 +71,8 @@ subprocess.run([
     str(TARGET / 'torrent_utils.py'),
     str(TARGET / 'emby_organizer.py'),
     str(TARGET / 'scripts/log-viewer.py'),
+    str(TARGET / 'orbit_dashboard_proxy.py'),
+    str(TARGET / 'orbit_dashboard_control.py'),
     str(TARGET / 'scripts/telegram_torrent_bot.py'),
     str(TARGET / 'scripts/log-error-watcher.py'),
     str(TARGET / 'scripts/update_macos.py'),
@@ -77,7 +82,7 @@ uid = subprocess.check_output(['id', '-u'], text=True).strip()
 for label in SERVICES:
     subprocess.run(['launchctl', 'kickstart', '-k', f'gui/{uid}/{label}'], check=False)
 
-print('✅ Emby Organizer actualizado.')
+print('✅ ToneDashboard actualizado.')
 print(f'   Destino: {TARGET}')
 print(f'   Copia de seguridad: {backup}')
 print('   .env y datos persistentes se han conservado.')

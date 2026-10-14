@@ -1,6 +1,6 @@
-# Instalación / migración a macOS
+# ToneDashboard — Instalación y migración a macOS
 
-El proyecto ya no depende de una ruta fija. Puede estar en el disco interno o en un volumen externo.
+El proyecto se llama ToneDashboard. Los nombres de los servicios de lanzamiento y la ruta de la instalación original se conservan por compatibilidad. Puedes usar el disco interno o un volumen externo; mover una instalación ya activa exige regenerar sus LaunchAgents.
 
 ## 1. Configurar
 
@@ -62,3 +62,7 @@ tail -f ~/Library/Logs/telegram-download-bot.err.log
 tail -f ~/Library/Logs/emby-organizer.out.log
 tail -f ~/Library/Logs/emby-organizer.err.log
 ```
+
+## Migración de nombre sin romper servicios
+
+Si ya usas `/Volumes/Datos/Proyectos/Scripts/emby-organizer`, mantenlo mientras los LaunchAgents apunten allí. Ejecuta primero `ToneDashboard/instalar.py --dry-run`, luego `--apply`. Solo después de verificar funcionamiento plantea trasladar la carpeta y regenerar todos los plists con `scripts/install-macos-services.sh`. No cambies ni elimines el histórico SQLite. El nombre de aplicación, título y documentación ya es ToneDashboard.

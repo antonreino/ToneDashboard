@@ -39,7 +39,7 @@ service_status() {
 }
 
 echo "======================================"
-echo "🎬 EMBY AUTOMATION - MAC"
+echo "🪐 TONEDASHBOARD - MAC"
 echo "======================================"
 echo
 
@@ -57,6 +57,9 @@ service_status "com.tone.emby-log-viewer"
 echo
 echo "🚨 Alertas de errores:"
 service_status "com.tone.emby-log-alerts"
+
+echo
+echo "🔄 Actualización catálogo PS5:"
 
 echo
 echo "📁 Media: $INBOX_DIR"
