@@ -82,6 +82,8 @@ struct OrbitZeroView: View {
     @State private var starting = false
     @State private var reloadIdentity = UUID()
 
+    @State private var showPairCode = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
@@ -102,6 +104,8 @@ struct OrbitZeroView: View {
                     }
                     .buttonStyle(.borderedProminent)
                 }
+                Button("Ver código", systemImage: "key.fill") { showPairCode = true }
+                    .buttonStyle(.bordered)
                 Button("Recargar", systemImage: "arrow.clockwise.circle") {
                     reloadIdentity = UUID()
                 }
@@ -129,6 +133,7 @@ struct OrbitZeroView: View {
         .padding(12)
         .navigationTitle("Orbit Zero")
         .task { await session.refreshOrbitStatus() }
+        .sheet(isPresented: $showPairCode) { OrbitPairCodeSheet() }
         .alert("Arrancar Orbit Zero", isPresented: $showStartDialog) {
             SecureField("Contraseña adicional", text: $controlPassword)
             Button("Cancelar", role: .cancel) { controlPassword = "" }
@@ -265,3 +270,72 @@ struct OrbitWebKitMobile: UIViewRepresentable {
     }
 }
 #endif
+
+struct OrbitPairCodeSheet: View {
+    @EnvironmentObject private var session: DashboardSession
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var password = ""
+    @State private var code: String?
+    @State private var error: String?
+    @State private var busy = false
+    @State private var request: Task<Void, Never>?
+    @State private var expiry: Task<Void, Never>?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Código de Orbit").font(.title2)
+            Text("Introduce la contraseña para consultar el código vigente del Mac. Se ocultará en 60 segundos.")
+                .font(.callout)
+            if let code {
+                Text(code).font(.system(size: 36, weight: .bold, design: .monospaced))
+                    .privacySensitive()
+            } else {
+                SecureField("Contraseña para mostrar el código", text: $password)
+                    .onSubmit { reveal() }
+                if let error { Text(error).foregroundStyle(.orange).font(.caption) }
+            }
+            HStack {
+                Button("Cerrar") { clear(); dismiss() }
+                Spacer()
+                if code == nil {
+                    Button(busy ? "Consultando…" : "Mostrar código") { reveal() }
+                        .disabled(busy || password.count < 12)
+                }
+            }
+        }
+        .padding(24).frame(minWidth: 300, idealWidth: 420)
+        .onDisappear { clear() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { clear(); dismiss() }
+        }
+        .onChange(of: session.baseURLString) { _, _ in clear(); dismiss() }
+        .onChange(of: session.username) { _, _ in clear(); dismiss() }
+        .onChange(of: session.password) { _, _ in clear(); dismiss() }
+    }
+
+    private func reveal() {
+        guard !busy, let client = session.client else { return }
+        let secret = password
+        password = ""; code = nil; error = nil; busy = true
+        request = Task { @MainActor in
+            defer { busy = false }
+            do {
+                let result = try await client.revealOrbitCode(password: secret)
+                guard !Task.isCancelled else { return }
+                code = result.code
+                expiry = Task { @MainActor in
+                    do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                    clear(); dismiss()
+                }
+            } catch {
+                if !Task.isCancelled { self.error = error.localizedDescription }
+            }
+        }
+    }
+
+    private func clear() {
+        request?.cancel(); expiry?.cancel()
+        password = ""; code = nil; error = nil
+    }
+}

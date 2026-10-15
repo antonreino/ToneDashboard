@@ -16,7 +16,7 @@ Aplicación nativa en **SwiftUI** para **macOS, iPhone y iPad**, que acompaña a
 
 La pestaña **Orbit** no instala Orbit Zero ni almacena sus enlaces: usa el proxy `https://TU-DASHBOARD/orbit-bridge/zero/`. El navegador nativo reutiliza las credenciales Basic del dashboard **sólo para el host y puerto HTTPS configurados**. El inicio de Orbit está disponible mediante el endpoint protegido y pide una contraseña adicional de 12+ caracteres que **no se guarda**. Las ventanas de verificación que Orbit abre en el escritorio del Mac no se controlan desde el iPhone; completa ese paso en casa.
 
-La propia aplicación de Orbit sigue gestionando los códigos de vinculación; ToneDashboardApps no los lee ni los almacena.
+Orbit sigue generando los códigos de vinculación. «Ver código» consulta el código vigente mediante el lector del Mac y una contraseña adicional; solo lo conserva en memoria durante un máximo de 60 segundos.
 
 ## Requisitos
 
@@ -48,7 +48,7 @@ La carpeta raíz y el `.xcodeproj` pasan a llamarse `ToneDashboardApps`; abre el
 
 - Login Basic sobre TLS; sin almacenamiento de contraseña de inicio de Orbit.
 - WebKit sólo navega a páginas HTTPS bajo la autoridad configurada para el dashboard. No se abren páginas de proveedores dentro de otras ventanas del sistema.
-- Sin VNC, sin lectura del llavero de Orbit, sin exposición de códigos de emparejamiento.
+- Sin VNC, sin lectura del llavero de Orbit, consulta de código únicamente mediante contraseña adicional.
 - El código fuente y los ZIP no contienen contraseñas ni `.env` reales.
 - Las vistas nativas y Orbit se ejecutan en el mismo dispositivo, pero Orbit Zero debe seguir abierto en el Mac mini para proporcionar su catálogo/cola.
 
@@ -76,3 +76,7 @@ Pruebas de la política de origen y redirecciones:
 swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift tests/APISecurityTests.swift -o /tmp/api-security-tests
 /tmp/api-security-tests
 ```
+
+## Ver código de Orbit
+
+En la pestaña Orbit, **Ver código** pide la contraseña `ORBIT_PAIR_CODE_PASSWORD` configurada en el servidor (mínimo 12 caracteres). Es el mismo endpoint y la misma protección que utiliza la web. La contraseña no se guarda y el código se oculta a los 60 segundos, al cerrar o al pasar a segundo plano. Requiere instalar y autorizar ToneOrbitCodeReader en el Mac; los errores de permiso, Orbit cerrado o código no visible se muestran en la app.

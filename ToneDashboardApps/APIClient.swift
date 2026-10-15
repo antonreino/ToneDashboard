@@ -139,6 +139,14 @@ struct APIClient {
         try await execute(try request(path: "/api/orbit/status"), as: OrbitStatus.self)
     }
 
+    func revealOrbitCode(password: String) async throws -> OrbitPairCodeResponse {
+        try await execute(try request(
+            path: "/api/orbit/pair-code", method: "POST", body: Data("{}".utf8),
+            contentType: "application/json",
+            extraHeaders: ["X-Orbit-Action": "reveal-code", "X-Orbit-Pair-Password": password]
+        ), as: OrbitPairCodeResponse.self)
+    }
+
     func startOrbit(controlPassword: String) async throws -> OrbitStartResponse {
         guard let origin = URLComponents(url: baseURL, resolvingAgainstBaseURL: false),
               origin.scheme?.lowercased() == "https", let host = origin.host else {

@@ -310,7 +310,7 @@ struct APIAck: Codable {
 
 
 // API de control de Orbit Zero en ToneDashboard. El código de vinculación
-// nunca se devuelve ni se almacena en la aplicación.
+// solo se revela mediante una acción protegida y permanece en memoria.
 struct OrbitStatus: Decodable {
     let running: Bool
     let can_start: Bool
@@ -322,4 +322,9 @@ struct OrbitStartResponse: Decodable {
     let running: Bool?
     let message: String?
     let error: String?
+}
+
+struct OrbitPairCodeResponse: Decodable {
+    let code: String
+    let display_seconds: Int
 }
