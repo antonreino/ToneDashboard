@@ -800,15 +800,25 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
           <h2 class="section-title">🪐 Orbit Zero <small>Mac mini · PS5</small></h2>
           <div class="orbit-toolbar-buttons">
             <button class="button" id="orbitStart" type="button" hidden>Iniciar Orbit</button>
+            <button class="button" id="orbitReveal" type="button">Ver código</button>
             <button class="button" id="orbitRetry" type="button">Reconectar</button>
             <a class="button" id="orbitOpen" href="/orbit-bridge/zero/" target="_blank" rel="noopener noreferrer">Abrir aparte ↗</a>
           </div>
         </div>
         <p class="orbit-status" id="orbitStatus" role="status">Comprobando Orbit Zero…</p>
         <iframe class="orbit-frame" id="orbitFrame" title="Orbit Zero integrado" loading="lazy" referrerpolicy="same-origin" src="about:blank"></iframe>
-        <p class="orbit-note">Para vincular un dispositivo utiliza el código que muestra Orbit Zero en <b>Consola → Cómo funciona</b> de la aplicación del Mac. Nuestro dashboard no lee ni guarda credenciales ni códigos de Orbit. Fuera de casa utiliza una VPN privada y HTTPS.</p>
+        <p class="orbit-note">Para vincular un dispositivo utiliza el código que muestra Orbit Zero en <b>Consola → Cómo funciona</b> de la aplicación del Mac. «Ver código» consulta el código actual del Mac y lo oculta después de 60 segundos. Fuera de casa utiliza una VPN privada y HTTPS.</p>
       </div>
     </section>
+    <dialog id="orbitPairDialog" class="orbit-password-dialog">
+      <form id="orbitPairForm">
+        <h3>Código de Orbit</h3>
+        <label for="orbitPairPassword">Contraseña para mostrar el código</label>
+        <input id="orbitPairPassword" type="password" required autocomplete="off" minlength="12">
+        <p id="orbitPairResult" role="status" style="white-space:pre-wrap"></p>
+        <menu><button class="button" type="button" id="orbitPairClose">Cerrar</button><button class="button" type="submit">Mostrar código</button></menu>
+      </form>
+    </dialog>
     <dialog id="orbitControlDialog" class="orbit-password-dialog" aria-labelledby="orbitControlTitle">
       <form method="dialog" id="orbitControlForm">
         <h3 id="orbitControlTitle">Arrancar Orbit Zero</h3>
@@ -1149,6 +1159,33 @@ torrentForm.addEventListener('submit',async e=>{
 
 // orbit-catalog-proxy v2: proxy mismo origen para Safari/iPhone, sin direcciones LAN en el cliente.
 // Orbit Zero v3: cargar solo en la pestaña, sin comprobaciones HEAD.
+let orbitCodeTimer,orbitCodeRequest;
+function clearOrbitCode(){
+ clearTimeout(orbitCodeTimer);orbitCodeRequest?.abort();
+ document.getElementById('orbitPairPassword').value='';
+ document.getElementById('orbitPairResult').textContent='';
+}
+document.getElementById('orbitReveal').addEventListener('click',()=>{
+ clearOrbitCode();document.getElementById('orbitPairDialog').showModal();
+ document.getElementById('orbitPairPassword').focus();
+});
+document.getElementById('orbitPairClose').addEventListener('click',()=>document.getElementById('orbitPairDialog').close());
+document.getElementById('orbitPairDialog').addEventListener('close',clearOrbitCode);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearOrbitCode();document.getElementById('orbitPairDialog').close();}});
+document.getElementById('orbitPairForm').addEventListener('submit',async e=>{
+ e.preventDefault();clearTimeout(orbitCodeTimer);orbitCodeRequest?.abort();
+ const secret=document.getElementById('orbitPairPassword');const password=secret.value;secret.value='';
+ const output=document.getElementById('orbitPairResult');output.textContent='Consultando el Mac…';
+ const request=new AbortController();orbitCodeRequest=request;
+ try{
+  const response=await fetch('/api/orbit/pair-code',{method:'POST',cache:'no-store',signal:request.signal,
+   headers:{'Content-Type':'application/json','X-Dashboard-Action':'write','X-Orbit-Action':'reveal-code','X-Orbit-Pair-Password':password},body:'{}'});
+  const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo consultar Orbit');
+  if(request.signal.aborted)return;
+  output.textContent='Código vigente: '+data.code+'\nSe ocultará en 60 segundos.';
+  orbitCodeTimer=setTimeout(()=>{clearOrbitCode();document.getElementById('orbitPairDialog').close();},60000);
+ }catch(error){if(!request.signal.aborted)output.textContent=error.message;}
+});
 let orbitLoaded=false,orbitRefreshing=false;
 async function orbitRefreshStatus(loadFrame=false){
  const status=document.getElementById('orbitStatus');
@@ -1746,6 +1783,14 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/orbit/pair-code':
+            from orbit_pairing import reveal_code
+            if not (DASHBOARD_USER and DASHBOARD_PASSWORD):
+                self.send_bytes(b'{"error":"Configura las credenciales del dashboard"}', 'application/json', 503)
+                return
+            result, code = reveal_code(self.headers, self.client_address)
+            self.send_bytes(json.dumps(result, ensure_ascii=False).encode(), 'application/json; charset=utf-8', code)
+            return
         if parsed.path == '/api/orbit/start':
             from orbit_dashboard_control import start_app
             result,code=start_app(self.headers, self.client_address)

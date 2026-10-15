@@ -76,7 +76,7 @@ cd /Volumes/Datos/Proyectos/Scripts/emby-organizer
 launchctl kickstart -k gui/$(id -u)/com.tone.emby-log-viewer
 ```
 
-Abre `http://127.0.0.1:8765` en el Mac mini. La pestaña **Orbit Zero** requiere que Orbit Zero esté abierto. `Iniciar Orbit` exige autenticación en el dashboard y una segunda contraseña; no recupera ni expone los códigos de emparejamiento de Orbit.
+Abre `http://127.0.0.1:8765` en el Mac mini. La pestaña **Orbit Zero** requiere que Orbit Zero esté abierto. `Iniciar Orbit` exige autenticación en el dashboard y una segunda contraseña; el código del ordenador se consulta por separado con «Ver código» y otra contraseña.
 
 ## Limpieza opcional de las tablas SQLite del catálogo viejo
 
@@ -101,7 +101,7 @@ Antes de borrar, genera una **copia SQLite consistente con verificación de inte
 - `POST /api/orbit/start` — arranque protegido de Orbit (contraseña adicional y validación de origen).
 - `/orbit-bridge/zero/` — proxy autenticado del navegador Orbit, incluidos recursos gráficos y conexiones en tiempo real.
 
-Se recomienda HTTPS con autenticación y VPN privada desde fuera de casa. **No abras los puertos 34179, 34177 ni VNC al exterior**. El proxy de Orbit es sólo para una instalación de confianza y no debe exponerse sin protección. El servidor no extrae contraseñas ni códigos de Orbit.
+Se recomienda HTTPS con autenticación y VPN privada desde fuera de casa. **No abras los puertos 34179, 34177 ni VNC al exterior**. El proxy de Orbit es sólo para una instalación de confianza y no debe exponerse sin protección. El servidor no extrae contraseñas de Orbit; el lector opcional solo consulta el código visible del ordenador mediante Accesibilidad.
 
 ## Pruebas y calidad
 
@@ -129,3 +129,13 @@ Las descargas directas solo aceptan destinos públicos HTTP/HTTPS en puertos 80 
 Las acciones POST y las mutaciones de Orbit comprueban `Origin` contra `Host`. Los clientes nativos sin `Origin` deben enviar `X-Dashboard-Action: write`. Las conexiones WebSocket de Orbit exigen un origen coincidente. El proxy inverso debe conservar el Host público. Actualiza la app junto con el servidor: los clientes antiguos sin la cabecera deberán actualizarse para descargar o subir torrents.
 
 El dashboard consulta cada 12 segundos y solo carga ofertas en Chollos y logs en Inicio. Orbit sigue siendo una aplicación de confianza que comparte origen con el dashboard; estos controles no aíslan un script comprometido servido por Orbit. Mantén el acceso privado y Orbit actualizado.
+
+## Mostrar el código de Orbit desde web y apps
+
+1. Establece `ORBIT_PAIR_CODE_PASSWORD` en el `.env` local (mínimo 12 caracteres y diferente de las otras contraseñas).
+2. Instala el lector: `bash scripts/install-orbit-code-reader.sh`. Autoriza **ToneOrbitCodeReader** en Ajustes del Sistema → Privacidad y seguridad → Accesibilidad.
+3. Reinicia el servicio `com.tone.emby-log-viewer` y actualiza las apps. En Orbit pulsa **Ver código**, introduce la contraseña y consulta el código vigente. Se oculta a los 60 segundos, al cerrar el diálogo o al pasar a segundo plano.
+
+El lector local puede abrir la pestaña Consola y el desplegable Cómo funciona de Orbit. No modifica el paquete de Orbit, no utiliza sus cookies ni lee el llavero. Solo funciona con la interfaz en español o inglés y con Orbit instalado en `/Applications/Orbit Zero.app`. Si Orbit no muestra el código (por ejemplo, PS5 desconectada en esta versión), se devuelve un error explícito; nunca un código guardado de un arranque anterior.
+
+`POST /api/orbit/pair-code` exige el login del dashboard, protección de origen, `X-Orbit-Action: reveal-code` y `X-Orbit-Pair-Password`. No devuelve el código en `/api/orbit/status`, no lo persiste ni lo registra. Cinco contraseñas incorrectas bloquean la consulta durante un minuto por dirección de conexión; detrás del proxy ese límite puede compartirse. La contraseña nunca se envía a Orbit y cada consulta vuelve a leer el código vigente.

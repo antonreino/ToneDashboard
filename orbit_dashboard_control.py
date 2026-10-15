@@ -1,4 +1,4 @@
-"""Acciones mínimas sobre Orbit Zero. Nunca inspecciona llaveros ni códigos de emparejamiento.
+"""Acciones mínimas sobre Orbit Zero. El arranque no inspecciona llaveros; la consulta protegida del código está en orbit_pairing.
 
 El arranque requiere autenticación HTTP del dashboard (comprobada por el handler),
 una segunda contraseña y una solicitud same-origin con cabecera no simple.
@@ -31,7 +31,7 @@ def get_status():
         'running': running(),
         'can_start': sys.platform == 'darwin' and MAC_APP.is_dir() and len(password) >= 12,
         'start_configured': len(password) >= 12,
-        'pair_code_available': False,
+        'pair_code_available': len(os.getenv('ORBIT_PAIR_CODE_PASSWORD', '')) >= 12,
     }
 
 

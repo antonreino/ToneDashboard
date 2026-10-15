@@ -163,7 +163,7 @@ class DashboardEndpointTests(unittest.TestCase):
         return handler
 
     def test_cross_origin_never_queues_or_writes(self):
-        for path in ('/api/download', '/api/torrent', '/api/orbit/start', '/orbit-bridge/zero/api/action'):
+        for path in ('/api/download', '/api/torrent', '/api/orbit/start', '/api/orbit/pair-code', '/orbit-bridge/zero/api/action'):
             handler = self.handler(path, {'Host': 'dashboard.test', 'Origin': 'https://evil.test'})
             with mock.patch.object(self.dashboard, 'queue_download_request') as queue, \
                  mock.patch.object(self.dashboard, 'save_torrent_bytes') as save:
