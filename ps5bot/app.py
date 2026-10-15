@@ -216,6 +216,17 @@ def command_reply(message, username, allowed, store, cfg):
             command,
         )
         return None
+    origin = message.get('forward_origin') or {}
+    sender = origin.get('sender_user') if origin.get('type') == 'user' else message.get('forward_from')
+    if isinstance(sender, dict) and isinstance(sender.get('id'), int) and sender['id'] > 0 and not sender.get('is_bot'):
+        store.set_meta('forwarded_chat_candidate', json.dumps({
+            'id': str(sender['id']), 'first_name': sender.get('first_name', ''),
+            'received_at': int(message.get('date') or time.time()),
+        }, ensure_ascii=False))
+        LOG.info('Identificador de usuario reenviado guardado para revisión local; no autorizado automáticamente.')
+    elif origin.get('type') == 'hidden_user':
+        store.set_meta('forwarded_chat_candidate', json.dumps({'error': 'hidden_user'}))
+        LOG.info('El reenvío oculta el identificador de usuario por privacidad de Telegram.')
     text = message.get('text', '').strip().split()
     if not text:
         return None

@@ -141,7 +141,7 @@ Si la fuente devuelve 403/503/CAPTCHA o requiere JavaScript, el adaptador HTTP n
 - `sources[].urls`: búsquedas/categorías/fichas concretas HTTPS del dominio correspondiente.
 - `model_overrides`: asignación explícita de URL canónica a `fat_digital`, `fat_disc`, `slim_digital` o `slim_disc`; úsala solo tras identificar la ficha.
 
-En `.env`, `TELEGRAM_CHAT_IDS` permite varios identificadores separados por comas. Solo esos chats reciben respuestas y avisos. Si autorizas un grupo, cualquier miembro que escriba en él puede consultar los precios. No hay comandos para ejecutar shell ni cambiar la configuración por Telegram.
+En `.env`, `TELEGRAM_CHAT_IDS` permite varios identificadores separados por comas. Para incorporar un amigo, primero debe abrir el bot y pulsar Iniciar. Un reenvío realizado desde un chat autorizado guarda únicamente su identificador y nombre en el metadato local `forwarded_chat_candidate`, para revisión manual; no añade destinatarios automáticamente. Si Telegram oculta el remitente, el amigo debe escribir directamente al bot. Los identificadores se añaden solo al `.env` local y requieren reiniciar el servicio. Solo esos chats reciben respuestas y avisos. Si autorizas un grupo, cualquier miembro que escriba en él puede consultar los precios. No hay comandos para ejecutar shell ni cambiar la configuración por Telegram.
 
 ## Ejecución manual / Linux
 
