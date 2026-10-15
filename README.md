@@ -141,3 +141,19 @@ El lector local puede abrir la pestaña Consola y el desplegable Cómo funciona 
 `POST /api/orbit/pair-code` exige el login del dashboard, protección de origen, `X-Orbit-Action: reveal-code` y `X-Orbit-Pair-Password`. No devuelve el código en `/api/orbit/status`, no lo persiste ni lo registra. Cinco contraseñas incorrectas bloquean la consulta durante un minuto por dirección de conexión; detrás del proxy ese límite puede compartirse. La contraseña nunca se envía a Orbit y cada consulta vuelve a leer el código vigente.
 
 El servicio inicia el lector como aplicación independiente mediante LaunchServices para que macOS aplique el permiso de Accesibilidad del lector, no el del proceso Python. La respuesta usa una FIFO de modo 0600 dentro de un directorio privado 0700; el código no se escribe en un archivo regular. Si al actualizar el lector el permiso aparece activado pero macOS lo deniega, elimina su entrada de Accesibilidad y vuelve a añadir la aplicación instalada para autorizar su firma actual.
+
+## Clasificación y estabilidad de vídeos
+
+El organizador obtiene primero el título del nombre del vídeo. Usa las carpetas superiores como alternativa cuando el archivo solo contiene un identificador de episodio, omitiendo `Season 2` / `Temporada 2` y sin usar la raíz `Torrent` como título. Limpia etiquetas como `4K`, `UHD`, `HDR` y `H.265`; conserva los números del título. Reconoce temporada 0, episodios concatenados `S01E01E02` y rangos `S01E01-S01E03`, `S01E01-E03` y `S01E01-03`. Rechaza rangos entre temporadas y episodios repetidos o invertidos. `Cap.103` se interpreta como temporada 1, episodio 3, salvo que haya una señal explícita de anime.
+
+Cada archivo debe permanecer sin cambios durante 180 segundos **observados por el proceso**, aunque tenga una fecha antigua. Un reinicio comienza de nuevo esa observación. `--scan-once` hace dos pasadas separadas por 180 segundos; los archivos modificados entre ambas esperan a otra ejecución. Solo puede ejecutarse una instancia, también para `--dry-run`. La simulación conserva los vídeos, pero sigue consultando bibliotecas y registrando el historial.
+
+Antes de publicar una subida se comprueba que el origen no cambió. Los temporales SFTP son únicos y terminan en `.uploading`; un fallo conserva el origen. No se sobrescribe un destino ya existente: el origen se conserva en `NoClasificado`. Esta carpeta, `.staging`, sus descendientes y los enlaces simbólicos se excluyen del procesamiento. Un fallo de archivo no detiene el resto del escaneo. Las carpetas antiguas creadas por clasificaciones erróneas requieren revisión manual: no se fusionan automáticamente.
+
+TMDb solo acepta una coincidencia inequívoca de título, comprueba el año indicado y renueva su caché cada 24 horas. Una respuesta ambigua no se decide por popularidad; se usan las reglas locales o cuarentena.
+
+### Refresco en el servidor Emby
+
+`scripts/emby-watch-refresh.sh` se instala **en el servidor Linux de Emby**, con Bash, `inotifywait` y `curl`. Conserva las variables `EMBY_WATCH_DIR`, `EMBY_URL`, `EMBY_API_KEY`, `COOLDOWN` (180 s) y `MIN_REFRESH_INTERVAL` (300 s); añade `RETRY_INTERVAL` (30 s). Un único planificador espera el silencio de eventos y conserva cualquier refresco pendiente hasta cumplir el intervalo mínimo. Solo actualiza por vídeos publicados/eliminados o directorios movidos/eliminados, no por crear carpetas o escribir `.uploading`. Los fallos se reintentan sin necesitar otro archivo.
+
+Tras actualizar este script en el clon, hay que copiarlo al servidor como `/usr/local/bin/emby-watch-refresh.sh` y reiniciar `emby-watch-refresh.service` allí. Un `git pull` o reinicio del organizador en el Mac no actualiza esa copia remota. Los tests ejecutan el script con `inotifywait` y `curl` simulados, sin acceder a Emby ni a Telegram.

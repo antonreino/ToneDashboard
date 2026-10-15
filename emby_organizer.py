@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import getpass
+import fcntl
+import uuid
 import json
 import logging
 import os
@@ -142,6 +144,7 @@ class MediaInfo:
     episode: Optional[int] = None
     year: Optional[int] = None
     extension: str = ""
+    episode_suffix: str = ""
 
 
 class OrganizerError(Exception):
@@ -410,11 +413,22 @@ class SftpUploader:
     def upload_file(self, local_path: Path, category: str, remote_path: str):
         remote_dir = str(Path(remote_path).parent).replace("\\", "/")
         self.ensure_remote_dir(category, remote_dir)
-        temp_remote_path = remote_path + ".uploading"
+        temp_remote_path = remote_path + "." + uuid.uuid4().hex + ".uploading"
+
+        signature = MediaOrganizer.file_signature(local_path)
 
         def op(sftp):
-            sftp.put(str(local_path), temp_remote_path)
-            sftp.rename(temp_remote_path, remote_path)
+            try:
+                sftp.put(str(local_path), temp_remote_path)
+                if MediaOrganizer.file_signature(local_path) != signature:
+                    raise OrganizerError("El archivo cambió durante la subida")
+                sftp.rename(temp_remote_path, remote_path)
+            except Exception:
+                try:
+                    sftp.remove(temp_remote_path)
+                except OSError:
+                    pass
+                raise
 
         return self._with_reconnect(category, op)
 
@@ -450,8 +464,9 @@ class SftpUploader:
 
         # Series normales o anime episódico.
         if media.category in {"series", "anime"} and media.episode is not None:
-            season = media.season or 1
+            season = media.season if media.season is not None else 1
             filename = f"S{season:02d}E{media.episode:03d}{media.extension}" if media.category == "anime" and media.episode >= 100 else f"S{season:02d}E{media.episode:02d}{media.extension}"
+            filename = filename[:-len(media.extension)] + media.episode_suffix + media.extension if media.extension else filename + media.episode_suffix
             return f"{target.path}/{safe_title}/Season {season}/{filename}"
 
         # Películas SIN carpeta (estructura plana)
@@ -528,32 +543,52 @@ class MediaOrganizer:
         self.uploader.close()
 
     def should_ignore(self, path: Path) -> bool:
-        if not path.is_file():
+        if path.is_symlink() or not path.is_file():
             return True
-        if path.parent.name in IGNORE_DIR_NAMES:
+        try:
+            relative = path.relative_to(INBOX_DIR)
+        except ValueError:
             return True
-        if path.name.lower() in IGNORE_FILENAMES:
+        if any(part in IGNORE_DIR_NAMES for part in relative.parts[:-1]):
             return True
-        if path.suffix.lower() in IGNORE_EXTENSIONS:
+        if any((INBOX_DIR.joinpath(*relative.parts[:i])).is_symlink() for i in range(1, len(relative.parts))):
             return True
-        if path.suffix.lower() not in VIDEO_EXTENSIONS:
-            return True
-        return False
+        return path.name.lower() in IGNORE_FILENAMES or path.suffix.lower() not in VIDEO_EXTENSIONS
+
+    @staticmethod
+    def file_signature(path):
+        stat = path.stat()
+        return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
 
     def is_stable(self, path: Path) -> bool:
+        # Observe a full quiet period, even when a manual copy preserves its old mtime.
+        observations = getattr(self, "_observations", None)
+        if observations is None:
+            self._observations = observations = {}
         try:
-            stat1 = path.stat()
-            time.sleep(2)
-            stat2 = path.stat()
-            if stat1.st_size != stat2.st_size:
-                return False
-            age = time.time() - stat2.st_mtime
-            return age >= STABLE_SECONDS
+            signature = self.file_signature(path)
         except FileNotFoundError:
+            observations.pop(path, None)
             return False
+        now = time.monotonic()
+        previous = observations.get(path)
+        if previous is None or previous[0] != signature:
+            observations[path] = signature, now
+            return False
+        return now - previous[1] >= STABLE_SECONDS
 
     def clean_title(self, raw_name: str) -> str:
-        name = raw_name.replace(".", " ").replace("_", " ")
+        name = re.sub(r"(?i)(?:www\.|newpct\d*).*?$", "", raw_name)
+        name = re.sub(r"^\[[^\]]+\]\s*", "", name)
+        metadata = re.search(r"(?i)\b(?:4k|uhd|hdr10|hdr|dolby[ ._-]+vision|h[ .]?26[45]|2160p|1080p|720p|480p|x26[45]|hevc|bluray|bdrip|webrip|web[ ._-]?dl|hdrip|dvdrip|hdtv)\b", name)
+        if metadata and name[:metadata.start()].strip(" -_.([]"):
+            name = name[:metadata.start()]
+        name = re.sub(r"(?i)\bh[ .]?26[45]\b", " ", name)
+        name = name.replace(".", " ").replace("_", " ")
+        name = re.sub(r"(?i)\b(?:4k|uhd|hdr10\+?|hdr|dv|dolby[ ._-]+vision|atmos|ddp?5[ .]1)\b", " ", name)
+        name = re.sub(r"(?i)\bS\d{1,2}E\d{1,3}(?:E\d{1,3}|-S\d{1,2}E\d{1,3})*.*$", "", name)
+        name = re.sub(r"(?i)\b\d{1,2}x\d{1,3}.*$", "", name)
+        name = re.sub(r"(?i)\bSeason[ ._-]*\d+[ ._-]*Episode[ ._-]*\d+.*$", "", name)
         name = re.sub(r"^\[[^\]]+\]\s*", "", name)
         name = HASH_BLOCK_PATTERN.sub("", name)
         name = re.sub(r"(?i)\[Cap[ ._-]?\d{1,4}\]", "", name)
@@ -604,27 +639,10 @@ class MediaOrganizer:
         return name, release_group
 
     def clean_title_for_tmdb(self, raw_name: str) -> str:
-        name = raw_name
-
-        name = re.sub(r"(?i)www\..*$", " ", name)
-        name = re.sub(r"(?i)newpct\d*.*$", " ", name)
-
-        name = name.replace(".", " ").replace("_", " ")
-
-        name = re.sub(r"\[[^\]]*\]", " ", name)
-        name = re.sub(r"\([^\)]*\)", " ", name)
-
-        name = re.sub(r"(?i)\b(mkv|mp4|avi|mov|m4v|ts)\b", " ", name)
-
-        name = QUALITY_TOKENS.sub(" ", name)
-        name = re.sub(
-            r"(?i)\b(BD1080|BD720|MicroHD|Castellano|Japones|Japonés|Japanese|Subs?|AC3|DTS|5\.1|5 1|ES|EN)\b",
-            " ",
-            name,
-        )
-
-        name = re.sub(r"\s+", " ", name).strip(" -_.[]")
-        logging.info("TMDb query limpia: raw=%s -> query=%s", raw_name, name)
+        name = self.clean_title(raw_name)
+        year = self.detect_year(name)
+        if year and name != str(year):
+            name = re.sub(r"[ (]*" + str(year) + r"[ )]*$", "", name).strip()
         return name
 
     def detect_episode(self, name: str) -> Tuple[Optional[int], Optional[int]]:
@@ -705,12 +723,9 @@ class MediaOrganizer:
             if episode <= 0:
                 return None
 
-            # Seguridad: sin grupo ni pista anime, no queremos convertir cualquier "Película - 2024" en anime.
-            # Permitimos episodios altos si hay patrón claro de Cap. o release group; para episodios bajos exigimos señal anime.
+            # Cap.103 alone also occurs in ordinary series; require an anime signal.
             if not has_anime_release_signal:
-                cap_like = re.search(r"(?i)\bCap\.?\s*\d{1,4}\b", cleaned) is not None
-                if not cap_like:
-                    return None
+                return None
 
             if not title:
                 return None
@@ -742,31 +757,32 @@ class MediaOrganizer:
         return None
 
     def detect_year(self, name: str) -> Optional[int]:
-        match = YEAR_PATTERN.search(name)
-        return int(match.group(1)) if match else None
+        matches = list(YEAR_PATTERN.finditer(name))
+        if not matches:
+            return None
+        year = matches[-1].group(1)
+        # Titles such as "1917" are not themselves release years.
+        return None if self.clean_title(name).strip(" ()") == year else int(year)
 
     def normalize_name(self, value: str) -> str:
         value = value.lower()
         value = unicodedata.normalize("NFKD", value)
         value = "".join(ch for ch in value if not unicodedata.combining(ch))
-        value = re.sub(r"(?i)\b(the|tv|serie|series|season)\b", " ", value)
         value = re.sub(r"[^a-z0-9]+", "", value)
         return value
 
     def resolve_existing_series(self, parsed_title: str, preferred_category: str) -> Tuple[str, str]:
-        candidates = []
-        for category in [preferred_category, "series", "anime"]:
-            try:
-                for remote_dir in self.uploader.list_remote_dirs(category):
-                    candidates.append((category, remote_dir))
-            except Exception:
-                continue
-
         normalized_target = self.normalize_name(parsed_title)
-        for category, remote_dir in candidates:
-            if self.normalize_name(remote_dir) == normalized_target:
-                return category, remote_dir
-
+        for category in dict.fromkeys([preferred_category, "series", "anime"]):
+            try:
+                directories = self.uploader.list_remote_dirs(category)
+            except Exception as exc:
+                raise OrganizerError("No se pudo comprobar la biblioteca remota") from exc
+            matches = [name for name in directories if self.normalize_name(name) == normalized_target]
+            if len(matches) > 1:
+                raise OrganizerError("Hay varias carpetas remotas con el mismo título normalizado")
+            if matches:
+                return category, matches[0]
         return preferred_category, parsed_title
 
     def load_tmdb_cache(self) -> dict:
@@ -796,8 +812,9 @@ class MediaOrganizer:
         cache = self.load_tmdb_cache()
         cache_key = self.normalize_name(query)
 
-        if cache_key in cache:
-            return cache[cache_key]
+        cached = cache.get(cache_key)
+        if isinstance(cached, dict) and time.time() - cached.get("cached_at", 0) < 86400:
+            return cached.get("result")
 
         url = "https://api.themoviedb.org/3/search/multi"
         params = {
@@ -817,22 +834,20 @@ class MediaOrganizer:
             ]
 
             if not results:
-                cache[cache_key] = None
+                cache[cache_key] = {"cached_at": time.time(), "result": None}
                 self.save_tmdb_cache(cache)
                 logging.info("TMDb sin resultados para query=%s", query)
                 return None
 
-            result = sorted(
-                results,
-                key=lambda r: (
-                    self.normalize_name(r.get("title") or r.get("name") or "") == self.normalize_name(query),
-                    r.get("popularity", 0),
-                    r.get("vote_count", 0),
-                ),
-                reverse=True,
-            )[0]
+            results = [r for r in results if any(
+                self.normalize_name(r.get(key) or "") == self.normalize_name(query)
+                for key in ("title", "name", "original_title", "original_name")
+            )]
+            if len(results) != 1:
+                return None
+            result = results[0]
 
-            cache[cache_key] = result
+            cache[cache_key] = {"cached_at": time.time(), "result": result}
             self.save_tmdb_cache(cache)
             return result
 
@@ -846,7 +861,6 @@ class MediaOrganizer:
 
     def classify_with_tmdb(self, path: Path) -> Optional[MediaInfo]:
         raw_candidates = [
-            path.parent.name if path.parent != INBOX_DIR else "",
             path.stem,
         ]
 
@@ -861,6 +875,9 @@ class MediaOrganizer:
             if not result:
                 continue
 
+            expected_year = self.detect_year(path.stem)
+            if expected_year and not str(result.get("release_date") or result.get("first_air_date") or "").startswith(str(expected_year)):
+                continue
             media_type = result.get("media_type")
             genre_ids = result.get("genre_ids", [])
             original_language = result.get("original_language")
@@ -918,7 +935,7 @@ class MediaOrganizer:
     def classify(self, path: Path) -> MediaInfo:
         stem = path.stem
         lower = stem.lower()
-        parent_stem = path.parent.name
+        parent_stem = path.parent.name if path.parent != INBOX_DIR else ""
         parent_lower = parent_stem.lower()
         extension = path.suffix.lower()
 
@@ -929,19 +946,47 @@ class MediaOrganizer:
         if anime_release:
             return anime_release
 
-        season, episode = self.detect_episode(stem)
+        episode_name = stem if re.search(r"(?i)\bS\d{1,2}E\d{1,3}", stem) else parent_stem
+        multi = re.search(r"(?i)\bS(\d{1,2})E(\d{1,3})((?:E\d{1,3})+|-(?:S\d{1,2})?E?\d{1,3})(?!\d)", episode_name)
+        episode_suffix = ""
+        if multi:
+            season, episode = int(multi[1]), int(multi[2])
+            if multi[3].startswith("-"):
+                end = re.fullmatch(r"(?i)-(?:S(\d{1,2}))?E?(\d{1,3})", multi[3])
+                end_season = int(end[1]) if end[1] is not None else season
+                if end_season != season or not episode < int(end[2]) <= episode + 50:
+                    return MediaInfo(path, stem, "unknown", extension=extension)
+                episode_suffix = "".join(f"E{n:02d}" for n in range(episode + 1, int(end[2]) + 1))
+            else:
+                extra_episodes = [int(n) for n in re.findall(r"(?i)E(\d+)", multi[3])]
+                if any(b <= a for a, b in zip([episode] + extra_episodes, extra_episodes)):
+                    return MediaInfo(path, stem, "unknown", extension=extension)
+                episode_suffix = "".join(f"E{n:02d}" for n in extra_episodes)
+        else:
+            season, episode = self.detect_episode(stem)
+        filename_has_episode = (multi is not None and episode_name == stem) or self.detect_episode(stem)[0] is not None
         if season is None or episode is None:
             season, episode = self.detect_episode(parent_stem)
 
         year = self.detect_year(stem)
         title = self.clean_title(stem)
-        parent_title = self.clean_title(parent_stem)
+        parent_title = ""
+        for ancestor in path.parents:
+            if ancestor == INBOX_DIR:
+                break
+            candidate = self.clean_title(ancestor.name)
+            generic = {"series", "serie", "anime", "animes", "peliculas", "movies", "torrent", "torrents", "descargas", "downloads", "completed", "completados"}
+            if candidate and self.normalize_name(candidate) not in generic and not re.fullmatch(r"(?i)(?:season|temporada|s)[ ._-]*\d+", candidate):
+                parent_title = candidate
+                break
 
         anime_context = any(hint in lower for hint in ANIME_HINTS) or any(hint in parent_lower for hint in ANIME_HINTS)
 
         if season is not None and episode is not None:
             category = "anime" if anime_context else "series"
-            final_title = parent_title or title
+            final_title = (title or parent_title) if filename_has_episode else (parent_title or title)
+            if not final_title:
+                return MediaInfo(path, stem, "unknown", extension=extension)
             category, final_title = self.resolve_existing_series(final_title, category)
             return MediaInfo(
                 source_path=path,
@@ -950,6 +995,7 @@ class MediaOrganizer:
                 season=season,
                 episode=episode,
                 extension=extension,
+                episode_suffix=episode_suffix,
             )
 
         # 2) Capítulos en español.
@@ -960,7 +1006,10 @@ class MediaOrganizer:
             spanish_season, spanish_episode = self.detect_spanish_episode(parent_stem, force_absolute=anime_context)
 
         if spanish_season is not None and spanish_episode is not None:
-            final_title = parent_title or title
+            filename_has_spanish_episode = self.detect_spanish_episode(stem)[0] is not None
+            final_title = (title or parent_title) if filename_has_spanish_episode else (parent_title or title)
+            if not final_title:
+                return MediaInfo(path, stem, "unknown", extension=extension)
             category = "anime" if anime_context else "series"
             category, final_title = self.resolve_existing_series(final_title, category)
             return MediaInfo(
@@ -982,7 +1031,7 @@ class MediaOrganizer:
         if movie_like:
             return MediaInfo(
                 source_path=path,
-                title=title,
+                title=re.sub(r"[ (]*" + str(year) + r"[ )]*$", "", title).strip() if year and title != str(year) else title,
                 category="movies",
                 year=year,
                 extension=extension,
@@ -1073,7 +1122,7 @@ class MediaOrganizer:
         for folder in folders:
             if folder == INBOX_DIR:
                 continue
-            if folder.name in IGNORE_DIR_NAMES:
+            if folder.is_symlink() or any(part in IGNORE_DIR_NAMES for part in folder.relative_to(INBOX_DIR).parts):
                 continue
 
             if self.dry_run:
@@ -1105,7 +1154,7 @@ class MediaOrganizer:
         category = category_names.get(media.category, media.category)
 
         if media.episode is not None:
-            detail = f"{media.title} - S{media.season or 1:02d}E{media.episode:03d}" if media.category == "anime" and media.episode >= 100 else f"{media.title} - S{media.season or 1:02d}E{media.episode:02d}"
+            detail = f"{media.title} - S{(media.season if media.season is not None else 1):02d}E{media.episode:03d}" if media.category == "anime" and media.episode >= 100 else f"{media.title} - S{(media.season if media.season is not None else 1):02d}E{media.episode:02d}"
         else:
             detail = media.title if media.year is None else f"{media.title} ({media.year})"
 
@@ -1142,7 +1191,11 @@ class MediaOrganizer:
             logging.info("Archivo aún en copia o demasiado reciente: %s", path)
             return
 
+        stable_signature = self.file_signature(path)
         media = self.classify(path)
+        if self.file_signature(path) != stable_signature:
+            logging.info("Archivo modificado durante la clasificación; se pospone: %s", path)
+            return
         if media.category == "unknown":
             self.quarantine(path, "No se pudo clasificar con suficiente confianza")
             return
@@ -1161,13 +1214,21 @@ class MediaOrganizer:
             )
             return
 
-        if self.uploader.exists(media.category, remote_path):
+        destination_exists = self.uploader.exists(media.category, remote_path)
+        if self.file_signature(path) != stable_signature:
+            logging.info("Archivo modificado antes de la subida; se pospone: %s", path)
+            return
+        if destination_exists:
             self.quarantine(path, f"El archivo remoto ya existe: {remote_path}")
             return
 
-        size_bytes = path.stat().st_size if path.exists() else None
+        signature = self.file_signature(path)
+        size_bytes = signature[2]
         self.uploader.upload_file(path, media.category, remote_path)
+        if self.file_signature(path) != signature:
+            raise OrganizerError("El archivo cambió durante la subida; se conserva la copia local")
         path.unlink()
+        getattr(self, "_observations", {}).pop(path, None)
         logging.info("Subido y eliminado localmente: %s", path)
         add_history(
             "organizer", "success", title=media.title, category=media.category,
@@ -1185,7 +1246,10 @@ class MediaOrganizer:
             if item.is_dir():
                 continue
             found_any = True
-            self.process_file(item)
+            try:
+                self.process_file(item)
+            except Exception as exc:
+                logging.error("No se pudo procesar %s: %s", item, redact_secrets(str(exc)))
 
         if not found_any:
             logging.info("No se encontraron archivos dentro de %s", INBOX_DIR)
@@ -1236,6 +1300,13 @@ def main():
         args.scan_once = True
 
     setup_logging(args.verbose)
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    lock = (STATE_DIR / "organizer.lock").open("a")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock.close()
+        raise SystemExit("Ya hay un organizador activo")
     organizer = MediaOrganizer(dry_run=args.dry_run)
 
     try:
@@ -1243,10 +1314,14 @@ def main():
             organizer.refresh_emby_storage(force=True)
             organizer.refresh_emby_system(force=True)
             organizer.scan_once()
+            # A one-shot run must also observe a full quiet period.
+            time.sleep(STABLE_SECONDS)
+            organizer.scan_once()
         elif args.daemon:
             organizer.run_daemon()
     finally:
         organizer.shutdown()
+        lock.close()
 
 
 if __name__ == "__main__":
