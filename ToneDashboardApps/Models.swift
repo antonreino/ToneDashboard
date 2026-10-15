@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 struct DashboardResponse: Codable {
     var services: [String: ServiceState]
@@ -327,4 +328,57 @@ struct OrbitStartResponse: Decodable {
 struct OrbitPairCodeResponse: Decodable {
     let code: String
     let display_seconds: Int
+}
+
+
+// One owner for the protected code and all in-flight requests. No persistence or clipboard.
+@MainActor
+final class OrbitCodeController: ObservableObject {
+    @Published private(set) var code: String?
+    @Published private(set) var error: String?
+    @Published private(set) var busy = false
+    @Published private(set) var displaySeconds = 60
+    private var generation = UUID()
+    private var request: Task<Void, Never>?
+    private var expiry: Task<Void, Never>?
+    private let wait: (Int) async throws -> Void
+
+    init(wait: @escaping (Int) async throws -> Void = { seconds in
+        try await Task.sleep(for: .seconds(seconds))
+    }) { self.wait = wait }
+
+    func reveal(load: @escaping () async throws -> OrbitPairCodeResponse) {
+        guard !busy else { return }
+        clear()
+        let token = generation
+        busy = true
+        request = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let reply = try await load()
+                guard token == self.generation, !Task.isCancelled else { return }
+                guard !reply.code.isEmpty, reply.display_seconds > 0 else { throw URLError(.cannotParseResponse) }
+                self.code = reply.code
+                self.displaySeconds = min(60, reply.display_seconds)
+                self.busy = false
+                self.expiry = Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    do { try await self.wait(self.displaySeconds) } catch { return }
+                    guard token == self.generation, !Task.isCancelled else { return }
+                    self.clear()
+                }
+            } catch {
+                guard token == self.generation, !Task.isCancelled else { return }
+                self.busy = false
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    func clear() {
+        generation = UUID()
+        request?.cancel(); request = nil
+        expiry?.cancel(); expiry = nil
+        code = nil; error = nil; busy = false
+    }
 }

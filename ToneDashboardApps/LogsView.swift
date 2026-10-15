@@ -13,7 +13,13 @@ struct LogsView: View {
     ]
 
     private var selectedInfo: (String, String, String) {
-        names.first(where: { $0.0 == selected }) ?? names[0]
+        availableNames.first(where: { $0.0 == selected }) ?? availableNames[0]
+    }
+
+    private var availableNames: [(String, String, String)] {
+        let known = Set(names.map { $0.0 })
+        return names +
+            session.logs.keys.sorted().filter { !known.contains($0) }.map { ($0, $0, "terminal.fill") }
     }
 
     private var selectedLog: String {
@@ -22,6 +28,8 @@ struct LogsView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            if let error = session.lastError { ErrorBanner(message: error) }
+            LogLineCountPicker()
             selector
                 .frame(height: 40)
 
@@ -62,7 +70,7 @@ struct LogsView: View {
     private var selector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(names, id: \.0) { item in
+                ForEach(availableNames, id: \.0) { item in
                     Button {
                         selected = item.0
                     } label: {
@@ -177,5 +185,19 @@ struct LogsView: View {
                 .padding(14)
         }
 #endif
+    }
+}
+
+
+struct LogLineCountPicker: View {
+    @EnvironmentObject private var session: DashboardSession
+    var body: some View {
+        Picker("Líneas de registro", selection: $session.logLines) {
+            Text("100").tag(100)
+            Text("300").tag(300)
+            Text("1000").tag(1000)
+        }
+        .pickerStyle(.segmented)
+        .onChange(of: session.logLines) { _, _ in Task { await session.refreshAll() } }
     }
 }

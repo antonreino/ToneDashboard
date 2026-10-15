@@ -1,0 +1,58 @@
+{
+  "available": true,
+  "active_offers": [
+    {
+      "source": "sample",
+      "url": "sample",
+      "title": "sample",
+      "model": "sample",
+      "price": 0,
+      "seller": "sample",
+      "kind": "sample",
+      "availability": "sample",
+      "shipping": null,
+      "condition": "sample",
+      "family": "sample",
+      "seen_iso": "sample"
+    },
+    {
+      "source": "sample",
+      "url": "sample",
+      "title": "sample",
+      "model": "sample",
+      "price": 0,
+      "seller": "sample",
+      "kind": "sample",
+      "availability": "sample",
+      "shipping": null,
+      "condition": "sample",
+      "family": "sample",
+      "seen_iso": "sample"
+    }
+  ],
+  "history": [
+    {
+      "body": "sample",
+      "created_iso": "sample"
+    },
+    {
+      "body": "sample",
+      "created_iso": "sample"
+    }
+  ],
+  "events": [
+    {
+      "name": "sample",
+      "level": "sample",
+      "detail": "sample",
+      "created_iso": "sample"
+    },
+    {
+      "name": "sample",
+      "level": "sample",
+      "detail": "sample",
+      "created_iso": "sample"
+    }
+  ],
+  "log": "sample"
+}

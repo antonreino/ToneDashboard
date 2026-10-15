@@ -28,6 +28,16 @@ jobs:
           swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift tests/APISecurityTests.swift -o /tmp/api-security-tests
           /tmp/api-security-tests
 
+      - name: Test functional parity and Orbit code lifecycle
+        run: |
+          swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift ToneDashboardApps/Formatters.swift ToneDashboardApps/DashboardSession.swift ToneDashboardApps/KeychainStore.swift tests/FunctionalParityTests.swift -o /tmp/functional-parity-tests
+          /tmp/functional-parity-tests
+
+      - name: Test API response contracts with anonymized fixtures
+        run: |
+          swiftc ToneDashboardApps/Models.swift tests/ServerContractTests.swift -o /tmp/server-contract-tests
+          /tmp/server-contract-tests tests/Fixtures
+
       - name: Build macOS
         run: |
           xcodebuild             -project ToneDashboardApps.xcodeproj             -scheme "ToneDashboardApps macOS"             -configuration Debug             -destination 'platform=macOS'             CODE_SIGNING_ALLOWED=NO             build

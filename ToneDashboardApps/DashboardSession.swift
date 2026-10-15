@@ -1,10 +1,14 @@
 import Foundation
+import Combine
 
 @MainActor
 final class DashboardSession: ObservableObject {
     @Published var dashboard: DashboardResponse?
     @Published var deals: DealsResponse?
     @Published var logs: [String: String] = [:]
+    @Published var logLines = 300
+    @Published var submittingDownload = false
+    @Published var submittingTorrent = false
     @Published var isLoading = false
     @Published var lastError: String?
     @Published var lastUpdated: Date?
@@ -23,11 +27,17 @@ final class DashboardSession: ObservableObject {
     private var refreshTask: Task<Void, Never>?
     private var persistedUsername: String
 
-    init() {
-        let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
+    private let sessionConfiguration: URLSessionConfiguration
+
+    init(defaults: UserDefaults = .standard,
+         passwordLoader: (String) -> String = KeychainStore.password,
+         sessionConfiguration: URLSessionConfiguration = .ephemeral) {
+        self.defaults = defaults
+        self.sessionConfiguration = sessionConfiguration
         let savedBaseURL = defaults.string(forKey: "baseURL") ?? ""
         let savedUsername = defaults.string(forKey: "username") ?? ""
-        let savedPassword = KeychainStore.password(account: savedUsername)
+        let savedPassword = passwordLoader(savedUsername)
 
         baseURLString = savedBaseURL
         username = savedUsername
@@ -46,7 +56,17 @@ final class DashboardSession: ObservableObject {
 
     var client: APIClient? {
         guard configured, let url = URL(string: baseURLString) else { return nil }
-        return APIClient(baseURL: url, username: username, password: password)
+        return APIClient(baseURL: url, username: username, password: password, sessionConfiguration: sessionConfiguration)
+    }
+
+    func clearConnectionData() {
+        dashboard = nil; deals = nil; logs = [:]
+        orbitStatus = nil; orbitError = nil; lastError = nil
+        lastUpdated = nil; toast = nil
+    }
+
+    private func connectionMatches(_ client: APIClient) -> Bool {
+        client.baseURL == URL(string: baseURLString) && client.username == username && client.password == password
     }
 
     func bootstrap() async {
@@ -54,7 +74,7 @@ final class DashboardSession: ObservableObject {
         refreshTask?.cancel()
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(20)) }
+                do { try await Task.sleep(for: .seconds(12)) }
                 catch { return }
                 guard let self, self.configured, self.isActive else { continue }
                 await self.refreshAll(silent: true)
@@ -65,8 +85,8 @@ final class DashboardSession: ObservableObject {
     func saveSettings() async {
         baseURLString = baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
         username = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        UserDefaults.standard.set(baseURLString, forKey: "baseURL")
-        UserDefaults.standard.set(username, forKey: "username")
+        defaults.set(baseURLString, forKey: "baseURL")
+        defaults.set(username, forKey: "username")
 
         if persistedUsername != username {
             KeychainStore.deletePassword(account: persistedUsername)
@@ -74,6 +94,7 @@ final class DashboardSession: ObservableObject {
         KeychainStore.savePassword(password, account: username)
         persistedUsername = username
 
+        clearConnectionData()
         guard let client else {
             lastError = "Configura una URL HTTPS válida, usuario y contraseña en Ajustes."
             return
@@ -82,13 +103,15 @@ final class DashboardSession: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            dashboard = try await client.dashboard()
+            let fetched = try await client.dashboard()
+            guard connectionMatches(client) else { return }
+            dashboard = fetched
             lastUpdated = Date()
             lastError = nil
             toast = "Conexión correcta"
             await refreshSecondary(client: client)
         } catch {
-            lastError = error.localizedDescription
+            if connectionMatches(client) { lastError = error.localizedDescription }
         }
     }
 
@@ -113,11 +136,13 @@ final class DashboardSession: ObservableObject {
         }
 
         do {
-            dashboard = try await client.dashboard()
+            let fetched = try await client.dashboard()
+            guard connectionMatches(client) else { return }
+            dashboard = fetched
             lastUpdated = Date()
             lastError = nil
         } catch {
-            lastError = error.localizedDescription
+            if connectionMatches(client) { lastError = error.localizedDescription }
             return
         }
 
@@ -125,49 +150,69 @@ final class DashboardSession: ObservableObject {
     }
 
     private func refreshSecondary(client: APIClient) async {
-        if selectedTab == "Ofertas", let fetched = try? await client.deals() {
-            deals = fetched
-        }
-        if selectedTab == "Logs", let fetched = try? await client.logs() {
-            logs = fetched.logs
+        do {
+            if selectedTab == "Ofertas" {
+                let fetched = try await client.deals(lines: logLines)
+                guard connectionMatches(client) else { return }
+                deals = fetched
+            }
+            if selectedTab == "Logs" {
+                let fetched = try await client.logs(lines: logLines)
+                guard connectionMatches(client) else { return }
+                logs = fetched.logs
+            }
+            lastError = nil
+            lastUpdated = Date()
+        } catch {
+            if connectionMatches(client) { lastError = error.localizedDescription }
         }
     }
 
     func queueDownload(_ url: String) async -> Bool {
-        guard let client else { return false }
+        guard let client, !submittingDownload else { return false }
+        submittingDownload = true
+        defer { submittingDownload = false }
         do {
-            _ = try await client.queueDownload(url: url)
+            _ = try await client.queueDownload(url: url.trimmingCharacters(in: .whitespacesAndNewlines))
+            guard connectionMatches(client) else { return false }
+            lastError = nil
             toast = "Descarga añadida a la cola"
             await refreshAll(silent: true)
             return true
         } catch {
-            lastError = error.localizedDescription
+            if connectionMatches(client) { lastError = error.localizedDescription }
             return false
         }
     }
 
     func uploadTorrent(url: URL) async -> Bool {
-        guard let client else { return false }
+        guard let client, !submittingTorrent else { return false }
+        submittingTorrent = true
+        defer { submittingTorrent = false }
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
             let data = try Data(contentsOf: url)
             let response = try await client.uploadTorrent(data: data, filename: url.lastPathComponent)
+            guard connectionMatches(client) else { return false }
+            lastError = nil
             toast = "Torrent añadido: \(response.name ?? url.lastPathComponent)"
             await refreshAll(silent: true)
             return true
         } catch {
-            lastError = error.localizedDescription
+            if connectionMatches(client) { lastError = error.localizedDescription }
             return false
         }
     }
     func refreshOrbitStatus() async {
         guard let client else { orbitStatus = nil; return }
         do {
-            orbitStatus = try await client.orbitStatus()
+            let fetched = try await client.orbitStatus()
+            guard connectionMatches(client) else { return }
+            orbitStatus = fetched
             orbitError = nil
         } catch {
-            orbitError = error.localizedDescription
+            if connectionMatches(client) { orbitError = error.localizedDescription }
         }
     }
 
@@ -178,12 +223,13 @@ final class DashboardSession: ObservableObject {
         }
         do {
             let reply = try await client.startOrbit(controlPassword: controlPassword)
+            guard connectionMatches(client) else { return false }
             toast = reply.message ?? "Solicitud de arranque enviada"
             orbitError = nil
             await refreshOrbitStatus()
             return true
         } catch {
-            orbitError = error.localizedDescription
+            if connectionMatches(client) { orbitError = error.localizedDescription }
             return false
         }
     }

@@ -45,6 +45,9 @@ struct ContentView: View {
             .onChange(of: session.selectedTab) { _, _ in
                 Task { await session.refreshAll() }
             }
+            .onChange(of: session.baseURLString) { _, _ in session.clearConnectionData() }
+            .onChange(of: session.username) { _, _ in session.clearConnectionData() }
+            .onChange(of: session.password) { _, _ in session.clearConnectionData() }
             .onChange(of: scenePhase) { _, phase in
                 session.isActive = phase == .active
                 if phase == .active { Task { await session.refreshAll() } }
@@ -86,14 +89,15 @@ struct OrbitZeroView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Orbit Zero").font(.headline)
                     Text(session.orbitStatus?.running == true ? "Servicio conectado" : "Servicio sin confirmar")
                         .font(.caption)
                         .foregroundStyle(session.orbitStatus?.running == true ? Color.green : Color.secondary)
                 }
-                Spacer()
+                ScrollView(.horizontal, showsIndicators: false) {
+                  HStack(spacing: 8) {
                 Button("Comprobar", systemImage: "arrow.clockwise") {
                     Task { await session.refreshOrbitStatus() }
                 }
@@ -106,10 +110,16 @@ struct OrbitZeroView: View {
                 }
                 Button("Ver código", systemImage: "key.fill") { showPairCode = true }
                     .buttonStyle(.bordered)
+                    .disabled(!session.configured)
+                if session.orbitStatus?.pair_code_available == false {
+                    Image(systemName: "exclamationmark.triangle").help("Configura el lector y la contraseña del código en el servidor.")
+                }
                 Button("Recargar", systemImage: "arrow.clockwise.circle") {
                     reloadIdentity = UUID()
                 }
                 .buttonStyle(.bordered)
+                  }
+                }
             }
             .font(.callout)
             if let error = session.orbitError {
@@ -276,36 +286,36 @@ struct OrbitPairCodeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @State private var password = ""
-    @State private var code: String?
-    @State private var error: String?
-    @State private var busy = false
-    @State private var request: Task<Void, Never>?
-    @State private var expiry: Task<Void, Never>?
+    @StateObject private var revealState = OrbitCodeController()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Código de Orbit").font(.title2)
-            Text("Introduce la contraseña para consultar el código vigente del Mac. Se ocultará en 60 segundos.")
+            Text("Introduce la contraseña para consultar el código vigente del Mac. Se ocultará en un máximo de 60 segundos.")
                 .font(.callout)
-            if let code {
+            if let code = revealState.code {
                 Text(code).font(.system(size: 36, weight: .bold, design: .monospaced))
                     .privacySensitive()
             } else {
                 SecureField("Contraseña para mostrar el código", text: $password)
                     .onSubmit { reveal() }
-                if let error { Text(error).foregroundStyle(.orange).font(.caption) }
+                if let error = revealState.error { Text(error).foregroundStyle(.orange).font(.caption) }
             }
             HStack {
                 Button("Cerrar") { clear(); dismiss() }
                 Spacer()
-                if code == nil {
-                    Button(busy ? "Consultando…" : "Mostrar código") { reveal() }
-                        .disabled(busy || password.count < 12)
+                if revealState.code == nil {
+                    Button(revealState.busy ? "Consultando…" : "Mostrar código") { reveal() }
+                        .disabled(revealState.busy || password.count < 12)
                 }
             }
         }
         .padding(24).frame(minWidth: 300, idealWidth: 420)
         .onDisappear { clear() }
+        .onChange(of: revealState.code) { previous, current in
+            if previous != nil && current == nil { dismiss() }
+        }
+        .onChange(of: session.selectedTab) { _, _ in clear(); dismiss() }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { clear(); dismiss() }
         }
@@ -315,27 +325,14 @@ struct OrbitPairCodeSheet: View {
     }
 
     private func reveal() {
-        guard !busy, let client = session.client else { return }
+        guard !revealState.busy, password.count >= 12, let client = session.client else { return }
         let secret = password
-        password = ""; code = nil; error = nil; busy = true
-        request = Task { @MainActor in
-            defer { busy = false }
-            do {
-                let result = try await client.revealOrbitCode(password: secret)
-                guard !Task.isCancelled else { return }
-                code = result.code
-                expiry = Task { @MainActor in
-                    do { try await Task.sleep(for: .seconds(60)) } catch { return }
-                    clear(); dismiss()
-                }
-            } catch {
-                if !Task.isCancelled { self.error = error.localizedDescription }
-            }
-        }
+        password = ""
+        revealState.reveal { try await client.revealOrbitCode(password: secret) }
     }
 
     private func clear() {
-        request?.cancel(); expiry?.cancel()
-        password = ""; code = nil; error = nil
+        password = ""
+        revealState.clear()
     }
 }

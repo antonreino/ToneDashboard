@@ -1,0 +1,9 @@
+{
+  "logs": {
+    "organizer_out": "sample",
+    "organizer_err": "sample",
+    "telegram_out": "sample",
+    "telegram_err": "sample",
+    "ps5_out": "sample"
+  }
+}

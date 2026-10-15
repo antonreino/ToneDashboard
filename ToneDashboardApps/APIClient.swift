@@ -27,12 +27,13 @@ struct APIClient {
     var baseURL: URL
     var username: String
     var password: String
+    var sessionConfiguration: URLSessionConfiguration = .ephemeral
 
     private var authHeader: String {
         Data("\(username):\(password)".utf8).base64EncodedString()
     }
 
-    private func request(path: String, method: String = "GET", body: Data? = nil, contentType: String? = nil, extraHeaders: [String: String] = [:]) throws -> URLRequest {
+    func request(path: String, method: String = "GET", body: Data? = nil, contentType: String? = nil, extraHeaders: [String: String] = [:]) throws -> URLRequest {
         guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL,
               DashboardRedirectGuard.trusted(url, baseURL: baseURL),
               baseURL.user == nil, baseURL.password == nil else {
@@ -51,7 +52,7 @@ struct APIClient {
     }
 
     private func execute<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
-        let session = URLSession(configuration: .ephemeral,
+        let session = URLSession(configuration: sessionConfiguration,
                                  delegate: DashboardRedirectGuard(baseURL: baseURL), delegateQueue: nil)
         defer { session.finishTasksAndInvalidate() }
         let (data, response) = try await session.data(for: request)
@@ -91,18 +92,16 @@ struct APIClient {
             )
         } catch let DecodingError.dataCorrupted(context) {
             let path = context.codingPath.map(\.stringValue).joined(separator: ".")
-            let snippet = String(data: data.prefix(600), encoding: .utf8) ?? "<respuesta no textual>"
             throw NSError(
                 domain: "ToneDashboardApps",
                 code: -5,
-                userInfo: [NSLocalizedDescriptionKey: "JSON no válido en \(path.isEmpty ? "respuesta" : path). \(context.debugDescription)\n\nServidor: \(snippet)"]
+                userInfo: [NSLocalizedDescriptionKey: "JSON no válido en \(path.isEmpty ? "respuesta" : path). \(context.debugDescription)"]
             )
         } catch {
-            let snippet = String(data: data.prefix(600), encoding: .utf8) ?? "<respuesta no textual>"
             throw NSError(
                 domain: "ToneDashboardApps",
                 code: -6,
-                userInfo: [NSLocalizedDescriptionKey: "No se pudo interpretar la respuesta del servidor: \(error.localizedDescription)\n\nServidor: \(snippet)"]
+                userInfo: [NSLocalizedDescriptionKey: "No se pudo interpretar la respuesta del servidor: \(error.localizedDescription)"]
             )
         }
     }

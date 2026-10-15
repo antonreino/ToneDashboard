@@ -25,6 +25,7 @@ struct SettingsView: View {
             .listRowBackground(DashboardPalette.panel)
 
             Section("Estado") {
+                LabeledContent("Versión", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"))")
                 LabeledContent("Última actualización", value: session.lastUpdated.map { spanishTime($0) } ?? "—")
                 if let error = session.lastError { Text(error).foregroundStyle(DashboardPalette.bad) }
             }

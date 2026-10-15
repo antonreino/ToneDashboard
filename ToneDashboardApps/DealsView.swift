@@ -4,7 +4,7 @@ struct DealsView: View {
     @EnvironmentObject private var session: DashboardSession
 
     private var ps5Offers: [Offer] {
-        (session.deals?.activeOffers ?? []).filter { ($0.family ?? "").lowercased() != "switch2" }
+        (session.deals?.activeOffers ?? []).filter { ($0.family ?? "").lowercased() == "ps5" }
     }
 
     private var switchOffers: [Offer] {
@@ -14,6 +14,7 @@ struct DealsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if let error = session.lastError { ErrorBanner(message: error) }
                 if let deals = session.deals {
                     if !deals.available {
                         ErrorBanner(message: deals.error ?? "El bot de precios no está disponible")
@@ -70,18 +71,47 @@ struct DealsView: View {
                             if deals.history.isEmpty {
                                 Text("No hay avisos recientes.").foregroundStyle(DashboardPalette.muted)
                             } else {
-                                ForEach(Array(deals.history.prefix(40).enumerated()), id: \.element.id) { index, item in
+                                ForEach(Array(deals.history.enumerated()), id: \.element.id) { index, item in
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(item.body).foregroundStyle(DashboardPalette.text)
                                         Text(prettyDate(item.createdIso)).font(.caption).foregroundStyle(DashboardPalette.muted)
                                     }
-                                    if index < min(deals.history.count, 40) - 1 {
+                                    if index < deals.history.count - 1 {
                                         Divider().overlay(DashboardPalette.border)
                                     }
                                 }
                             }
                         }
                     }
+                    DashboardPanel {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Estado de las fuentes", systemImage: "antenna.radiowaves.left.and.right").font(.headline)
+                            if deals.events.isEmpty { Text("Sin eventos recientes.").foregroundStyle(DashboardPalette.muted) }
+                            ForEach(deals.events) { event in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(event.name).bold()
+                                        Spacer()
+                                        StatusPill(text: event.level == "error" ? "Error" : "Recuperada", good: event.level != "error")
+                                    }
+                                    Text(event.detail)
+                                    Text(prettyDate(event.createdIso)).font(.caption).foregroundStyle(DashboardPalette.muted)
+                                }
+                            }
+                        }
+                    }
+                    DashboardPanel {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Registro del bot").font(.headline)
+                            LogLineCountPicker()
+                            Text(deals.log ?? "(vacío)")
+                                .font(.system(.caption, design: .monospaced))
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                } else if session.lastError != nil {
+                    ContentUnavailableView("No se pudieron cargar las ofertas", systemImage: "wifi.exclamationmark", description: Text("Comprueba la conexión y vuelve a actualizar."))
                 } else {
                     ProgressView("Cargando ofertas…")
                         .tint(DashboardPalette.accent)
@@ -139,7 +169,13 @@ private struct OfferFamilyCard: View {
                             if !seller.isEmpty {
                                 Text(seller).font(.caption).foregroundStyle(DashboardPalette.muted)
                             }
-                            if let raw = offer.url, let url = URL(string: raw) {
+                            Text("\(offerKindLabel(offer.kind)) · \(availabilityLabel(offer.availability))")
+                                .font(.caption).foregroundStyle(DashboardPalette.muted)
+                            Text(offer.shipping.map { "Envío: \(euroString(cents: $0))" } ?? "Envío por confirmar")
+                                .font(.caption).foregroundStyle(DashboardPalette.muted)
+                            Text("Última lectura: \(prettyDate(offer.seenIso))")
+                                .font(.caption).foregroundStyle(DashboardPalette.muted)
+                            if let url = safeOfferURL(offer.url) {
                                 Link(destination: url) {
                                     Label("Abrir oferta", systemImage: "arrow.up.right.square")
                                         .font(.subheadline.weight(.semibold))

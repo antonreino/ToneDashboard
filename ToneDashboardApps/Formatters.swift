@@ -79,6 +79,8 @@ func localizedStatus(_ status: String?) -> String {
     case "paused": return "Pausado"
     case "retrying", "retry": return "Reintentando"
     case "skipped": return "Omitido"
+    case "quarantined": return "Cuarentena"
+    case "dry-run": return "Simulación"
     case "moved": return "Movido a Emby"
     default:
         return raw.replacingOccurrences(of: "_", with: " ").capitalized
@@ -111,4 +113,27 @@ func localizedCategory(_ category: String) -> String {
     case "download", "downloads": return "Descargas"
     default: return category.replacingOccurrences(of: "_", with: " ").capitalized
     }
+}
+
+
+func durationString(_ seconds: Int?) -> String {
+    guard let seconds, seconds >= 0 else { return "—" }
+    if seconds >= 3600 { return "\(seconds / 3600) h \((seconds % 3600) / 60) min" }
+    if seconds >= 60 { return "\(seconds / 60) min \(seconds % 60) s" }
+    return "\(seconds) s"
+}
+
+func safeOfferURL(_ raw: String?) -> URL? {
+    guard let raw, let url = URL(string: raw), let scheme = url.scheme?.lowercased(),
+          ["http", "https"].contains(scheme), url.host != nil,
+          url.user == nil, url.password == nil else { return nil }
+    return url
+}
+
+func availabilityLabel(_ value: String?) -> String {
+    ["in_stock": "En stock", "preorder": "Preventa / reserva", "out_of_stock": "Agotado", "unknown": "Stock por confirmar"][value ?? ""] ?? "Stock por confirmar"
+}
+
+func offerKindLabel(_ value: String?) -> String {
+    ["retailer": "Tienda", "comparison": "Comparador", "deal": "Chollo"][value ?? ""] ?? (value ?? "—")
 }

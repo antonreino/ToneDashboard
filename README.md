@@ -68,7 +68,7 @@ La sintaxis Swift se puede validar fuera de macOS, pero para verificar realmente
 
 La API valida HTTPS, host y puerto antes de adjuntar credenciales. Rechaza redirecciones a otras autoridades o HTTP y no sigue redirecciones de acciones POST. Utiliza sesiones efímeras y envía `X-Dashboard-Action: write` para las acciones del servidor actualizado.
 
-Orbit utiliza almacenamiento WebKit no persistente, limita los reintentos de autenticación y recarga al cambiar URL, usuario o contraseña. Las consultas periódicas se realizan cada 20 segundos mientras la app está activa; ofertas y logs se consultan al usar sus pestañas.
+Orbit utiliza almacenamiento WebKit no persistente, limita los reintentos de autenticación y recarga al cambiar URL, usuario o contraseña. Las consultas periódicas se realizan cada 12 segundos mientras la app está activa; ofertas y logs se consultan al usar sus pestañas.
 
 Pruebas de la política de origen y redirecciones:
 
@@ -80,3 +80,18 @@ swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift tests/AP
 ## Ver código de Orbit
 
 En la pestaña Orbit, **Ver código** pide la contraseña `ORBIT_PAIR_CODE_PASSWORD` configurada en el servidor (mínimo 12 caracteres). Es el mismo endpoint y la misma protección que utiliza la web. La contraseña no se guarda y el código se oculta a los 60 segundos, al cerrar o al pasar a segundo plano. Requiere instalar y autorizar ToneOrbitCodeReader en el Mac; los errores de permiso, Orbit cerrado o código no visible se muestran en la app.
+
+## Versión 1.1 (build 2): paridad con la web
+
+Consulta [PARIDAD_FUNCIONAL.md](PARIDAD_FUNCIONAL.md) para la comparación completa. Se añaden las métricas y estadísticas ausentes, ETA y detalles de descarga, disponibilidad/envío/fecha de las ofertas, eventos y logs del bot, selector de líneas y errores de actualización visibles. La barra de Orbit se adapta al ancho del iPhone y el código tiene cancelación y caducidad verificadas, sin reproducir respuestas privadas en los errores.
+
+Las consultas periódicas pasan a 12 segundos mientras la app está activa. Para reconocer la nueva compilación, **Ajustes → Estado → Versión** debe indicar **1.1 (2)**. El `git pull` no sustituye la app instalada: compila e instala los targets correspondientes conservando los identificadores de paquete y el Keychain.
+
+Pruebas adicionales (transporte simulado, sin acciones reales):
+
+```bash
+swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift ToneDashboardApps/Formatters.swift ToneDashboardApps/DashboardSession.swift ToneDashboardApps/KeychainStore.swift tests/FunctionalParityTests.swift -o /tmp/functional-parity-tests
+/tmp/functional-parity-tests
+swiftc ToneDashboardApps/Models.swift tests/ServerContractTests.swift -o /tmp/server-contract-tests
+/tmp/server-contract-tests tests/Fixtures
+```
