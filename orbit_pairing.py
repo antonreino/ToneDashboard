@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import threading
 import time
 
@@ -13,6 +14,26 @@ from request_security import allowed_mutation
 READER = Path.home() / 'Applications/ToneOrbitCodeReader.app/Contents/MacOS/ToneOrbitCodeReader'
 _lock = threading.Lock()
 _failures = {}
+
+
+def invoke_reader():
+    # LaunchServices gives the reader its own macOS privacy identity, rather than
+    # inheriting the background Python service's identity. The FIFO stores no
+    # code on disk and lives in a directory accessible only to this user.
+    with tempfile.TemporaryDirectory(prefix='tone-orbit-code-') as directory:
+        fifo = Path(directory) / 'response'
+        os.mkfifo(fifo, 0o600)
+        descriptor = os.open(fifo, os.O_RDWR | os.O_NONBLOCK)
+        try:
+            app = READER.parent.parent.parent
+            result = subprocess.run(
+                ['/usr/bin/open', '-n', '-g', '-W', '--stdout', str(fifo),
+                 '--stderr', '/dev/null', str(app)],
+                capture_output=True, text=True, timeout=15, check=False)
+            payload = os.read(descriptor, 4096).decode('utf-8')
+            return subprocess.CompletedProcess([], result.returncode, payload)
+        finally:
+            os.close(descriptor)
 
 
 def reveal_code(headers, client_address):
@@ -40,7 +61,7 @@ def reveal_code(headers, client_address):
         if not READER.is_file():
             return {'error': 'Instala el lector local con scripts/install-orbit-code-reader.sh.'}, 503
         try:
-            result = subprocess.run([str(READER)], capture_output=True, text=True, timeout=15, check=False)
+            result = invoke_reader()
             data = json.loads(result.stdout)
         except (OSError, ValueError, subprocess.TimeoutExpired):
             return {'error': 'No se pudo consultar el lector local de Orbit.'}, 502

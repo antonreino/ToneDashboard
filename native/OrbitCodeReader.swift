@@ -48,14 +48,25 @@ guard let app = NSWorkspace.shared.runningApplications.first(where: {
 }) else { finish(["error": "not_running"], status: 1) }
 let root = AXUIElementCreateApplication(app.processIdentifier)
 AXUIElementSetMessagingTimeout(root, 2)
+// Electron may not expose its HTML accessibility tree until a client opts in.
+AXUIElementSetAttributeValue(root, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+AXUIElementSetAttributeValue(root, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
 var elements = nodes(root)
+for _ in 0..<10 {
+    if elements.contains(where: { ["Consola", "Console"].contains(text($0)) }) { break }
+    Thread.sleep(forTimeInterval: 0.2)
+    elements = nodes(root)
+}
 if let code = readCode(elements) { finish(["code": code]) }
 if let console = elements.first(where: {
     (attribute($0, kAXRoleAttribute) as? String) == kAXButtonRole && ["Consola", "Console"].contains(text($0))
 }) {
     AXUIElementPerformAction(console, kAXPressAction as CFString)
-    Thread.sleep(forTimeInterval: 0.35)
-    elements = nodes(root)
+    for _ in 0..<10 {
+        Thread.sleep(forTimeInterval: 0.2)
+        elements = nodes(root)
+        if elements.contains(where: { ["Cómo funciona", "How it works"].contains(text($0)) }) { break }
+    }
 }
 if let code = readCode(elements) { finish(["code": code]) }
 if let help = elements.first(where: {

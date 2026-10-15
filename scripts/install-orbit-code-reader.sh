@@ -17,4 +17,4 @@ cat > "$DEST/Contents/Info.plist" <<'PLIST'
 PLIST
 /usr/bin/codesign --force --sign - --identifier com.tone.OrbitCodeReader "$DEST"
 printf 'Lector instalado. Autorízalo en Ajustes del Sistema → Privacidad y seguridad → Accesibilidad: %s\n' "$DEST"
-"$DEST/Contents/MacOS/ToneOrbitCodeReader" --request-permission >/dev/null || true
+/usr/bin/open -n -g --stdout /dev/null --stderr /dev/null "$DEST" --args --request-permission
