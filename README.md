@@ -1,8 +1,8 @@
 # ToneDashboard
 
-Panel de control personal para **Mac mini, automatización Emby, descargas, Telegram, estadísticas, ofertas y Orbit Zero**. Web responsive que sirve de backend a [ToneDashboardApps](../ToneDashboardApps/README.md) para macOS/iOS/iPadOS.
+Panel de control personal para **Mac mini, automatización Emby, descargas, Telegram, estadísticas, ofertas y Orbit Zero**. Web responsive que sirve de backend a [ToneDashboardApps](https://github.com/antonreino/ToneDashboardApps) para macOS/iOS/iPadOS.
 
-> Cambio de marca de `emby-organizer`: los ejecutables de Emby y los identificadores de los LaunchAgents se mantienen a propósito para conservar el servicio y el historial. **No cambies la ruta del repositorio en el Mac sin reinstalar los LaunchAgents.** El nombre `ToneDashboard` corresponde al proyecto, a la interfaz y al nuevo repositorio deseado, no a una migración destructiva de las rutas actuales.
+> Cambio de marca de `emby-organizer`: los ejecutables de Emby y los identificadores de los LaunchAgents se mantienen a propósito para conservar el servicio y el historial. **No cambies la ruta del repositorio en el Mac sin reinstalar los LaunchAgents.** El nombre `ToneDashboard` corresponde al proyecto, a la interfaz y al repositorio de GitHub, no a una migración destructiva de las rutas actuales.
 
 ## Funciones actuales
 
@@ -114,9 +114,9 @@ bash -n scripts/install-macos-services.sh
 
 `README.md`, `.env.example`, `MACOS_MIGRATION.md`, `launchd/` y scripts son parte del código. Los archivos `.env`, SQLite, logs, descargas, copias de seguridad y cachés no se distribuyen.
 
-## Publicación y cambio de nombre de GitHub
+## Repositorios y rutas de instalación
 
-El ZIP contiene la nueva estructura **ToneDashboard**. Renombrar el repositorio remoto en GitHub y actualizar el `git remote` local se hace aparte, después de comprobar el despliegue. Hasta entonces, los enlaces a `antonreino/emby-organizer` que no se hayan cambiado siguen funcionando. **El instalador no renombra el repositorio ni el directorio activo automáticamente**.
+Los repositorios oficiales son [ToneDashboard](https://github.com/antonreino/ToneDashboard) y [ToneDashboardApps](https://github.com/antonreino/ToneDashboardApps). Los remotos locales apuntan a estos nombres. El backend instalado conserva la carpeta `emby-organizer` y sus identificadores de servicio para mantener las rutas de los LaunchAgents. **El instalador no renombra el directorio activo automáticamente**.
 
 ## Licencia
 

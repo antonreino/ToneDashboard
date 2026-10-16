@@ -1,6 +1,6 @@
 # Revisión de seguridad — 15 de octubre de 2026
 
-Base revisada: `5fcd82c` de `antonreino/emby-organizer` y `836b0c9` de `antonreino/EmbyDashboardNative`. Los nombres de producto son ToneDashboard y ToneDashboardApps. Los remotos configurados con estos nombres nuevos no existían; se han corregido las URL de los clones a los repositorios existentes.
+Base revisada: `5fcd82c` de `antonreino/emby-organizer` y `836b0c9` de `antonreino/EmbyDashboardNative`. Los nombres de producto son ToneDashboard y ToneDashboardApps. En el momento de la revisión, los remotos con los nombres nuevos todavía no existían. El 16 de octubre de 2026 el propietario completó el cambio de nombre: los repositorios actuales son [ToneDashboard](https://github.com/antonreino/ToneDashboard) y [ToneDashboardApps](https://github.com/antonreino/ToneDashboardApps).
 
 ## Correcciones
 

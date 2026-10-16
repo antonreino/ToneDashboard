@@ -553,7 +553,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
       </div>
       <div class="controls">
         <a class="github-link"
-           href="https://github.com/antonreino/emby-organizer"
+           href="https://github.com/antonreino/ToneDashboard"
            target="_blank"
            rel="noopener noreferrer"
            title="Abrir repositorio en GitHub"
