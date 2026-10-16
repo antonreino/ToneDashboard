@@ -131,3 +131,9 @@ Orbit de la consola.
 Ofertas permite añadir EAN-8/EAN-13 y muestra una tarjeta por producto, además de PS5 y Switch. El servidor valida el código y evita duplicados; el seguimiento se comparte entre web, iOS y macOS. Todas las tarjetas ordenan las ofertas por precio del artículo ascendente, con envío aparte. Requiere las versiones actualizadas de ToneDashboard y ps5-price-bot. Amazon e Idealo siguen limitados por respuestas sin precio/403; no se dan por operativos.
 
 Validación1.3(4): pruebas API, contratos de respuestas y paridad correctas; compilaciones macOS, iOS Simulator y ambas Release firmadas correctas. Instalación local verificada en Mac e iPhone físico conectado. El funcionamiento prolongado de proveedores depende del tracker y sus fuentes públicas.
+
+### Versión 1.3.1 (5)
+
+Botón **Eliminar producto** con confirmación en cada tarjeta EAN, tanto iOS como macOS. El servidor retira el seguimiento y los avisos pendientes conservando el historial. Los productos por EAN usan automáticamente el bot Telegram y los destinatarios existentes, incluida su primera oferta encontrada.
+
+Validación1.3.1(5): compilaciones Release firmadas de macOS/iOS correctas y pruebas nativas de eliminación y paridad correctas; servidor validado con 65 pruebas del tracker y 91 del dashboard.

@@ -173,7 +173,24 @@ final class DashboardSession: ObservableObject {
         do {
             _ = try await client.addTrackedProduct(ean: ean)
             guard connectionMatches(client) else { return false }
-            deals = try await client.deals(lines: logLines)
+            let fetched = try await client.deals(lines: logLines)
+            guard connectionMatches(client) else { return false }
+            deals = fetched
+            lastError = nil
+            return true
+        } catch {
+            if connectionMatches(client) { lastError = error.localizedDescription }
+            return false
+        }
+    }
+
+    func removeTrackedProduct(ean: String) async -> Bool {
+        guard let client else { return false }
+        do {
+            _ = try await client.removeTrackedProduct(ean: ean)
+            let fetched = try await client.deals(lines: logLines)
+            guard connectionMatches(client) else { return false }
+            deals = fetched
             lastError = nil
             return true
         } catch {

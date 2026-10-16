@@ -37,6 +37,14 @@ struct FunctionalParityTests {
         let productDeals = try JSONDecoder().decode(DealsResponse.self, from: Data(productJSON.utf8))
         precondition(productDeals.products?.first?.ean == "0711719021247")
         precondition(productDeals.activeOffers.first?.ean == productDeals.products?.first?.ean)
+        MockProtocol.handler = { request in
+            precondition(request.url?.path == "/api/deals/products/remove")
+            precondition(request.httpMethod == "POST")
+            precondition(request.value(forHTTPHeaderField: "X-Dashboard-Action") == "write")
+            return (200, "{\"ok\":true,\"removed\":true}")
+        }
+        let removed = try await api.removeTrackedProduct(ean: "0711719021247")
+        precondition(removed.ok == true)
         let secret = "pair-only-password"
         let request = try api.request(path: "/api/orbit/pair-code", method: "POST", body: Data("{}".utf8), extraHeaders: ["X-Orbit-Action":"reveal-code", "X-Orbit-Pair-Password":secret])
         precondition(request.httpMethod == "POST")

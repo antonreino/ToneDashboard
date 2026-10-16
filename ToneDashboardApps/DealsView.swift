@@ -5,6 +5,8 @@ struct DealsView: View {
     @State private var ean = ""
     @State private var savingProduct = false
     @State private var productMessage = ""
+    @State private var productToRemove: TrackedProduct?
+    @State private var confirmRemoval = false
 
     private var ps5Offers: [Offer] {
         (session.deals?.activeOffers ?? []).filter { ($0.family ?? "").lowercased() == "ps5" }
@@ -45,9 +47,15 @@ struct DealsView: View {
                         }
                     }
                     ForEach(deals.products ?? []) { product in
+                        VStack(alignment: .trailing, spacing: 6) {
                         OfferFamilyCard(title: product.name, subtitle: "EAN \(product.ean)",
                                         systemImage: "barcode", accent: DashboardPalette.cyan,
                                         offers: deals.activeOffers.filter { $0.ean == product.ean })
+                        Button("Eliminar producto", role: .destructive) {
+                            productToRemove = product
+                            confirmRemoval = true
+                        }.disabled(savingProduct)
+                        }
                     }
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .top, spacing: 16) {
@@ -150,6 +158,19 @@ struct DealsView: View {
                 }
             }
             .padding()
+        }
+        .confirmationDialog("¿Dejar de seguir este producto?", isPresented: $confirmRemoval, titleVisibility: .visible, presenting: productToRemove) { product in
+            Button("Eliminar producto", role: .destructive) {
+                savingProduct = true
+                Task {
+                    _ = await session.removeTrackedProduct(ean: product.ean)
+                    savingProduct = false
+                    productToRemove = nil
+                }
+            }
+            Button("Cancelar", role: .cancel) { productToRemove = nil }
+        } message: { product in
+            Text("EAN \(product.ean). Dejarás de recibir avisos de este producto. Se conservará el historial.")
         }
         .background(DashboardBackground())
         .navigationTitle("Ofertas")
