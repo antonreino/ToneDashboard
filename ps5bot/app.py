@@ -316,6 +316,13 @@ def run(cfg, store, stop):
         while not stop.is_set():
             if time.monotonic() - refreshed >= 15:
                 sources = [s for s in cfg["sources"] if s.get("enabled", True)] + product_sources(list_products(ROOT / "data/prices.sqlite3"), cfg["sources"])
+                active_names = {s['name'] for s in sources}
+                for obsolete in (set(jobs) | set(due) | set(failures)) - active_names:
+                    obsolete_job = jobs.pop(obsolete, None)
+                    if obsolete_job:
+                        obsolete_job.cancel()
+                    due.pop(obsolete, None)
+                    failures.pop(obsolete, None)
                 refreshed = time.monotonic()
             for s in sources:
                 name = s['name']
@@ -340,7 +347,10 @@ def run(cfg, store, stop):
                     # Cadencia desde el inicio de la consulta, sin solapar ni acumular ejecuciones.
                     due[name] = time.monotonic() + wait if error else max(time.monotonic(), due[name] + wait)
                     next_wall = time.time() + max(0, due[name] - time.monotonic())
-                    store.source_result(name, offers, error, next_wall)
+                    if s.get('product_ean'):
+                        store.source_result(name, offers, error, next_wall, generation=s.get('product_generation'))
+                    else:
+                        store.source_result(name, offers, error, next_wall)
                     if error:
                         LOG.warning('%s: %s; pausa %.0f s', name, error, wait)
                     else:

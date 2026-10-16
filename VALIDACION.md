@@ -71,3 +71,9 @@ Después consulta `/estado` en el bot. Si Amazon o Fnac siguen fallando, esas fu
 - Servicios tracker y dashboard reiniciados; API real con autenticación devuelve ofertas ordenadas y formulario EAN; EAN inválido devuelve400. SQLite `integrity_check=ok`, respaldo previo e historial conservados. No se enviaron avisos Telegram de prueba.
 
 No equivale a una prueba prolongada de todos los productos/tiendas. La cobertura EAN depende de que la fuente publique el identificador exacto; no se inventan coincidencias. La revisión remota CI se comprueba aparte de estas pruebas locales.
+
+### Eliminación y Telegram · 16/10/2026
+
+65 pruebas del tracker correctas y 91 del dashboard. Pruebas nuevas: primera oferta EAN para los dos chats configurados, bajadas/subidas y vuelta de stock, entrega por transporte Telegram simulado, eliminación idempotente, cancelación de cola exclusiva del EAN, conservación de otros avisos e historial, descarte de consultas anteriores a eliminar/recrear y migración de cola antigua. API protegida de eliminación y cliente nativo comprobados. No se enviaron mensajes reales de prueba.
+
+Apps1.3.1(5) compiladas y firmadas para macOS/iOS; se aplican junto con el reinicio de tracker/dashboard. API real de eliminación validada con un EAN inválido (400), control web y migración `outbox.product_ean` comprobados; SQLite íntegro. Se conservan los dos destinatarios existentes.

@@ -74,7 +74,25 @@ def product_sources(products, configured):
             if not template or not template.get('enabled', True):
                 continue
             source = dict(template, name=f'{template["name"]} · EAN {ean}', family='ean',
-                          product_ean=ean, urls=[url.format(ean=ean)], initial_delay_seconds=0,
+                          product_ean=ean, product_generation=product.get('created'), urls=[url.format(ean=ean)], initial_delay_seconds=0,
                           interval_seconds=max(900, template.get('interval_seconds', 900)))
             result.append(source)
     return result
+
+
+def remove_product(path, value):
+    """Dejar de seguir sin borrar el historial de avisos publicados."""
+    ean = validate_ean(value)
+    with connection(path) as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        removed = bool(conn.execute('DELETE FROM tracked_products WHERE ean=?', (ean,)).rowcount)
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if 'offers' in tables:
+            conn.execute('UPDATE offers SET active=0 WHERE model=?', ('ean:' + ean,))
+        if 'outbox' in tables:
+            columns = {r[1] for r in conn.execute('PRAGMA table_info(outbox)')}
+            if 'product_ean' in columns:
+                conn.execute('DELETE FROM outbox WHERE product_ean=? OR (product_ean IS NULL AND instr(body,?)>0)', (ean, 'EAN ' + ean))
+            else:
+                conn.execute('DELETE FROM outbox WHERE instr(body,?)>0', ('EAN ' + ean,))
+        return removed

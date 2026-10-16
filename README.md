@@ -199,3 +199,9 @@ Se revisaron README, VALIDACION, adaptadores y fixtures previos antes de probar 
 - **Chollometro**: el RSS público responde y el parser lee sus precios. Cero coincidencias PS5 en la muestra no significa fallo ni oferta disponible. La ruta `/search` publicada por el formulario devuelve HTTP 410; `/buscar` devuelve 404. Se mantienen RSS y categorías existentes, con caché compartida y sin eludir bloqueos.
 
 Las fuentes desactivadas no se reactivan al añadir un EAN. Para comprobar proveedores utiliza `--check --diagnose`; las pruebas no deben enviar mensajes reales ni borrar historial.
+
+### Eliminar productos y avisos Telegram
+
+El botón **Eliminar** de cada producto EAN en web, iOS y macOS deja de seguirlo tras confirmar. Retira sus ofertas activas y cancela los avisos de ese EAN pendientes de envío; conserva el historial ya publicado. Las consultas iniciadas antes de eliminarlo no pueden reactivar sus ofertas ni generar nuevos avisos. Un mensaje cuyo envío ya haya comenzado podría llegar igualmente.
+
+Todos los EAN utilizan el mismo bot y todos los chats ya autorizados en `TELEGRAM_CHAT_IDS`: primera oferta encontrada, nuevas fichas, bajadas/subidas y vuelta de stock. No hace falta configurar otro bot ni destinatarios. Los avisos mantienen deduplicación y reintentos. El comportamiento de primera lectura de PS5/Switch se conserva.
