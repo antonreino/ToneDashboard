@@ -1,0 +1,440 @@
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+from html import escape
+import json
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+from pathlib import Path
+import signal
+import threading
+import time
+from urllib.parse import urlsplit
+from .network import fetch, FetchError, Telegram
+from .parsers import parse_page, ParseError, discover_product_urls
+from .store import Store
+from .models import FAMILIES
+from .products import list_products, product_sources, configured_sources
+
+ROOT = Path(__file__).resolve().parent.parent
+LOG = logging.getLogger('ps5bot')
+DOMAINS = {
+    'amazon': 'amazon.es', 'fnac': 'fnac.es', 'mediamarkt': 'mediamarkt.es',
+    'pccomponentes': 'pccomponentes.com', 'idealo': 'idealo.es', 'chollometro': 'chollometro.com',
+    'game': 'game.es', 'carrefour': 'carrefour.es',
+}
+
+
+# Evita lanzar varias peticiones simultáneas al mismo dominio.
+# No intenta eludir controles anti-bot: al contrario, reduce presión y reutiliza respuestas.
+DOMAIN_MIN_GAP = {
+    'amazon': 120,
+    'fnac': 90,
+    'mediamarkt': 45,
+    'pccomponentes': 120,
+    'idealo': 120,
+    'chollometro': 20,
+    'game': 60,
+    'carrefour': 60,
+}
+SHARED_CACHE_SECONDS = {
+    'chollometro': 60,
+}
+_FETCH_STATE_LOCK = threading.Lock()
+_DOMAIN_LOCKS = {}
+_DOMAIN_LAST_REQUEST = {}
+_RESPONSE_CACHE = {}
+
+
+def source_default_interval(parser):
+    return {
+        'amazon': 900,          # 15 min
+        'fnac': 600,            # 10 min
+        'mediamarkt': 300,      # 5 min
+        'pccomponentes': 600,   # 10 min
+        'idealo': 900,          # 15 min
+        'chollometro': 90,      # 90 s; RSS es la fuente más rápida
+        'game': 600,
+        'carrefour': 600,
+    }.get(parser, 300)
+
+
+def fetch_source_url(url, source, cfg):
+    """Petición coordinada por dominio con caché corta para URLs compartidas."""
+    parser = source.get('parser', '')
+    now = time.monotonic()
+    cache_seconds = float(source.get('cache_seconds', SHARED_CACHE_SECONDS.get(parser, 0)))
+
+    if cache_seconds > 0:
+        with _FETCH_STATE_LOCK:
+            cached = _RESPONSE_CACHE.get(url)
+            if cached and now - cached[0] < cache_seconds:
+                return cached[1]
+
+    with _FETCH_STATE_LOCK:
+        lock = _DOMAIN_LOCKS.setdefault(parser, threading.Lock())
+
+    with lock:
+        # Otra tarea puede haber rellenado la caché mientras esperábamos el lock.
+        now = time.monotonic()
+        if cache_seconds > 0:
+            with _FETCH_STATE_LOCK:
+                cached = _RESPONSE_CACHE.get(url)
+                if cached and now - cached[0] < cache_seconds:
+                    return cached[1]
+
+        min_gap = float(source.get('domain_min_gap_seconds', DOMAIN_MIN_GAP.get(parser, 30)))
+        with _FETCH_STATE_LOCK:
+            last = _DOMAIN_LAST_REQUEST.get(parser, 0.0)
+        wait = max(0.0, min_gap - (time.monotonic() - last))
+        if wait:
+            time.sleep(wait)
+
+        try:
+            html = fetch(url, cfg.get('timeout_seconds', 18))
+        finally:
+            with _FETCH_STATE_LOCK:
+                _DOMAIN_LAST_REQUEST[parser] = time.monotonic()
+
+        if cache_seconds > 0:
+            with _FETCH_STATE_LOCK:
+                _RESPONSE_CACHE[url] = (time.monotonic(), html)
+        return html
+
+
+def env_file():
+    path = ROOT / '.env'
+    if path.exists():
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ.setdefault(key.strip(), value.strip().strip('\"\''))
+
+
+def load_config(path):
+    cfg = json.loads(Path(path).read_text())
+    if not isinstance(cfg.get('interval_seconds'), (int, float)) or cfg['interval_seconds'] < 30:
+        raise ValueError('interval_seconds debe ser al menos 30')
+    if not 1 <= cfg.get('timeout_seconds', 18) <= 25:
+        raise ValueError('timeout_seconds debe estar entre 1 y 25')
+    names = set()
+    for s in cfg['sources']:
+        s.setdefault('family', 'ps5')
+        if s['family'] not in FAMILIES:
+            raise ValueError('Familia desconocida')
+        if s['name'] in names:
+            raise ValueError('Los nombres de fuentes deben ser únicos')
+        names.add(s['name'])
+        domain = DOMAINS[s['parser']]
+        if s['kind'] not in ('retailer', 'comparison', 'deal'):
+            raise ValueError('Tipo de fuente desconocido')
+        if not s.get('urls'):
+            raise ValueError('Cada fuente necesita al menos una URL')
+        for url in s['urls']:
+            p = urlsplit(url)
+            if p.scheme != 'https' or not p.hostname or not (p.hostname == domain or p.hostname.endswith('.'+domain)):
+                raise ValueError(f'URL no válida para {s["name"]}')
+    return cfg
+
+
+def source_interval(source, cfg):
+    """Cadencia individual adaptada a cada proveedor."""
+    if isinstance(source.get('interval_seconds'), (int, float)) and source['interval_seconds'] >= 30:
+        return source['interval_seconds']
+    return max(cfg['interval_seconds'], source_default_interval(source.get('parser')))
+
+
+def collect(source, cfg, diagnostics=None):
+    offers = {}
+    failures = []
+    successful_urls = 0
+
+    # Las peticiones se coordinan por dominio para que PS5 y Switch 2 no golpeen
+    # simultáneamente la misma tienda. Cada URL se evalúa de forma independiente:
+    # si una ficha concreta falla, conservamos las demás; solo cae la fuente
+    # cuando no se ha podido leer correctamente ninguna URL.
+    for url in source['urls']:
+        report = {} if diagnostics is not None else None
+        try:
+            html = fetch_source_url(url, source, cfg)
+            parsed = parse_page(
+                html, url, source,
+                cfg.get('model_overrides'),
+                cfg.get('include_used', False),
+                report,
+            )
+            if source.get('product_ean') and source['parser'] != 'chollometro':
+                detail_urls = discover_product_urls(html, url, source)
+                detail_successes = 0
+                for detail_url in detail_urls:
+                    try:
+                        detail_html = fetch_source_url(detail_url, source, cfg)
+                        parsed.extend(parse_page(detail_html, detail_url, source, cfg.get('model_overrides'), cfg.get('include_used', False)))
+                        detail_successes += 1
+                    except (FetchError, ParseError) as exc:
+                        failures.append(exc)
+                if detail_urls and not detail_successes and not parsed:
+                    raise FetchError("No se pudieron verificar las fichas EAN descubiertas")
+            successful_urls += 1
+            for offer in parsed:
+                offers[offer.key] = offer
+        except (FetchError, ParseError) as exc:
+            failures.append(exc)
+            if diagnostics is not None:
+                diagnostics.append({
+                    'url': url,
+                    'error': str(exc),
+                    'candidates': 0,
+                    'accepted': 0,
+                    'samples': [],
+                })
+            continue
+
+        if diagnostics is not None:
+            diagnostics.append(report)
+
+    if successful_urls == 0 and failures:
+        retry_after = max((getattr(exc, 'retry_after', 0) for exc in failures), default=0)
+        details = []
+        for exc in failures:
+            detail = str(exc)
+            if detail not in details:
+                details.append(detail)
+        message = 'Todas las URLs fallaron: ' + '; '.join(details[:4])
+        if any(isinstance(exc, FetchError) for exc in failures):
+            raise FetchError(message, retry_after)
+        raise ParseError(message)
+
+    if failures:
+        LOG.warning(
+            '%s: lectura parcial; %d/%d URLs correctas; %d con error',
+            source['name'], successful_urls, len(source['urls']), len(failures),
+        )
+
+    return list(offers.values())
+
+
+def command_reply(message, username, allowed, store, cfg):
+    chat = str(message.get('chat', {}).get('id', ''))
+    if chat not in allowed:
+        sender = message.get('from', {}) or {}
+        command = (message.get('text') or '').strip().split(maxsplit=1)[0] if message.get('text') else ''
+        LOG.warning(
+            'Chat Telegram no autorizado: chat_id=%s user_id=%s username=%s nombre=%s comando=%s',
+            chat,
+            sender.get('id', ''),
+            sender.get('username', ''),
+            ' '.join(x for x in (sender.get('first_name', ''), sender.get('last_name', '')) if x).strip(),
+            command,
+        )
+        return None
+    origin = message.get('forward_origin') or {}
+    sender = origin.get('sender_user') if origin.get('type') == 'user' else message.get('forward_from')
+    if isinstance(sender, dict) and isinstance(sender.get('id'), int) and sender['id'] > 0 and not sender.get('is_bot'):
+        store.set_meta('forwarded_chat_candidate', json.dumps({
+            'id': str(sender['id']), 'first_name': sender.get('first_name', ''),
+            'received_at': int(message.get('date') or time.time()),
+        }, ensure_ascii=False))
+        LOG.info('Identificador de usuario reenviado guardado para revisión local; no autorizado automáticamente.')
+    elif origin.get('type') == 'hidden_user':
+        store.set_meta('forwarded_chat_candidate', json.dumps({'error': 'hidden_user'}))
+        LOG.info('El reenvío oculta el identificador de usuario por privacidad de Telegram.')
+    text = message.get('text', '').strip().split()
+    if not text:
+        return None
+    command, _, suffix = text[0].partition('@')
+    if suffix and suffix.lower() != username.lower():
+        return None
+    family = 'switch2' if command in ('/switch2', '/zelda', '/estado_switch2', '/chollos_switch2') else 'ps5'
+    selected = [s for s in cfg['sources'] if s.get('family', 'ps5') == family]
+    enabled = {s['name'] for s in selected if s.get('enabled', True)}
+    if command in ('/ps5', '/switch2', '/zelda'):
+        return store.summary(cfg.get('stale_after_seconds', 180), enabled=enabled, family=family)
+    if command in ('/estado', '/estado_ps5', '/estado_switch2'):
+        return store.status(cfg['sources'] if command == '/estado' else selected)
+    if command in ('/chollos', '/chollos_switch2'):
+        return store.deals(enabled=enabled, family=family)
+    if command == '/logs':
+        return store.logs()
+    if command in ('/start', '/help', '/ayuda'):
+        return ('/ps5 — mejor precio reciente de cada modelo\n'
+                '/switch2 — consola Zelda 40.º aniversario (también /zelda)\n'
+                '/estado — estado actual y próxima revisión\n'
+                '/estado_ps5 · /estado_switch2 — estado por consola\n'
+                '/logs — últimos errores y recuperaciones\n'
+                '/chollos · /chollos_switch2 — anuncios por consola\n'
+                'Telegram solo avisa de productos/ofertas y cambios de precio o stock. PS5 Pro excluida.')
+    return None
+
+
+def commands(api, store, cfg, allowed, username, stop):
+    offset = int(store.get_meta('telegram_offset'))
+    while not stop.is_set():
+        try:
+            updates = api.call('getUpdates', {'offset': offset, 'timeout': 20, 'allowed_updates': ['message']}, timeout=25)
+            for update in updates:
+                message = update.get('message', {})
+                reply = command_reply(message, username, allowed, store, cfg)
+                if reply:
+                    store.queue(reply, message['chat']['id'])
+                offset = update['update_id'] + 1
+                store.set_meta('telegram_offset', offset)
+        except FetchError as exc:
+            LOG.warning('%s; si HTTP 409, hay otro proceso/webhook usando este bot.', exc)
+            stop.wait(max(5, exc.retry_after))
+        except Exception as exc:
+            LOG.error('Error en comandos: %s', type(exc).__name__)
+            stop.wait(5)
+
+
+def notifications(api, store, stop):
+    while not stop.is_set():
+        row = store.pending()
+        if row is None:
+            stop.wait(0.5)
+            continue
+        try:
+            api.send(row['chat'], row['body'])
+            store.sent(row['id'])
+            stop.wait(1.1)
+        except FetchError as exc:
+            delay = max(exc.retry_after, min(1800, 5 * 2 ** min(row['attempts'], 9)))
+            store.retry(row['id'], delay)
+            LOG.warning('%s; notificación retenida en cola.', exc)
+            stop.wait(max(1, exc.retry_after))
+
+
+def run(cfg, store, stop):
+    sources = [s for s in cfg['sources'] if s.get('enabled', True)]
+    jobs, failures = {}, {}
+    started = time.monotonic()
+    due = {s['name']: started + max(0, float(s.get('initial_delay_seconds', 0))) for s in sources}
+    interval = cfg['interval_seconds']
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        refreshed = 0.0
+        while not stop.is_set():
+            if time.monotonic() - refreshed >= 15:
+                sources = configured_sources(ROOT / "data/prices.sqlite3", cfg["sources"]) + product_sources(list_products(ROOT / "data/prices.sqlite3"), cfg["sources"])
+                active_names = {s['name'] for s in sources}
+                for obsolete in (set(jobs) | set(due) | set(failures)) - active_names:
+                    obsolete_job = jobs.pop(obsolete, None)
+                    if obsolete_job:
+                        obsolete_job.cancel()
+                    due.pop(obsolete, None)
+                    failures.pop(obsolete, None)
+                refreshed = time.monotonic()
+            for s in sources:
+                name = s['name']
+                job = jobs.get(name)
+                if job and job.done():
+                    base_interval = source_interval(s, cfg)
+                    error, wait, offers = None, base_interval, []
+                    try:
+                        offers = job.result()
+                        failures[name] = 0
+                    except (FetchError, ParseError) as exc:
+                        error = str(exc)
+                        failures[name] = failures.get(name, 0) + 1
+                        wait = max(getattr(exc, 'retry_after', 0), min(3600, base_interval * 2 ** min(failures[name], 6)))
+                        if 'HTTP 403' in error or 'CAPTCHA' in error:
+                            wait = max(wait, 1800)
+                        elif 'HTTP 429' in error:
+                            wait = max(wait, 600)
+                    except Exception as exc:
+                        error = 'Error del adaptador: ' + type(exc).__name__
+                        wait = 300
+                    # Cadencia desde el inicio de la consulta, sin solapar ni acumular ejecuciones.
+                    due[name] = time.monotonic() + wait if error else max(time.monotonic(), due[name] + wait)
+                    next_wall = time.time() + max(0, due[name] - time.monotonic())
+                    if s.get('product_ean'):
+                        store.source_result(name, offers, error, next_wall, generation=s.get('product_generation'))
+                    else:
+                        store.source_result(name, offers, error, next_wall, family=s.get("family", "ps5"), generation=s.get("tracking_generation"))
+                    if error:
+                        LOG.warning('%s: %s; pausa %.0f s', name, error, wait)
+                    else:
+                        LOG.info('%s: %d fichas', name, len(offers))
+                    del jobs[name]
+                if name not in jobs and time.monotonic() >= due.get(name, 0):
+                    due[name] = time.monotonic()
+                    jobs[name] = pool.submit(collect, s, cfg)
+            stop.wait(0.25)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Bot de precios PS5 y Switch 2 Zelda')
+    parser.add_argument('--config', default=str(ROOT / 'config.json'))
+    parser.add_argument('--check', action='store_true', help='Una lectura por fuente, sin Telegram ni modificar la base de datos')
+    parser.add_argument('--source', help='Filtra --check por el nombre exacto, por ejemplo Amazon')
+    parser.add_argument('--diagnose', action='store_true', help='Con --check: títulos y precios descartados; no imprime credenciales ni HTML')
+    args = parser.parse_args()
+    env_file()
+    cfg = load_config(args.config)
+    if args.check:
+        def check(source):
+            reports = [] if args.diagnose else None
+            try:
+                offers = collect(source, cfg, reports)
+                return source['name'], offers, None, reports
+            except (FetchError, ParseError) as exc:
+                return source['name'], [], str(exc), reports
+        sources = [s for s in cfg['sources'] if s.get('enabled', True) and (not args.source or s['name'] == args.source)]
+        if not sources:
+            parser.error('No existe una fuente activa con ese nombre')
+        failed = False
+        with ThreadPoolExecutor(max_workers=max(1, len(sources))) as pool:
+            for name, offers, error, reports in pool.map(check, sources):
+                print(f'{name}: ' + (error if error else (f'OK, {len(offers)} fichas' if offers else 'SIN COINCIDENCIAS VÁLIDAS')), flush=True)
+                failed |= bool(error)
+                for o in offers:
+                    print(f'  {o.model} | {o.price/100:.2f} EUR | {o.availability} | {o.title}\n  {o.url}')
+                if reports:
+                    print(json.dumps(reports, ensure_ascii=False, indent=2))
+        return 2 if failed else 0
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    chats = tuple(x.strip() for x in os.environ.get('TELEGRAM_CHAT_IDS', '').split(',') if x.strip())
+    if not token or not chats:
+        parser.error('Faltan credenciales. Ejecuta python scripts/configure.py')
+    if any(not x.lstrip('-').isdigit() for x in chats):
+        parser.error('TELEGRAM_CHAT_IDS debe contener identificadores numéricos')
+    data = ROOT / 'data'
+    data.mkdir(exist_ok=True, mode=0o700)
+    logs = ROOT / 'logs'
+    logs.mkdir(exist_ok=True)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s',
+                        handlers=[RotatingFileHandler(logs / 'bot.log', maxBytes=2_000_000, backupCount=3), logging.StreamHandler()])
+    # Impide dos instancias locales y las carreras de SQLite/getUpdates.
+    import fcntl
+    lock = (data / 'bot.lock').open('w')
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        parser.error('Ya hay una instancia ejecutándose en esta carpeta')
+    api = Telegram(token)
+    try:
+        me = api.call('getMe')
+        if api.call('getWebhookInfo').get('url'):
+            parser.error('Este bot tiene un webhook activo. Usa un bot nuevo de BotFather para evitar conflictos.')
+    except FetchError as exc:
+        parser.error(str(exc))
+    store = Store(data / 'prices.sqlite3', chats)
+    stop = threading.Event()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, lambda *_: stop.set())
+    threads = [threading.Thread(target=commands, args=(api, store, cfg, chats, me['username'], stop), daemon=True),
+               threading.Thread(target=notifications, args=(api, store, stop), daemon=True)]
+    for t in threads:
+        t.start()
+    try:
+        run(cfg, store, stop)
+    finally:
+        stop.set()
+        for t in threads:
+            t.join(timeout=27)
+        lock.close()
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
