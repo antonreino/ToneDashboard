@@ -137,7 +137,7 @@ struct OrbitZeroView: View {
                 ContentUnavailableView("Configura ToneDashboard", systemImage: "lock.shield",
                     description: Text("Introduce la URL HTTPS y las credenciales en Ajustes."))
             }
-            Text("Las verificaciones externas de algunos proveedores siguen realizándose en el Mac. Esta pestaña no da acceso remoto al escritorio. Para acceder fuera de casa usa VPN y HTTPS.")
+            Text("Abre Conexión automática dentro de Orbit para recordar este dispositivo durante 30 días. Las verificaciones externas de algunos proveedores siguen realizándose en el Mac. Esta pestaña no da acceso remoto al escritorio. Para acceder fuera de casa usa VPN y HTTPS.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(12)
@@ -247,7 +247,8 @@ struct OrbitWebKitMac: NSViewRepresentable {
     }
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()
+        // Keep the revocable HttpOnly device authorization between app launches.
+        configuration.websiteDataStore = .default()
         let web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = context.coordinator
         web.load(orbitRequest(baseURL: baseURL, username: username, password: password))
@@ -268,7 +269,8 @@ struct OrbitWebKitMobile: UIViewRepresentable {
     }
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()
+        // Keep the revocable HttpOnly device authorization between app launches.
+        configuration.websiteDataStore = .default()
         let web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = context.coordinator
         web.scrollView.contentInsetAdjustmentBehavior = .never

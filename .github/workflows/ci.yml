@@ -38,6 +38,11 @@ jobs:
           swiftc ToneDashboardApps/Models.swift tests/ServerContractTests.swift -o /tmp/server-contract-tests
           /tmp/server-contract-tests tests/Fixtures
 
+      - name: Test persistent Orbit cookies with WebKit
+        run: |
+          swiftc -parse-as-library tests/OrbitCookiePersistenceTests.swift -o /tmp/orbit-cookie-tests
+          /tmp/orbit-cookie-tests
+
       - name: Build macOS
         run: |
           xcodebuild             -project ToneDashboardApps.xcodeproj             -scheme "ToneDashboardApps macOS"             -configuration Debug             -destination 'platform=macOS'             CODE_SIGNING_ALLOWED=NO             build

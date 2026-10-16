@@ -110,3 +110,18 @@ swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift ToneDash
 swiftc ToneDashboardApps/Models.swift tests/ServerContractTests.swift -o /tmp/server-contract-tests
 /tmp/server-contract-tests tests/Fixtures
 ```
+
+### Orbit: recordar este dispositivo (1.2, compilación 3)
+
+Las apps de iOS y macOS conservan ahora los datos web de Orbit entre aperturas.
+Dentro de Orbit, abre **Conexión automática**, introduce una vez la contraseña de
+vinculación y pulsa **Recordar este dispositivo**. El control es el mismo que en
+la web. La autorización dura 30 días y se revoca con **Olvidar este dispositivo**.
+Requiere el backend ToneDashboard actualizado y su URL HTTPS.
+
+El backend recupera el código vigente a través del lector local autorizado si
+Orbit reinicia sus sesiones. No se conserva el código ni la contraseña adicional
+en la app. Mantén Orbit Zero conectado a la PS5 y el código accesible en
+**Consola → Cómo funciona** del Mac. **Ver código** sigue disponible si necesitas
+vincular manualmente. La recuperación no arranca el jailbreak ni el receptor de
+Orbit de la consola.
