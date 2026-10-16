@@ -14,7 +14,7 @@ from .network import fetch, FetchError, Telegram
 from .parsers import parse_page, ParseError, discover_product_urls
 from .store import Store
 from .models import FAMILIES
-from .products import list_products, product_sources
+from .products import list_products, product_sources, configured_sources
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = logging.getLogger('ps5bot')
@@ -315,7 +315,7 @@ def run(cfg, store, stop):
         refreshed = 0.0
         while not stop.is_set():
             if time.monotonic() - refreshed >= 15:
-                sources = [s for s in cfg["sources"] if s.get("enabled", True)] + product_sources(list_products(ROOT / "data/prices.sqlite3"), cfg["sources"])
+                sources = configured_sources(ROOT / "data/prices.sqlite3", cfg["sources"]) + product_sources(list_products(ROOT / "data/prices.sqlite3"), cfg["sources"])
                 active_names = {s['name'] for s in sources}
                 for obsolete in (set(jobs) | set(due) | set(failures)) - active_names:
                     obsolete_job = jobs.pop(obsolete, None)
@@ -350,7 +350,7 @@ def run(cfg, store, stop):
                     if s.get('product_ean'):
                         store.source_result(name, offers, error, next_wall, generation=s.get('product_generation'))
                     else:
-                        store.source_result(name, offers, error, next_wall)
+                        store.source_result(name, offers, error, next_wall, family=s.get("family", "ps5"), generation=s.get("tracking_generation"))
                     if error:
                         LOG.warning('%s: %s; pausa %.0f s', name, error, wait)
                     else:

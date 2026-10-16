@@ -6,6 +6,10 @@ import time
 from pathlib import Path
 
 MAX_PRODUCTS = 20
+BUILTINS = {
+    'ps5': ('PlayStation 5', ('fat_digital', 'fat_disc', 'slim_digital', 'slim_disc')),
+    'switch2': ('Nintendo Switch 2 · Zelda', ('switch2_zelda40',)),
+}
 
 
 def validate_ean(value):
@@ -25,6 +29,8 @@ def connection(path):
     conn = sqlite3.connect(path, timeout=5)
     conn.row_factory = sqlite3.Row
     conn.execute('CREATE TABLE IF NOT EXISTS tracked_products (ean TEXT PRIMARY KEY, name TEXT NOT NULL, created REAL NOT NULL)')
+    conn.execute('CREATE TABLE IF NOT EXISTS tracked_families (family TEXT PRIMARY KEY, enabled INTEGER NOT NULL, generation REAL NOT NULL)')
+    conn.executemany('INSERT OR IGNORE INTO tracked_families VALUES (?,1,0)', [(k,) for k in BUILTINS])
     conn.commit()
     try:
         yield conn
@@ -96,3 +102,47 @@ def remove_product(path, value):
             else:
                 conn.execute('DELETE FROM outbox WHERE instr(body,?)>0', ('EAN ' + ean,))
         return removed
+
+
+
+def list_tracking(path, enabled=True):
+    with connection(path) as conn:
+        families = [dict(id=r['family'], ean='', name=BUILTINS[r['family']][0], family=r['family'])
+                    for r in conn.execute('SELECT * FROM tracked_families WHERE enabled=? ORDER BY family', (int(enabled),)) if r['family'] in BUILTINS]
+    return families + ([dict(p, id='ean:'+p['ean'], family='ean') for p in list_products(path)] if enabled else [])
+
+
+def configured_sources(path, configured):
+    with connection(path) as conn:
+        states = {r['family']: dict(r) for r in conn.execute('SELECT * FROM tracked_families')}
+    return [dict(s, tracking_generation=states[s.get('family', 'ps5')]['generation']) for s in configured
+            if s.get('enabled', True) and states.get(s.get('family', 'ps5'), {}).get('enabled')]
+
+
+def remove_tracking(path, ident):
+    if not isinstance(ident, str):
+        raise ValueError('Identificador de seguimiento no válido')
+    if ident not in BUILTINS:
+        return remove_product(path, ident.removeprefix('ean:'))
+    with connection(path) as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        changed = bool(conn.execute('UPDATE tracked_families SET enabled=0,generation=? WHERE family=? AND enabled=1', (time.time(),ident)).rowcount)
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if 'offers' in tables:
+            for model in BUILTINS[ident][1]:conn.execute('UPDATE offers SET active=0 WHERE model=?',(model,))
+        if 'outbox' in tables:
+            columns = {r[1] for r in conn.execute('PRAGMA table_info(outbox)')}
+            if 'product_family' in columns:conn.execute('DELETE FROM outbox WHERE product_family=?',(ident,))
+            # Compatibilidad con avisos antiguos, sin borrar avisos de EAN.
+            if 'product_ean' in columns:
+                for label in (('PS5 ',) if ident=='ps5' else ('Nintendo Switch 2',)):
+                    conn.execute('DELETE FROM outbox WHERE product_ean IS NULL AND instr(body,?)>0',(label,))
+        return changed
+
+
+def restore_tracking(path, ident):
+    if not isinstance(ident, str) or ident not in BUILTINS:
+        raise ValueError('Solo PS5 y Switch se restauran aquí; los demás productos se añaden por EAN.')
+    with connection(path) as conn:
+        conn.execute('UPDATE tracked_families SET enabled=1,generation=? WHERE family=? AND enabled=0',(time.time(),ident))
+    return True

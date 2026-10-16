@@ -18,6 +18,8 @@ class Store:
         self.chats = tuple(chats)
         self.db.executescript('''
             PRAGMA journal_mode=WAL;
+            CREATE TABLE IF NOT EXISTS tracked_families (family TEXT PRIMARY KEY, enabled INTEGER NOT NULL, generation REAL NOT NULL);
+            INSERT OR IGNORE INTO tracked_families VALUES ('ps5',1,0),('switch2',1,0);
             CREATE TABLE IF NOT EXISTS tracked_products (ean TEXT PRIMARY KEY, name TEXT NOT NULL, created REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS offers (
                 key TEXT PRIMARY KEY, source TEXT, payload TEXT, price INTEGER,
@@ -39,6 +41,8 @@ class Store:
         ''')
         if 'product_ean' not in {r[1] for r in self.db.execute('PRAGMA table_info(outbox)')}:
             self.db.execute('ALTER TABLE outbox ADD COLUMN product_ean TEXT')
+        if 'product_family' not in {r[1] for r in self.db.execute('PRAGMA table_info(outbox)')}:
+            self.db.execute('ALTER TABLE outbox ADD COLUMN product_family TEXT')
         self.db.commit()
 
     def queue(self, body, chat=None):
@@ -55,7 +59,7 @@ class Store:
                 for chunk in chunks:
                     self.db.execute('INSERT INTO outbox(chat,body) VALUES (?,?)', (target, chunk))
 
-    def source_result(self, name, offers, error=None, next_check=0, now=None, generation=None):
+    def source_result(self, name, offers, error=None, next_check=0, now=None, generation=None, family=None):
         now = time.time() if now is None else now
         with self.lock, self.db:
             self.db.execute('BEGIN IMMEDIATE')
@@ -64,6 +68,10 @@ class Store:
                 product = self.db.execute('SELECT created FROM tracked_products WHERE ean=?', (product_ean,)).fetchone()
                 if product is None or (generation is not None and product['created'] != generation):
                     return  # Resultado de una consulta anterior a la eliminación/recreación.
+            elif family:
+                tracked = self.db.execute('SELECT enabled,generation FROM tracked_families WHERE family=?',(family,)).fetchone()
+                if tracked is None or not tracked['enabled'] or (generation is not None and tracked['generation'] != generation):
+                    return
             self.db.execute('INSERT OR IGNORE INTO sources(name) VALUES (?)', (name,))
             state = self.db.execute('SELECT * FROM sources WHERE name=?', (name,)).fetchone()
             def notify_once(body):
@@ -75,7 +83,7 @@ class Store:
                 if not cur.rowcount:
                     return False
                 for chat in self.chats:
-                    self.db.execute('INSERT INTO outbox(chat,body,product_ean) VALUES (?,?,?)', (chat, body, product_ean))
+                    self.db.execute('INSERT INTO outbox(chat,body,product_ean,product_family) VALUES (?,?,?,?)', (chat, body, product_ean, family or (None if product_ean else ('switch2' if any(o.model.startswith('switch2') for o in offers) else 'ps5'))))
                 return True
 
             def source_event(level, detail):

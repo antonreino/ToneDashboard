@@ -205,3 +205,7 @@ Las fuentes desactivadas no se reactivan al añadir un EAN. Para comprobar prove
 El botón **Eliminar** de cada producto EAN en web, iOS y macOS deja de seguirlo tras confirmar. Retira sus ofertas activas y cancela los avisos de ese EAN pendientes de envío; conserva el historial ya publicado. Las consultas iniciadas antes de eliminarlo no pueden reactivar sus ofertas ni generar nuevos avisos. Un mensaje cuyo envío ya haya comenzado podría llegar igualmente.
 
 Todos los EAN utilizan el mismo bot y todos los chats ya autorizados en `TELEGRAM_CHAT_IDS`: primera oferta encontrada, nuevas fichas, bajadas/subidas y vuelta de stock. No hace falta configurar otro bot ni destinatarios. Los avisos mantienen deduplicación y reintentos. El comportamiento de primera lectura de PS5/Switch se conserva.
+
+### Seguimientos uniformes: PS5, Switch y EAN
+
+PS5 y Switch también se gestionan desde las tarjetas: **Eliminar** detiene sus consultas y sus avisos, conserva el historial y no afecta a los EAN añadidos ni a sus proveedores. La decisión se conserva tras reiniciar. **Volver a seguir** permite recuperar cualquiera de esas dos familias; los EAN se recuperan añadiendo su código otra vez. El registro `tracked_families` conserva el estado y la generación de PS5/Switch; una respuesta antigua no puede reactivar un seguimiento retirado o recién recuperado. No se desactivan tiendas globalmente por retirar una familia.
