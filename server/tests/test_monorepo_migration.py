@@ -6,6 +6,11 @@ import unittest
 ROOT=Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('tone_migration',ROOT/'scripts/migration.py');migration=importlib.util.module_from_spec(spec);spec.loader.exec_module(migration)
 class MigrationTests(unittest.TestCase):
+ def test_missing_database_is_not_created(self):
+  with tempfile.TemporaryDirectory() as d:
+   path=Path(d)/'missing.sqlite3'
+   with self.assertRaises(sqlite3.OperationalError):migration.database_manifest(path)
+   self.assertFalse(path.exists())
  def test_sqlite_copy_preserves_all_rows_binary_and_history(self):
   with tempfile.TemporaryDirectory() as d:
    source=Path(d)/'old.sqlite3';target=Path(d)/'new.sqlite3'

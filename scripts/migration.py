@@ -6,7 +6,9 @@ from pathlib import Path
 
 
 def database_manifest(path):
-    with sqlite3.connect(path) as conn:
+    path = Path(path).resolve()
+    # A verification must never create an empty database at a mistaken path.
+    with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as conn:
         integrity = conn.execute('PRAGMA integrity_check').fetchone()[0]
         if integrity != 'ok':
             raise ValueError('SQLite integrity check failed')

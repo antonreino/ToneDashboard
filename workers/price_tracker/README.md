@@ -126,8 +126,8 @@ En `.env`, `TELEGRAM_CHAT_IDS` permite varios identificadores separados por coma
 ## Ejecución manual / Linux
 
 ```bash
-python3 -m venv .venv
-../../.venv/bin/python -m pip install -r requirements.txt
+python3 -m venv ../../.venv
+../../.venv/bin/python -m pip install -r ../../requirements.txt
 ../../.venv/bin/python scripts/configure.py
 ../../.venv/bin/python -m ps5bot.app
 ```
