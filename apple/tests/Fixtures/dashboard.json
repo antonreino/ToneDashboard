@@ -1,0 +1,193 @@
+{
+  "services": {
+    "organizer": {
+      "running": true,
+      "state": "sample"
+    },
+    "telegram": {
+      "running": true,
+      "state": "sample"
+    },
+    "viewer": {
+      "running": true,
+      "state": "sample"
+    },
+    "alerts": {
+      "running": true,
+      "state": "sample"
+    }
+  },
+  "summary": {
+    "downloads": {
+      "completed": 0
+    },
+    "history_24h": {
+      "count": 0,
+      "success": 0,
+      "errors": 0,
+      "bytes": 0,
+      "downloaded_bytes": 0,
+      "moved_bytes": 0
+    }
+  },
+  "statistics": {
+    "downloaded_bytes": 0,
+    "moved_bytes": 0,
+    "total_bytes": 0,
+    "download_count": 0,
+    "moved_count": 0,
+    "periods": [
+      {
+        "label": "sample",
+        "downloaded_bytes": 0,
+        "moved_bytes": 0,
+        "download_count": 0,
+        "moved_count": 0
+      },
+      {
+        "label": "sample",
+        "downloaded_bytes": 0,
+        "moved_bytes": 0,
+        "download_count": 0,
+        "moved_count": 0
+      }
+    ],
+    "categories": [
+      {
+        "category": "sample",
+        "bytes": 0,
+        "count": 0
+      },
+      {
+        "category": "sample",
+        "bytes": 0,
+        "count": 0
+      }
+    ],
+    "first_event": "sample",
+    "last_event": "sample"
+  },
+  "downloads": [
+    {
+      "id": 0,
+      "created_at": "sample",
+      "updated_at": "sample",
+      "name": "sample",
+      "target": "sample",
+      "size_bytes": 0,
+      "resume_supported": 0,
+      "status": "sample",
+      "queued_at": 0,
+      "started_at": 0,
+      "finished_at": 0,
+      "attempt": 0,
+      "error": null,
+      "downloaded_bytes": 0,
+      "speed_bps": null,
+      "progress_percent": 0,
+      "eta_seconds": null
+    },
+    {
+      "id": 0,
+      "created_at": "sample",
+      "updated_at": "sample",
+      "name": "sample",
+      "target": "sample",
+      "size_bytes": 0,
+      "resume_supported": 0,
+      "status": "sample",
+      "queued_at": 0,
+      "started_at": 0,
+      "finished_at": 0,
+      "attempt": 0,
+      "error": null,
+      "downloaded_bytes": 0,
+      "speed_bps": null,
+      "progress_percent": 0,
+      "eta_seconds": null
+    }
+  ],
+  "history": [
+    {
+      "id": 0,
+      "created_at": "sample",
+      "kind": "sample",
+      "status": "sample",
+      "title": "sample",
+      "category": null,
+      "source_path": null,
+      "destination": "sample",
+      "details": "sample",
+      "size_bytes": 0,
+      "job_id": 0
+    },
+    {
+      "id": 0,
+      "created_at": "sample",
+      "kind": "sample",
+      "status": "sample",
+      "title": "sample",
+      "category": null,
+      "source_path": null,
+      "destination": "sample",
+      "details": "sample",
+      "size_bytes": 0,
+      "job_id": 0
+    }
+  ],
+  "disk": {
+    "path": "sample",
+    "exists": true,
+    "total": 0,
+    "used": 0,
+    "free": 0
+  },
+  "internal_disk": {
+    "path": "sample",
+    "exists": true,
+    "total": 0,
+    "used": 0,
+    "free": 0
+  },
+  "emby_disk": {
+    "available": true,
+    "path": "sample",
+    "total": 0,
+    "used": 0,
+    "free": 0,
+    "used_percent": 0,
+    "updated_at": "sample",
+    "stale": false,
+    "stored_at": "sample"
+  },
+  "emby_system": {
+    "available": true,
+    "cpu_percent": 0,
+    "ram_total": 0,
+    "ram_used": 0,
+    "ram_available": 0,
+    "ram_percent": 0,
+    "load_1": 0,
+    "load_5": 0,
+    "load_15": 0,
+    "updated_at": "sample",
+    "stale": false,
+    "stored_at": "sample"
+  },
+  "system": {
+    "cpu_percent": 0,
+    "gpu_percent": 0,
+    "temperature_c": 0,
+    "cpu_temperature_c": 0,
+    "gpu_temperature_c": 0,
+    "thermal_state": null,
+    "ram_total": 0,
+    "ram_used": 0,
+    "ram_percent": 0,
+    "memory_free_percent": 0,
+    "swap_used": 0,
+    "net_rx_bps": 0,
+    "net_tx_bps": 0,
+    "powermetrics_note": "sample"
+  }
+}

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build iOS and macOS
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test API origin and redirect protection
+        run: |
+          swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift tests/APISecurityTests.swift -o /tmp/api-security-tests
+          /tmp/api-security-tests
+
+      - name: Test functional parity and Orbit code lifecycle
+        run: |
+          swiftc ToneDashboardApps/APIClient.swift ToneDashboardApps/Models.swift ToneDashboardApps/Formatters.swift ToneDashboardApps/DashboardSession.swift ToneDashboardApps/KeychainStore.swift tests/FunctionalParityTests.swift -o /tmp/functional-parity-tests
+          /tmp/functional-parity-tests
+
+      - name: Test API response contracts with anonymized fixtures
+        run: |
+          swiftc ToneDashboardApps/Models.swift tests/ServerContractTests.swift -o /tmp/server-contract-tests
+          /tmp/server-contract-tests tests/Fixtures
+
+      - name: Test persistent Orbit cookies with WebKit
+        run: |
+          swiftc -parse-as-library tests/OrbitCookiePersistenceTests.swift -o /tmp/orbit-cookie-tests
+          /tmp/orbit-cookie-tests
+
+      - name: Build macOS
+        run: |
+          xcodebuild             -project ToneDashboardApps.xcodeproj             -scheme "ToneDashboardApps macOS"             -configuration Debug             -destination 'platform=macOS'             CODE_SIGNING_ALLOWED=NO             build
+
+      - name: Build iOS Simulator
+        run: |
+          xcodebuild             -project ToneDashboardApps.xcodeproj             -scheme "ToneDashboardApps iOS"             -configuration Debug             -sdk iphonesimulator             -destination 'generic/platform=iOS Simulator'             CODE_SIGNING_ALLOWED=NO             build

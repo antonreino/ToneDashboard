@@ -1,0 +1,41 @@
+# macOS
+.DS_Store
+
+# Xcode - configuración personal
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Builds
+build/
+DerivedData/
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcarchive
+
+# Swift / SwiftPM
+.build/
+.swiftpm/
+
+# Signing / secrets
+*.mobileprovision
+*.p12
+*.cer
+*.pem
+*.key
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Local backups
+*.bak
+*.bak.*

@@ -1,0 +1,35 @@
+name: ToneDashboardApps
+options:
+  bundleIdPrefix: ovh.tonecas
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    MARKETING_VERSION: "1.4"
+    CURRENT_PROJECT_VERSION: "6"
+targets:
+  ToneDashboardApps iOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources: [ToneDashboardApps]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ovh.tonecas.embydashboard.ios
+        PRODUCT_NAME: ToneDashboardApps
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ToneDashboardApps
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+  ToneDashboardApps macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources: [ToneDashboardApps]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ovh.tonecas.embydashboard.macos
+        PRODUCT_NAME: ToneDashboardApps
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ToneDashboardApps

@@ -1,0 +1,398 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		09F68D27FD65DD1468D0D1F0 /* DashboardSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 862370040BA2C9A7D6572B12 /* DashboardSession.swift */; };
+		1221C271A6E71511E0C983ED /* ToneDashboardAppsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */; };
+		15F11F91DD068384295C99CE /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EA1506F6609ECD63A7D352 /* APIClient.swift */; };
+		1C2CC5BB54B8B4BE9F33DA6F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5F8A71D5156697717112741 /* Models.swift */; };
+		1F71F291A9EF5F205AE5E275 /* DealsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60AE69A88733BD87E928DAB /* DealsView.swift */; };
+		439C5435E94D75745DC93064 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EA1506F6609ECD63A7D352 /* APIClient.swift */; };
+		564CEEB4654F444C9BD4E52A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E896D4187B4663640BE5D1D4 /* ContentView.swift */; };
+		57A019BE72071589AC34A35E /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E022712B15654F85BB09E753 /* KeychainStore.swift */; };
+		5EA9A0384BE219A004EDA489 /* ToneDashboardAppsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */; };
+		5EAFD0ED398CA43DA54192E2 /* DealsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60AE69A88733BD87E928DAB /* DealsView.swift */; };
+		6470A28B7CECD0F8249702E5 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5BAE77966572E0853A6F7F2 /* Components.swift */; };
+		6A3372FAEE2D3A416610A8EC /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A374189E818099574B1C4295 /* ActivityView.swift */; };
+		6B251DE8730D1676ECEAA26E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 953C73B9C09E35A59E2292EC /* Assets.xcassets */; };
+		73C5BC5B1A98E49AEBAC7F65 /* LogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A985D1B463542D048E17FCF /* LogsView.swift */; };
+		8F7E327C7CC4DC1E23578F8A /* DashboardSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 862370040BA2C9A7D6572B12 /* DashboardSession.swift */; };
+		9413DFCF13302C133B39843C /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1BE648A3259EDEB1DD7974F /* Formatters.swift */; };
+		97FBBCC8C9A2D2EBD0A33F10 /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3E012FF059A136910E6717 /* DownloadsView.swift */; };
+		9CE166A76696FF1231E4C9AC /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5BAE77966572E0853A6F7F2 /* Components.swift */; };
+		AE6D35CCCF1C011A67E31F65 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2874E6DDAD4727F1711134EA /* SettingsView.swift */; };
+		C372F13C25C1B6D11C560746 /* OverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27D24DB39BF3CA4772BAF2F8 /* OverviewView.swift */; };
+		C50BAF042ED2C2CB4398BE28 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1BE648A3259EDEB1DD7974F /* Formatters.swift */; };
+		C8D3217021E7E9AA6807FB61 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E022712B15654F85BB09E753 /* KeychainStore.swift */; };
+		D059F2187F0EC289BFCCB34E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 953C73B9C09E35A59E2292EC /* Assets.xcassets */; };
+		D4A00B1DF84A6C23EF42D41C /* LogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A985D1B463542D048E17FCF /* LogsView.swift */; };
+		D9994ED2AFB4CD77DB36786F /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A374189E818099574B1C4295 /* ActivityView.swift */; };
+		DB4082E9821C0E68111D189A /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3E012FF059A136910E6717 /* DownloadsView.swift */; };
+		DB8415B5ECFBDF25A2082A81 /* OverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27D24DB39BF3CA4772BAF2F8 /* OverviewView.swift */; };
+		E7D381ABB88A6961B49421D5 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5F8A71D5156697717112741 /* Models.swift */; };
+		F12C68168621A47492E4DEFF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E896D4187B4663640BE5D1D4 /* ContentView.swift */; };
+		F7487799E6CC7E48B6EA85FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2874E6DDAD4727F1711134EA /* SettingsView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		27D24DB39BF3CA4772BAF2F8 /* OverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewView.swift; sourceTree = "<group>"; };
+		2874E6DDAD4727F1711134EA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		6A985D1B463542D048E17FCF /* LogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogsView.swift; sourceTree = "<group>"; };
+		862370040BA2C9A7D6572B12 /* DashboardSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSession.swift; sourceTree = "<group>"; };
+		8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneDashboardAppsApp.swift; sourceTree = "<group>"; };
+		92EA1506F6609ECD63A7D352 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		953C73B9C09E35A59E2292EC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A374189E818099574B1C4295 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		C1BE648A3259EDEB1DD7974F /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		C60AE69A88733BD87E928DAB /* DealsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DealsView.swift; sourceTree = "<group>"; };
+		D5BAE77966572E0853A6F7F2 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		D5F8A71D5156697717112741 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		E022712B15654F85BB09E753 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		E896D4187B4663640BE5D1D4 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		EACF94B8D347BE846E1CF6B2 /* ToneDashboardApps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ToneDashboardApps.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE3E012FF059A136910E6717 /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
+		FE41F09D53D034A8EC446345 /* ToneDashboardApps macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "ToneDashboardApps macOS.app"; path = ToneDashboardApps.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		442FA6D35CE990BF5097CB87 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BFB44C88AC5AF08DB96E0CD7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3C9D7F1ECE6B1C2C05B9A223 = {
+			isa = PBXGroup;
+			children = (
+				CC6A140804F390EB618F6366 /* ToneDashboardApps */,
+				7162250E0FAA4FDEE70FDEA1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7162250E0FAA4FDEE70FDEA1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EACF94B8D347BE846E1CF6B2 /* ToneDashboardApps.app */,
+				FE41F09D53D034A8EC446345 /* ToneDashboardApps macOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CC6A140804F390EB618F6366 /* ToneDashboardApps */ = {
+			isa = PBXGroup;
+			children = (
+				92EA1506F6609ECD63A7D352 /* APIClient.swift */,
+				A374189E818099574B1C4295 /* ActivityView.swift */,
+				D5BAE77966572E0853A6F7F2 /* Components.swift */,
+				E896D4187B4663640BE5D1D4 /* ContentView.swift */,
+				862370040BA2C9A7D6572B12 /* DashboardSession.swift */,
+				C60AE69A88733BD87E928DAB /* DealsView.swift */,
+				EE3E012FF059A136910E6717 /* DownloadsView.swift */,
+				8C450585BFEA10DB644BA1F9 /* ToneDashboardAppsApp.swift */,
+				C1BE648A3259EDEB1DD7974F /* Formatters.swift */,
+				E022712B15654F85BB09E753 /* KeychainStore.swift */,
+				6A985D1B463542D048E17FCF /* LogsView.swift */,
+				D5F8A71D5156697717112741 /* Models.swift */,
+				27D24DB39BF3CA4772BAF2F8 /* OverviewView.swift */,
+				2874E6DDAD4727F1711134EA /* SettingsView.swift */,
+				953C73B9C09E35A59E2292EC /* Assets.xcassets */,
+			);
+			path = ToneDashboardApps;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		20E544863AF77FAF092ABFB3 /* ToneDashboardApps iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4701E2C0C8898C686A3B14BE /* Build configuration list for PBXNativeTarget "ToneDashboardApps iOS" */;
+			buildPhases = (
+				B275D04F9D223BEE09F6792E /* Sources */,
+				BFB44C88AC5AF08DB96E0CD7 /* Frameworks */,
+				931EA1C85C0AAEC7F176BBE6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ToneDashboardApps iOS";
+			productName = ToneDashboardApps;
+			productReference = EACF94B8D347BE846E1CF6B2 /* ToneDashboardApps.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C276F70E6D3FBCBBB24ADB95 /* ToneDashboardApps macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 02C76DA5C80449378D6D7029 /* Build configuration list for PBXNativeTarget "ToneDashboardApps macOS" */;
+			buildPhases = (
+				77877B66617D6810402240F7 /* Sources */,
+				442FA6D35CE990BF5097CB87 /* Frameworks */,
+				BF4730DA3FF663EFAABB1993 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ToneDashboardApps macOS";
+			productName = "ToneDashboardApps macOS";
+			productReference = FE41F09D53D034A8EC446345 /* ToneDashboardApps macOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		16EEAF57BAFC2A41CAB7C99A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					20E544863AF77FAF092ABFB3 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					C276F70E6D3FBCBBB24ADB95 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = BFBF18BA719BB7358C67F723 /* Build configuration list for PBXProject "ToneDashboardApps" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 3C9D7F1ECE6B1C2C05B9A223;
+			productRefGroup = 7162250E0FAA4FDEE70FDEA1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				20E544863AF77FAF092ABFB3 /* ToneDashboardApps iOS */,
+				C276F70E6D3FBCBBB24ADB95 /* ToneDashboardApps macOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		931EA1C85C0AAEC7F176BBE6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B251DE8730D1676ECEAA26E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF4730DA3FF663EFAABB1993 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D059F2187F0EC289BFCCB34E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		77877B66617D6810402240F7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15F11F91DD068384295C99CE /* APIClient.swift in Sources */,
+				6A3372FAEE2D3A416610A8EC /* ActivityView.swift in Sources */,
+				9CE166A76696FF1231E4C9AC /* Components.swift in Sources */,
+				F12C68168621A47492E4DEFF /* ContentView.swift in Sources */,
+				8F7E327C7CC4DC1E23578F8A /* DashboardSession.swift in Sources */,
+				5EAFD0ED398CA43DA54192E2 /* DealsView.swift in Sources */,
+				97FBBCC8C9A2D2EBD0A33F10 /* DownloadsView.swift in Sources */,
+				5EA9A0384BE219A004EDA489 /* ToneDashboardAppsApp.swift in Sources */,
+				9413DFCF13302C133B39843C /* Formatters.swift in Sources */,
+				C8D3217021E7E9AA6807FB61 /* KeychainStore.swift in Sources */,
+				D4A00B1DF84A6C23EF42D41C /* LogsView.swift in Sources */,
+				E7D381ABB88A6961B49421D5 /* Models.swift in Sources */,
+				DB8415B5ECFBDF25A2082A81 /* OverviewView.swift in Sources */,
+				F7487799E6CC7E48B6EA85FB /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B275D04F9D223BEE09F6792E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				439C5435E94D75745DC93064 /* APIClient.swift in Sources */,
+				D9994ED2AFB4CD77DB36786F /* ActivityView.swift in Sources */,
+				6470A28B7CECD0F8249702E5 /* Components.swift in Sources */,
+				564CEEB4654F444C9BD4E52A /* ContentView.swift in Sources */,
+				09F68D27FD65DD1468D0D1F0 /* DashboardSession.swift in Sources */,
+				1F71F291A9EF5F205AE5E275 /* DealsView.swift in Sources */,
+				DB4082E9821C0E68111D189A /* DownloadsView.swift in Sources */,
+				1221C271A6E71511E0C983ED /* ToneDashboardAppsApp.swift in Sources */,
+				C50BAF042ED2C2CB4398BE28 /* Formatters.swift in Sources */,
+				57A019BE72071589AC34A35E /* KeychainStore.swift in Sources */,
+				73C5BC5B1A98E49AEBAC7F65 /* LogsView.swift in Sources */,
+				1C2CC5BB54B8B4BE9F33DA6F /* Models.swift in Sources */,
+				C372F13C25C1B6D11C560746 /* OverviewView.swift in Sources */,
+				AE6D35CCCF1C011A67E31F65 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		7604B0063A84072C3BF95D64 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.macos;
+				PRODUCT_NAME = ToneDashboardApps;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		804C72BE83C11D7A59A5BFF7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = NXB5TD235A;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.ios;
+				PRODUCT_NAME = ToneDashboardApps;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		81F995B9124D62CFA8FD9F82 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = NXB5TD235A;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.ios;
+				PRODUCT_NAME = ToneDashboardApps;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C7FC41BF6A58EF77E1082413 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ToneDashboardApps;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.macos;
+				PRODUCT_NAME = ToneDashboardApps;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		DA925284BA893A0B7CD58824 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		DE0782D262A66EE774C897C3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		02C76DA5C80449378D6D7029 /* Build configuration list for PBXNativeTarget "ToneDashboardApps macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7604B0063A84072C3BF95D64 /* Debug */,
+				C7FC41BF6A58EF77E1082413 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4701E2C0C8898C686A3B14BE /* Build configuration list for PBXNativeTarget "ToneDashboardApps iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				81F995B9124D62CFA8FD9F82 /* Debug */,
+				804C72BE83C11D7A59A5BFF7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BFBF18BA719BB7358C67F723 /* Build configuration list for PBXProject "ToneDashboardApps" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA925284BA893A0B7CD58824 /* Debug */,
+				DE0782D262A66EE774C897C3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 16EEAF57BAFC2A41CAB7C99A /* Project object */;
+}
