@@ -458,7 +458,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .deal-card__top{flex-wrap:wrap}
 .deal-card__top .pill{white-space:normal;max-width:100%}
 .deal-card__link{max-width:100%;min-height:44px;align-items:center}
-.ean-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.ean-form{padding:18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
 .ean-form label,.ean-form p{grid-column:1/-1;margin:0}
 .ean-form p{color:var(--muted);font-size:13px;line-height:1.55}
 .ean-form input{min-width:0;width:100%;min-height:46px;font:inherit;font-size:16px;color:var(--text);background:#091427;border:1px solid var(--border);border-radius:12px;padding:12px}
