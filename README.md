@@ -1,6 +1,6 @@
 # ToneDashboardApps
 
-Aplicación nativa en **SwiftUI** para **macOS, iPhone y iPad**, que acompaña a [ToneDashboard](../ToneDashboard/README.md). Reemplaza el nombre anterior `EmbyDashboardNative` / `Emby Dashboard`.
+Aplicación nativa en **SwiftUI** para **macOS, iPhone y iPad**, que acompaña a [ToneDashboard](https://github.com/antonreino/ToneDashboard). Reemplaza el nombre anterior `EmbyDashboardNative` / `Emby Dashboard`.
 
 ## Funciones
 
