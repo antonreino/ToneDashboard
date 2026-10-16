@@ -31,7 +31,7 @@ El dashboard mantiene el puerto8765 y las rutas API. El tracker utiliza `workers
 
 ## Apps Apple
 
-Abrir `apple/ToneDashboardApps.xcodeproj`: versión1.0.0, compilación7. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
+Abrir `apple/ToneDashboardApps.xcodeproj`: versión1.0.0, compilación8. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
 
 Las apps cargan `/` del dashboard HTTPS. Las mejoras de interfaz se reciben al recargar; cambios del contenedor requieren nueva compilación. Autenticación y navegación quedan limitadas al origen configurado. No se entregan contraseñas a JavaScript ni hay un puente de ejecución de comandos.
 

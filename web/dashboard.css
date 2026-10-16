@@ -446,3 +446,31 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .orbit-password-dialog menu{display:flex;gap:10px;justify-content:flex-end;margin:0;padding:0}
 #view-orbitzero .panel__body{padding:12px}
 @media(max-width:700px){#view-orbitzero .panel__body{padding:6px}.orbit-frame{height:calc(100dvh - 190px);min-height:470px;border-radius:8px}.orbit-toolbar-buttons{width:100%}.orbit-toolbar-buttons .button{flex:1}}
+
+/* Product groups occupy a full row: avoid nested three-column grids. */
+.product-groups{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.product-group{min-width:0}
+.product-group .deal-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}
+.product-group .panel__head{gap:16px;align-items:center}
+.product-group .section-title{min-width:0;overflow-wrap:anywhere}
+.product-group .panel__head>button{flex-shrink:0}
+.deal-card{min-width:0;overflow-wrap:anywhere}
+.deal-card__top{flex-wrap:wrap}
+.deal-card__top .pill{white-space:normal;max-width:100%}
+.deal-card__link{max-width:100%;min-height:44px;align-items:center}
+.ean-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.ean-form label,.ean-form p{grid-column:1/-1;margin:0}
+.ean-form p{color:var(--muted);font-size:13px;line-height:1.55}
+.ean-form input{min-width:0;width:100%;min-height:46px;font:inherit;font-size:16px;color:var(--text);background:#091427;border:1px solid var(--border);border-radius:12px;padding:12px}
+.ean-form button{min-height:46px}
+@media(max-width:600px){
+  .product-groups{gap:14px}
+  .product-group .deal-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+  .product-group .panel__head{align-items:flex-start;flex-wrap:wrap;gap:12px}
+  .product-group .section-title{flex:1 1 180px}
+  .ean-form{grid-template-columns:minmax(0,1fr);padding:16px}
+  .ean-form label,.ean-form p{grid-column:auto}
+  .ean-form button{width:100%}
+  #view-chollos>.panel__head{flex-wrap:wrap;gap:10px}
+  #inactiveProducts{display:grid;gap:10px}
+}

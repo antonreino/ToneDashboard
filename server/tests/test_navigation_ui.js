@@ -1,0 +1,23 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('web/dashboard.js','utf8');
+const html=fs.readFileSync('web/index.html','utf8');
+const names=[...html.matchAll(/class="tab(?: active)?" data-view="([^"]+)"/g)].map(m=>m[1]);
+assert.equal(names.at(-1),'logs');
+const logStart=html.indexOf('id="view-logs"');
+assert(logStart>html.indexOf('id="view-chollos"'));
+for(const id of ['organizer_out','organizer_err','telegram_out','telegram_err'])assert(html.indexOf(`id="${id}"`)>logStart);
+const makeClasses=active=>({active,contains(){return this.active},remove(){this.active=false},add(){this.active=true},toggle(_,on){this.active=on}});
+const views=names.map(name=>({id:'view-'+name,classList:makeClasses(name==='inicio')}));
+const tabs=names.map(name=>({dataset:{view:name},classList:makeClasses(name==='inicio'),addEventListener(_,fn){this.click=fn}}));
+const counts={dashboard:0,logs:0,deals:0,orbit:0};
+const nodes=new Map(views.map(v=>[v.id,v]));nodes.set('lines',{value:'300',addEventListener(){}});nodes.set('updated',{});
+const context={console,document:{hidden:false,getElementById:id=>nodes.get(id),querySelectorAll:sel=>sel==='.tab'?tabs:views},loadDashboard:async()=>{counts.dashboard++},loadLogs:async()=>{counts.logs++},loadDeals:async()=>{counts.deals++},orbitEnsureLoaded:()=>{counts.orbit++},setInterval:()=>{}};
+vm.createContext(context);vm.runInContext(source.slice(source.indexOf("document.querySelectorAll('.tab')"),source.indexOf('// Native containers')),context);
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
+(async()=>{
+ await settle();assert.equal(counts.logs,0);assert.equal(counts.deals,0);
+ tabs.find(t=>t.dataset.view==='logs').click();await settle();assert.equal(counts.logs,1);assert(views.find(v=>v.id==='view-logs').classList.active);
+ tabs.find(t=>t.dataset.view==='chollos').click();await settle();assert.equal(counts.logs,1);assert.equal(counts.deals,1);
+ tabs.find(t=>t.dataset.view==='orbitzero').click();await settle();assert.equal(counts.orbit,1);
+ console.log('Navigation: separate final Logs tab; logs/deals fetched only in their sections; Orbit navigation preserved');
+})().catch(e=>{console.error(e);process.exitCode=1});

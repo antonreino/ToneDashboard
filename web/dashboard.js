@@ -247,7 +247,7 @@ async function loadDeals(){
   }
   const ps5Offers=d.active_offers.filter(o=>o.family==='ps5');
   const switchOffers=d.active_offers.filter(o=>o.family==='switch2');
-  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>${p.family==='ean'?'EAN '+esc(p.ean):'Seguimiento'}</small></h2><button type="button" class="button" data-remove-tracking="${esc(p.id||p.ean)}" aria-label="Dejar de seguir ${esc(p.name)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>p.family&&p.family!=='ean'?o.family===p.family:o.ean===p.ean),'Todavía no hay ofertas verificadas para este seguimiento.')}</div></div></section>`).join('');
+  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel product-group"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>${p.family==='ean'?'EAN '+esc(p.ean):'Seguimiento'}</small></h2><button type="button" class="button" data-remove-tracking="${esc(p.id||p.ean)}" aria-label="Dejar de seguir ${esc(p.name)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>p.family&&p.family!=='ean'?o.family===p.family:o.ean===p.ean),'Todavía no hay ofertas verificadas para este seguimiento.')}</div></div></section>`).join('');
   document.getElementById('inactiveProducts').innerHTML=(d.inactive_products||[]).map(p=>`<button class="button" type="button" data-restore-tracking="${esc(p.id)}">Volver a seguir ${esc(p.name)}</button>`).join(' ');
   status.textContent=`${ps5Offers.length} PS5 · ${switchOffers.length} Switch Zelda`;
   ps5.innerHTML=renderActiveDeals(ps5Offers,'No hay ofertas activas de PS5.');
@@ -408,7 +408,7 @@ async function refreshAll(){
   try{
     if(document.hidden||document.getElementById('view-orbitzero').classList.contains('active'))return;
     const tasks=[loadDashboard()];
-    if(document.getElementById('view-inicio').classList.contains('active'))tasks.push(loadLogs());
+    if(document.getElementById('view-logs').classList.contains('active'))tasks.push(loadLogs());
     if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
     await Promise.all(tasks);
   }catch(e){

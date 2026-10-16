@@ -7,3 +7,4 @@ cd "$ROOT"
 node --check web/dashboard.js
 (cd server && node tests/test_orbit_devices_ui.js)
 node server/tests/test_tracking_ui.js
+node server/tests/test_navigation_ui.js

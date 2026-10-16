@@ -22,6 +22,8 @@ struct ContentView: View {
                 ContentUnavailableView("Tone Dashboard", systemImage: "server.rack", description: Text("Configura tu servidor para abrir la misma interfaz que utilizas en la web."))
             }
         }
+        .background(Color(red: 7/255, green: 17/255, blue: 31/255).ignoresSafeArea())
+        .preferredColorScheme(.dark)
         .toolbar {
             Button("Actualizar", systemImage:"arrow.clockwise") { session.lastError = nil; session.reload += 1 }.disabled(!session.configured)
             Button("Ajustes", systemImage:"gearshape") { settings = true }
@@ -31,6 +33,11 @@ struct ContentView: View {
         .onDisappear { session.suspend += 1 }
         .frame(minWidth: 320, minHeight: 400)
         .navigationTitle("Tone Dashboard")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color(red: 7/255, green: 17/255, blue: 31/255), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        #endif
         }
     }
 }
@@ -147,7 +154,9 @@ struct DashboardWebView: NSViewRepresentable {
     func makeCoordinator() -> DashboardWebCoordinator { DashboardWebCoordinator(session:session,baseURL:baseURL) }
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration(); config.websiteDataStore = session.websiteDataStore
-        let web = WKWebView(frame:.zero,configuration:config); context.coordinator.configure(web); return web
+        let web = WKWebView(frame:.zero,configuration:config)
+        web.underPageBackgroundColor = NSColor(red:7/255,green:17/255,blue:31/255,alpha:1)
+        context.coordinator.configure(web); return web
     }
     func updateNSView(_ web: WKWebView,context: Context) { context.coordinator.update(web) }
 }
@@ -158,7 +167,14 @@ struct DashboardWebView: UIViewRepresentable {
     func makeCoordinator() -> DashboardWebCoordinator { DashboardWebCoordinator(session:session,baseURL:baseURL) }
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration(); config.websiteDataStore = session.websiteDataStore
-        let web = WKWebView(frame:.zero,configuration:config); context.coordinator.configure(web); return web
+        let web = WKWebView(frame:.zero,configuration:config)
+        let background = UIColor(red:7/255,green:17/255,blue:31/255,alpha:1)
+        web.isOpaque = false
+        web.backgroundColor = background
+        web.underPageBackgroundColor = background
+        web.scrollView.backgroundColor = background
+        web.scrollView.contentInsetAdjustmentBehavior = .never
+        context.coordinator.configure(web); return web
     }
     func updateUIView(_ web: WKWebView,context: Context) { context.coordinator.update(web) }
 }

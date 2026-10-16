@@ -59,6 +59,7 @@
     <button class="tab" data-view="estadisticas">Estadísticas</button>
     <button class="tab" data-view="orbitzero">Orbit Zero</button>
     <button class="tab" data-view="chollos">Chollos</button>
+    <button class="tab" data-view="logs">Logs</button>
   </nav>
 
   <div id="view-inicio" class="view active">
@@ -198,35 +199,6 @@
     <div class="panel__body" id="history"></div>
   </section>
 
-  <section class="logs">
-    <section class="panel log-panel">
-      <div class="panel__head">
-        <h2 class="section-title">Organizer <small>Salida estándar</small></h2>
-      </div>
-      <pre id="organizer_out"></pre>
-    </section>
-
-    <section class="panel log-panel error">
-      <div class="panel__head">
-        <h2 class="section-title">Organizer · stderr <small>Errores y trazas</small></h2>
-      </div>
-      <pre id="organizer_err"></pre>
-    </section>
-
-    <section class="panel log-panel">
-      <div class="panel__head">
-        <h2 class="section-title">Telegram bot <small>Actividad del bot</small></h2>
-      </div>
-      <pre id="telegram_out"></pre>
-    </section>
-
-    <section class="panel log-panel error">
-      <div class="panel__head">
-        <h2 class="section-title">Telegram · stderr <small>Errores del bot</small></h2>
-      </div>
-      <pre id="telegram_err"></pre>
-    </section>
-  </section>
 
   </div>
 
@@ -313,13 +285,13 @@
       <h2 class="section-title">🔥 Ofertas <small>datos del bot de precios</small></h2>
       <span class="deal-status" id="dealStatus">Cargando…</span>
     </div>
-    <form id="eanProductForm" class="panel pad" style="margin-bottom:18px">
+    <form id="eanProductForm" class="panel pad ean-form" style="margin-bottom:18px">
       <label for="eanProductInput">Seguir otro producto por EAN</label>
       <input id="eanProductInput" type="text" inputmode="numeric" maxlength="13" pattern="[0-9]{8}|[0-9]{13}" required placeholder="EAN de 8 o 13 cifras" aria-describedby="eanProductMessage">
       <button class="button" type="submit">Añadir producto</button>
       <p id="eanProductMessage" role="status">Las ofertas se agrupan por producto y se ordenan de menor a mayor precio. Solo se aceptan coincidencias del EAN.</p>
     </form>
-    <div id="eanProductCards" class="layout" style="margin-bottom:18px"></div>
+    <div id="eanProductCards" class="product-groups" style="margin-bottom:18px"></div>
     <div id="inactiveProducts" class="pad"></div>
     <div hidden><div id="activeDealsPs5"></div><div id="activeDealsSwitch"></div></div>
     <div class="layout">
@@ -337,6 +309,39 @@
       <pre id="dealLog">(cargando)</pre>
     </section>
   </div>
+  <div id="view-logs" class="view">
+  <section class="logs">
+    <section class="panel log-panel">
+      <div class="panel__head">
+        <h2 class="section-title">Organizer <small>Salida estándar</small></h2>
+      </div>
+      <pre id="organizer_out"></pre>
+    </section>
+
+    <section class="panel log-panel error">
+      <div class="panel__head">
+        <h2 class="section-title">Organizer · stderr <small>Errores y trazas</small></h2>
+      </div>
+      <pre id="organizer_err"></pre>
+    </section>
+
+    <section class="panel log-panel">
+      <div class="panel__head">
+        <h2 class="section-title">Telegram bot <small>Actividad del bot</small></h2>
+      </div>
+      <pre id="telegram_out"></pre>
+    </section>
+
+    <section class="panel log-panel error">
+      <div class="panel__head">
+        <h2 class="section-title">Telegram · stderr <small>Errores del bot</small></h2>
+      </div>
+      <pre id="telegram_err"></pre>
+    </section>
+  </section>
+
+  </div>
+
 </div>
 
 <!-- DASHBOARD_SCRIPT -->
