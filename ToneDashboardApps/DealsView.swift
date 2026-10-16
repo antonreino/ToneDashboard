@@ -2,6 +2,9 @@ import SwiftUI
 
 struct DealsView: View {
     @EnvironmentObject private var session: DashboardSession
+    @State private var ean = ""
+    @State private var savingProduct = false
+    @State private var productMessage = ""
 
     private var ps5Offers: [Offer] {
         (session.deals?.activeOffers ?? []).filter { ($0.family ?? "").lowercased() == "ps5" }
@@ -20,6 +23,32 @@ struct DealsView: View {
                         ErrorBanner(message: deals.error ?? "El bot de precios no está disponible")
                     }
 
+                    DashboardPanel {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Seguir otro producto por EAN").font(.headline)
+                            TextField("EAN de 8 o 13 cifras", text: $ean)
+                                .textFieldStyle(.roundedBorder)
+                                .autocorrectionDisabled()
+                            Button(savingProduct ? "Guardando…" : "Añadir producto") {
+                                savingProduct = true
+                                Task {
+                                    if await session.addTrackedProduct(ean: ean.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                                        ean = ""
+                                        productMessage = "Producto guardado. La primera lectura puede tardar unos minutos."
+                                    }
+                                    savingProduct = false
+                                }
+                            }
+                            .disabled(savingProduct || ean.isEmpty)
+                            Text(productMessage.isEmpty ? "Solo se agrupan coincidencias verificadas del EAN. Ofertas de menor a mayor precio." : productMessage)
+                                .font(.caption).foregroundStyle(DashboardPalette.muted)
+                        }
+                    }
+                    ForEach(deals.products ?? []) { product in
+                        OfferFamilyCard(title: product.name, subtitle: "EAN \(product.ean)",
+                                        systemImage: "barcode", accent: DashboardPalette.cyan,
+                                        offers: deals.activeOffers.filter { $0.ean == product.ean })
+                    }
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .top, spacing: 16) {
                             OfferFamilyCard(
@@ -154,7 +183,7 @@ private struct OfferFamilyCard: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 14)
                 } else {
-                    ForEach(Array(offers.enumerated()), id: \.element.id) { index, offer in
+                    ForEach(Array(offers.sorted { ($0.price ?? Int.max) < ($1.price ?? Int.max) }.enumerated()), id: \.element.id) { index, offer in
                         VStack(alignment: .leading, spacing: 7) {
                             HStack(alignment: .top) {
                                 Text(offer.title ?? "Sin título")

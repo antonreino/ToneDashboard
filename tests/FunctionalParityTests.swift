@@ -22,6 +22,21 @@ struct FunctionalParityTests {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockProtocol.self]
         let api = APIClient(baseURL: URL(string: "https://dashboard.test")!, username: "test", password: "login-only", sessionConfiguration: configuration)
+        MockProtocol.handler = { request in
+            precondition(request.url?.path == "/api/deals/products")
+            precondition(request.httpMethod == "POST")
+            precondition(request.value(forHTTPHeaderField: "X-Dashboard-Action") == "write")
+            return (200, "{\"ok\":true}")
+        }
+        let productReply = try await api.addTrackedProduct(ean: "0711719021247")
+        precondition(productReply.ok == true)
+        MockProtocol.handler = { _ in (400, "{\"error\":\"EAN inválido\"}") }
+        do { _ = try await api.addTrackedProduct(ean: "bad"); preconditionFailure("Expected invalid EAN") }
+        catch { precondition(error.localizedDescription == "EAN inválido") }
+        let productJSON = #"{"available":true,"products":[{"ean":"0711719021247","name":"Producto"}],"active_offers":[{"ean":"0711719021247","family":"ean","price":14995}],"history":[],"events":[]}"#
+        let productDeals = try JSONDecoder().decode(DealsResponse.self, from: Data(productJSON.utf8))
+        precondition(productDeals.products?.first?.ean == "0711719021247")
+        precondition(productDeals.activeOffers.first?.ean == productDeals.products?.first?.ean)
         let secret = "pair-only-password"
         let request = try api.request(path: "/api/orbit/pair-code", method: "POST", body: Data("{}".utf8), extraHeaders: ["X-Orbit-Action":"reveal-code", "X-Orbit-Pair-Password":secret])
         precondition(request.httpMethod == "POST")

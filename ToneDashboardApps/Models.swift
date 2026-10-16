@@ -245,21 +245,29 @@ struct LogResponse: Codable {
     var logs: [String: String]
 }
 
+struct TrackedProduct: Codable, Identifiable {
+    var id: String { ean }
+    var ean: String
+    var name: String
+}
+
 struct DealsResponse: Codable {
     var available: Bool
     var error: String?
+    var products: [TrackedProduct]?
     var activeOffers: [Offer]
     var history: [DealHistory]
     var events: [DealEvent]
     var log: String?
     enum CodingKeys: String, CodingKey {
-        case available, error, history, events, log
+        case available, error, history, events, log, products
         case activeOffers = "active_offers"
     }
 }
 
 struct Offer: Codable, Identifiable {
     var id: String { "\(source ?? "")|\(url ?? "")|\(title ?? "")" }
+    var ean: String?
     var family: String?
     var kind: String?
     var price: Int?
@@ -271,7 +279,7 @@ struct Offer: Codable, Identifiable {
     var url: String?
     var seenIso: String?
     enum CodingKeys: String, CodingKey {
-        case family, kind, price, availability, title, source, seller, shipping, url
+        case ean, family, kind, price, availability, title, source, seller, shipping, url
         case seenIso = "seen_iso"
     }
 }

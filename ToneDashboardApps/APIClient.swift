@@ -118,6 +118,11 @@ struct APIClient {
         try await execute(try request(path: "/api/deals?lines=\(lines)"), as: DealsResponse.self)
     }
 
+    func addTrackedProduct(ean: String) async throws -> APIAck {
+        let body = try JSONSerialization.data(withJSONObject: ["ean": ean])
+        return try await execute(try request(path: "/api/deals/products", method: "POST", body: body, contentType: "application/json"), as: APIAck.self)
+    }
+
     func queueDownload(url: String) async throws -> APIAck {
         let body = try JSONSerialization.data(withJSONObject: ["url": url])
         return try await execute(try request(path: "/api/download", method: "POST", body: body, contentType: "application/json"), as: APIAck.self)

@@ -168,6 +168,20 @@ final class DashboardSession: ObservableObject {
         }
     }
 
+    func addTrackedProduct(ean: String) async -> Bool {
+        guard let client else { return false }
+        do {
+            _ = try await client.addTrackedProduct(ean: ean)
+            guard connectionMatches(client) else { return false }
+            deals = try await client.deals(lines: logLines)
+            lastError = nil
+            return true
+        } catch {
+            if connectionMatches(client) { lastError = error.localizedDescription }
+            return false
+        }
+    }
+
     func queueDownload(_ url: String) async -> Bool {
         guard let client, !submittingDownload else { return false }
         submittingDownload = true

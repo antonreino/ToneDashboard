@@ -125,3 +125,9 @@ en la app. Mantén Orbit Zero conectado a la PS5 y el código accesible en
 **Consola → Cómo funciona** del Mac. **Ver código** sigue disponible si necesitas
 vincular manualmente. La recuperación no arranca el jailbreak ni el receptor de
 Orbit de la consola.
+
+### Versión 1.3 (4): seguimiento por EAN
+
+Ofertas permite añadir EAN-8/EAN-13 y muestra una tarjeta por producto, además de PS5 y Switch. El servidor valida el código y evita duplicados; el seguimiento se comparte entre web, iOS y macOS. Todas las tarjetas ordenan las ofertas por precio del artículo ascendente, con envío aparte. Requiere las versiones actualizadas de ToneDashboard y ps5-price-bot. Amazon e Idealo siguen limitados por respuestas sin precio/403; no se dan por operativos.
+
+Validación1.3(4): pruebas API, contratos de respuestas y paridad correctas; compilaciones macOS, iOS Simulator y ambas Release firmadas correctas. Instalación local verificada en Mac e iPhone físico conectado. El funcionamiento prolongado de proveedores depende del tracker y sus fuentes públicas.

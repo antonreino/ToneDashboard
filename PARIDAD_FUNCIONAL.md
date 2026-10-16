@@ -31,3 +31,5 @@ Se mantienen HTTPS obligatorio, validación del certificado del sistema, credenc
 - Compilación Xcode de macOS e iOS Simulator sin firma de distribución.
 
 Los tests no descargan archivos, no envían torrents, no arrancan Orbit ni obtienen un código real. La firma y la instalación en un iPhone físico, y la vinculación real a la PS5, requieren pruebas posteriores en ese dispositivo. Las comprobaciones de interfaz en simulador no sustituyen esas pruebas.
+
+- 1.3 (4): alta EAN mediante `POST /api/deals/products`, listado `products` y ofertas con campo `ean` en `/api/deals`. Formulario, tarjeta por producto y orden ascendente de precios en web, iOS y macOS. Errores de validación del servidor visibles; sin productos duplicados.
