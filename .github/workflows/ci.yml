@@ -18,9 +18,13 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt
       - run: |
-          python -m py_compile orbit_pairing.py download_security.py request_security.py emby_organizer.py state_db.py torrent_utils.py orbit_dashboard_proxy.py orbit_dashboard_control.py scripts/log-viewer.py scripts/telegram_torrent_bot.py scripts/log-error-watcher.py scripts/update_macos.py
+          python -m py_compile orbit_devices.py orbit_pairing.py download_security.py request_security.py emby_organizer.py state_db.py torrent_utils.py orbit_dashboard_proxy.py orbit_dashboard_control.py scripts/log-viewer.py scripts/telegram_torrent_bot.py scripts/log-error-watcher.py scripts/update_macos.py
           bash -n scripts/install-macos-services.sh
           bash -n scripts/status-macos.sh
           bash -n scripts/open-logs-macos.sh
           bash -n scripts/emby-watch-refresh.sh
       - run: python -m unittest discover -s tests -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check orbit_devices.js && node --check orbit_bridge_shim.js && node tests/test_orbit_devices_ui.js

@@ -1756,6 +1756,11 @@ class Handler(BaseHTTPRequestHandler):
             data = price_bot_snapshot(lines)
             self.send_bytes(json.dumps(data, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
             return
+        if parsed.path == '/api/orbit/device':
+            from orbit_devices import token, valid
+            remembered = bool(DASHBOARD_USER and DASHBOARD_PASSWORD and valid(token(self.headers)))
+            self.send_bytes(json.dumps({'remembered': remembered}).encode(), 'application/json; charset=utf-8')
+            return
         if parsed.path == "/api/dashboard":
             data = {
                 "services": {name: service_state(label) for name, label in SERVICES.items()},
@@ -1783,6 +1788,23 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path in ('/api/orbit/remember', '/api/orbit/forget'):
+            from orbit_devices import action
+            if not (DASHBOARD_USER and DASHBOARD_PASSWORD):
+                self.send_bytes(b'{"error":"Configura las credenciales del dashboard"}', 'application/json', 503)
+                return
+            result, status, cookie = action(self.headers, self.client_address, parsed.path.endswith('/forget'))
+            body = json.dumps(result, ensure_ascii=False).encode()
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            if cookie:
+                self.send_header('Set-Cookie', cookie)
+                self.send_header('Set-Cookie', 'orbitZero=; Max-Age=0; Path=/orbit-bridge/zero/; HttpOnly; Secure; SameSite=Strict')
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if parsed.path == '/api/orbit/pair-code':
             from orbit_pairing import reveal_code
             if not (DASHBOARD_USER and DASHBOARD_PASSWORD):

@@ -177,3 +177,28 @@ TMDb solo acepta una coincidencia inequívoca de título, comprueba el año indi
 `scripts/emby-watch-refresh.sh` se instala **en el servidor Linux de Emby**, con Bash, `inotifywait` y `curl`. Conserva las variables `EMBY_WATCH_DIR`, `EMBY_URL`, `EMBY_API_KEY`, `COOLDOWN` (180 s) y `MIN_REFRESH_INTERVAL` (300 s); añade `RETRY_INTERVAL` (30 s). Un único planificador espera el silencio de eventos y conserva cualquier refresco pendiente hasta cumplir el intervalo mínimo. Solo actualiza por vídeos publicados/eliminados o directorios movidos/eliminados, no por crear carpetas o escribir `.uploading`. Los fallos se reintentan sin necesitar otro archivo.
 
 Tras actualizar este script en el clon, hay que copiarlo al servidor como `/usr/local/bin/emby-watch-refresh.sh` y reiniciar `emby-watch-refresh.service` allí. Un `git pull` o reinicio del organizador en el Mac no actualiza esa copia remota. Los tests ejecutan el script con `inotifywait` y `curl` simulados, sin acceder a Emby ni a Telegram.
+
+### Conexión automática de Orbit (web, iOS y macOS)
+
+En la pestaña Orbit abre **Conexión automática**, introduce la contraseña de
+`ORBIT_PAIR_CODE_PASSWORD` y pulsa **Recordar este dispositivo**. La autorización
+caduca a los 30 días. Se conserva en una cookie `Secure`, `HttpOnly` y
+`SameSite=Strict`; utiliza la URL HTTPS del dashboard, también en la red local.
+En las apps requiere ToneDashboardApps 1.2 (3) o posterior.
+
+Si Orbit pierde su sesión o se reinicia, el puente consulta el código vigente
+mediante ToneOrbitCodeReader y realiza la vinculación normal de Orbit. El lector
+necesita permiso de Accesibilidad y debe poder encontrar el código en la ventana
+del Mac: conecta la consola y deja abierta **Consola → Cómo funciona**. Si la
+lectura falla, sigue disponible **Ver código** y la vinculación manual. Los
+intentos automáticos se limitan a uno por minuto y dispositivo; después
+de corregir la conexión espera un minuto y pulsa **Recargar/Reconectar**.
+
+**Olvidar este dispositivo** revoca su autorización en el servidor y elimina sus
+cookies de vinculación. Cambiar cualquiera de las contraseñas del dashboard o
+`ORBIT_PAIR_CODE_PASSWORD` e iniciar de nuevo el servicio invalida las
+autorizaciones existentes. El servidor guarda únicamente hashes de las
+autorizaciones en `~/.local/share/emby_organizer/orbit-devices.sqlite3` (permisos
+0600); no guarda el código ni la contraseña de vinculación. Las sesiones de Orbit
+se mantienen en memoria y se pueden reconstruir después de reiniciar el servicio.
+La consola necesita tener iniciado su receptor de Orbit para utilizar sus funciones.

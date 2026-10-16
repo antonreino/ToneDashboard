@@ -12,6 +12,7 @@
       const url = new URL(value, document.baseURI);
       const orbitLocal = (url.protocol === 'http:' || url.protocol === 'ws:') &&
         url.port === '34179';
+      if (url.origin === location.origin && ['/api/orbit/remember', '/api/orbit/forget', '/api/orbit/device'].includes(url.pathname)) return value;
       if (url.origin !== location.origin && !orbitLocal) return value; // Don't proxy third-party images.
       if (url.origin === location.origin && (url.pathname.startsWith(BASE) || url.pathname.startsWith('/orbit-bridge/'))) return value;
       if (!value.startsWith('/') && !orbitLocal && !/^(?:https?:|wss?:)/i.test(value)) return value; // Relative paths already use <base>.

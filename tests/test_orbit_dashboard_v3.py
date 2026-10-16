@@ -68,6 +68,18 @@ class OrbitV3Tests(unittest.TestCase):
             self.assertIn('src="/orbit-bridge/zero/art/cover.jpg"',html)
             self.assertIn('src="/orbit-bridge/zero/__bridge.js"',html)
             self.assertNotIn('X-Frame-Options',resp.headers)
+    def test_shared_device_assets_follow_strict_csp(self):
+        for filename, content_type in (('__devices.js', 'application/javascript'), ('__devices.css', 'text/css')):
+            with self.fetch('/orbit-bridge/zero/' + filename) as response:
+                self.assertEqual(response.status, 200)
+                self.assertIn(content_type, response.headers['Content-Type'])
+                self.assertEqual(response.headers['Cache-Control'], 'no-store')
+                self.assertTrue(response.read())
+        with self.fetch('/orbit-bridge/zero/') as response:
+            html = response.read().decode()
+            self.assertIn('__devices.css', html)
+            self.assertNotIn("'unsafe-inline'", response.headers['Content-Security-Policy'])
+
     def test_image_caching(self):
         with self.fetch('/orbit-bridge/zero/art/cover.jpg') as resp:
             self.assertEqual(resp.read(),b'fake-image')
