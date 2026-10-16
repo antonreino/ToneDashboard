@@ -202,3 +202,11 @@ autorizaciones en `~/.local/share/emby_organizer/orbit-devices.sqlite3` (permiso
 0600); no guarda el código ni la contraseña de vinculación. Las sesiones de Orbit
 se mantienen en memoria y se pueden reconstruir después de reiniciar el servicio.
 La consola necesita tener iniciado su receptor de Orbit para utilizar sus funciones.
+
+### Seguimiento de productos por EAN
+
+En **Ofertas**, el formulario EAN permite añadir productos de 8 o 13 cifras con control válido. Cada producto dispone de una tarjeta y ofertas ordenadas por precio ascendente, igual que PS5 y Switch. Se muestra el precio del artículo; gastos de envío aparte. El registro se comparte con `ps5-price-bot` mediante su SQLite, conservando historial y destinatarios. Requiere actualizar también ese repositorio: el bot incorpora las altas automáticamente sin reinicio individual.
+
+PcComponentes y MediaMarkt se han validado con búsquedas y fichas reales. Chollometro se consulta por sus fuentes públicas existentes y exige coincidencia EAN para productos añadidos. Amazon (sin precios) e Idealo (403) continúan desactivados; no se presentan como fuentes operativas.
+
+Validación local de esta actualización: 91 pruebas Python correctas, API HTTP con autenticación y control de origen, orden numérico de ofertas y comprobación JavaScript. Servicio reiniciado y API real comprobada, con SQLite íntegro y respaldo previo. No se enviaron mensajes de prueba a Telegram.

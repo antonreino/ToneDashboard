@@ -835,6 +835,13 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
       <h2 class="section-title">🔥 Ofertas <small>datos del bot de precios</small></h2>
       <span class="deal-status" id="dealStatus">Cargando…</span>
     </div>
+    <form id="eanProductForm" class="panel pad" style="margin-bottom:18px">
+      <label for="eanProductInput">Seguir otro producto por EAN</label>
+      <input id="eanProductInput" type="text" inputmode="numeric" maxlength="13" pattern="[0-9]{8}|[0-9]{13}" required placeholder="EAN de 8 o 13 cifras" aria-describedby="eanProductMessage">
+      <button class="button" type="submit">Añadir producto</button>
+      <p id="eanProductMessage" role="status">Las ofertas se agrupan por producto y se ordenan de menor a mayor precio. Solo se aceptan coincidencias del EAN.</p>
+    </form>
+    <div id="eanProductCards" class="layout" style="margin-bottom:18px"></div>
     <div class="layout" style="margin-bottom:18px;">
       <section class="panel">
         <div class="panel__head"><h2 class="section-title">🎮 PS5 <small>ofertas activas</small></h2></div>
@@ -1056,7 +1063,7 @@ async function loadDashboard(){
 }
 
 function euroPrice(cents){if(cents==null)return "—";return new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(Number(cents)/100)}
-function familyLabel(family){return family==="switch2"?"Switch 2 Zelda":"PS5"}
+function familyLabel(family){return family==="ean"?"Producto EAN":family==="switch2"?"Switch 2 Zelda":"PS5"}
 function availabilityLabel(v){return {in_stock:"En stock",preorder:"Preventa / reserva",out_of_stock:"Agotado",unknown:"Stock por confirmar"}[v]||v||"—"}
 function kindLabel(v){return {retailer:"Tienda",comparison:"Comparador",deal:"Chollo"}[v]||v||"—"}
 function safeDealURL(raw){
@@ -1065,13 +1072,22 @@ function safeDealURL(raw){
 }
 function renderActiveDeals(rows,emptyText="No hay ofertas activas disponibles."){
   if(!rows.length)return `<div class="empty" style="grid-column:1/-1">${esc(emptyText)}</div>`;
-  return rows.map(o=>`<article class="deal-card">
+  return [...rows].sort((a,b)=>Number(a.price)-Number(b.price)).map(o=>`<article class="deal-card">
     <div class="deal-card__top"><div><div class="deal-card__family">${esc(familyLabel(o.family))} · ${esc(kindLabel(o.kind))}</div><div class="deal-card__price">${esc(euroPrice(o.price))}</div></div><span class="pill ${o.availability==='unknown'?'warn':'ok'}">${esc(availabilityLabel(o.availability))}</span></div>
     <div class="deal-card__title">${esc(o.title||'Sin título')}</div>
     <div class="deal-card__meta">${esc(o.source||'—')}${o.seller?' · '+esc(o.seller):''}<br>${o.shipping!=null?'Envío: '+esc(euroPrice(o.shipping)):'Envío por confirmar'}<br>Última lectura: ${formatHistoryDate(o.seen_iso)}</div>
     <a class="deal-card__link" href="${esc(safeDealURL(o.url))}" target="_blank" rel="noopener noreferrer">Abrir oferta ↗</a>
   </article>`).join('');
 }
+document.getElementById('eanProductForm').addEventListener('submit',async event=>{
+  event.preventDefault(); const form=event.currentTarget,button=form.querySelector('button'),message=document.getElementById('eanProductMessage');
+  button.disabled=true;
+  try {
+    const r=await fetch('/api/deals/products',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify({ean:document.getElementById('eanProductInput').value.trim()})});
+    const d=await r.json(); if(!r.ok)throw new Error(d.error||'No se pudo guardar el producto');
+    document.getElementById('eanProductInput').value='';message.textContent='Producto guardado. El seguimiento se incorpora automáticamente; la primera lectura puede tardar unos minutos.';await loadDeals();
+  } catch(e){message.textContent=e.message} finally {button.disabled=false}
+});
 async function loadDeals(){
   const r=await fetch(`/api/deals?lines=${linesEl.value}`,{cache:'no-store'}),d=await r.json();
   const status=document.getElementById('dealStatus'),ps5=document.getElementById('activeDealsPs5'),sw=document.getElementById('activeDealsSwitch'),history=document.getElementById('dealHistory'),events=document.getElementById('dealEvents'),log=document.getElementById('dealLog');
@@ -1087,6 +1103,7 @@ async function loadDeals(){
   }
   const ps5Offers=d.active_offers.filter(o=>o.family==='ps5');
   const switchOffers=d.active_offers.filter(o=>o.family==='switch2');
+  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>EAN ${esc(p.ean)}</small></h2></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>o.ean===p.ean),'Buscando ofertas con este EAN. Todavía no hay coincidencias verificadas.')}</div></div></section>`).join('');
   status.textContent=`${ps5Offers.length} PS5 · ${switchOffers.length} Switch Zelda`;
   ps5.innerHTML=renderActiveDeals(ps5Offers,'No hay ofertas activas de PS5.');
   sw.innerHTML=renderActiveDeals(switchOffers,'No hay ofertas activas de Switch Zelda.');
@@ -1380,6 +1397,19 @@ def _epoch_iso(value) -> str | None:
     from datetime import datetime, timezone
     return datetime.fromtimestamp(stamp, timezone.utc).isoformat(timespec="seconds")
 
+def _tracked_products_module():
+    import importlib.util
+    path = PRICE_BOT_DIR / 'ps5bot' / 'products.py'
+    spec = importlib.util.spec_from_file_location('dashboard_price_products', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def tracked_products():
+    return _tracked_products_module().list_products(PRICE_BOT_DB)
+
+
 def _price_bot_policy() -> tuple[set[str] | None, float | None]:
     try:
         cfg = json.loads(PRICE_BOT_CONFIG.read_text(encoding="utf-8"))
@@ -1388,6 +1418,8 @@ def _price_bot_policy() -> tuple[set[str] | None, float | None]:
             for source in cfg.get("sources", [])
             if source.get("enabled", True)
         }
+        module = _tracked_products_module()
+        enabled.update(s["name"] for s in module.product_sources(module.list_products(PRICE_BOT_DB), cfg.get("sources", [])))
         stale = float(cfg.get("stale_after_seconds", 0) or 0)
         return enabled, stale if stale > 0 else None
     except Exception:
@@ -1625,7 +1657,7 @@ def price_bot_snapshot(log_lines: int = 300) -> dict:
         conn = sqlite3.connect(PRICE_BOT_DB, timeout=2)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA query_only=ON")
-        rows = conn.execute("SELECT o.source,o.payload,o.seen FROM offers o JOIN sources s ON s.name=o.source WHERE o.active=1 AND s.ok=1 ORDER BY o.seen DESC LIMIT 250").fetchall()
+        rows = conn.execute("SELECT o.source,o.payload,o.seen FROM offers o JOIN sources s ON s.name=o.source WHERE o.active=1 AND s.ok=1 ORDER BY o.price ASC").fetchall()
         enabled_sources, stale_after = _price_bot_policy()
         cutoff = time.time() - stale_after if stale_after else None
         active = []
@@ -1638,12 +1670,21 @@ def price_bot_snapshot(log_lines: int = 300) -> dict:
                 payload = json.loads(row["payload"])
             except (TypeError, json.JSONDecodeError):
                 continue
-            payload["family"] = "switch2" if str(payload.get("model") or "").startswith("switch2") else "ps5"
+            model = str(payload.get("model") or "")
+            payload["family"] = "ean" if model.startswith("ean:") else ("switch2" if model.startswith("switch2") else "ps5")
+            if model.startswith("ean:"):
+                payload["ean"] = model[4:]
             payload["seen_iso"] = _epoch_iso(row["seen"])
             active.append(payload)
+        active.sort(key=lambda o: (o.get('price') if isinstance(o.get('price'), int) else float('inf'), str(o.get('source', '')), str(o.get('url', ''))))
+        products = tracked_products()
+        for product in products:
+            match = next((o for o in active if o.get('ean') == product['ean']), None)
+            if match:
+                product['name'] = match.get('title') or product['name']
         history = [{"body": _plain_telegram_html(r["body"]), "created_iso": _epoch_iso(r["created"])} for r in conn.execute("SELECT body,created FROM published_notifications ORDER BY created DESC LIMIT 120")]
         events = [{"name": r["name"], "level": r["level"], "detail": r["detail"], "created_iso": _epoch_iso(r["created"])} for r in conn.execute("SELECT name,level,detail,created FROM source_events ORDER BY id DESC LIMIT 100")]
-        return {"available": True, "active_offers": active, "history": history, "events": events, "log": log_text}
+        return {"available": True, "products": products, "active_offers": active, "history": history, "events": events, "log": log_text}
     except sqlite3.Error as exc:
         return {"available": False, "error": f"No se pudo leer SQLite del bot de precios: {exc}", "active_offers": [], "history": [], "events": [], "log": log_text}
     finally:
@@ -1788,6 +1829,21 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/deals/products':
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if not 0 < length <= 1024:
+                    raise ValueError('Solicitud vacía o demasiado grande')
+                body = json.loads(self.rfile.read(length))
+                if not isinstance(body, dict):
+                    raise ValueError('Solicitud no válida')
+                product = _tracked_products_module().add_product(PRICE_BOT_DB, body.get('ean'))
+                self.send_bytes(json.dumps({'ok': True, 'product': product}).encode(), 'application/json', 200)
+            except (ValueError, UnicodeError) as exc:
+                self.send_bytes(json.dumps({'error': str(exc)}).encode(), 'application/json', 400)
+            except (OSError, sqlite3.Error):
+                self.send_bytes(b'{"error":"No se pudo guardar el producto"}', 'application/json', 503)
+            return
         if parsed.path in ('/api/orbit/remember', '/api/orbit/forget'):
             from orbit_devices import action
             if not (DASHBOARD_USER and DASHBOARD_PASSWORD):
