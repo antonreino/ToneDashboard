@@ -214,3 +214,7 @@ Validación local de esta actualización: 91 pruebas Python correctas, API HTTP 
 Cada tarjeta EAN incluye **Eliminar**, con confirmación. Deja de seguir ese producto y cancela sus avisos pendientes sin borrar el historial. Los productos nuevos notifican por el bot Telegram y a los destinatarios existentes.
 
 **PS5 y Switch también son eliminables** desde su tarjeta, igual que los EAN. Al retirarlas se detienen sus consultas y avisos, no solo se ocultan. Las familias retiradas muestran **Volver a seguir**. El historial se conserva y los EAN continúan usando sus tiendas, aunque se retire PS5 o Switch. El mismo control existe en iOS y macOS1.4(6).
+
+### Recuperación de conexiones SSH/SFTP
+
+El Organizer comprueba también si el canal SFTP está cerrado, mantiene viva la sesión SSH y aplica tiempos de espera a las lecturas. Biblioteca, espacio y CPU/RAM recuperan una conexión interrumpida con un único reintento, igual que las operaciones de subida. Se mantiene la verificación estricta de `known_hosts`; un fallo de autenticación o de clave del servidor no se trata como una interrupción recuperable. Los errores incluyen su tipo incluso cuando la excepción no tiene mensaje, sin exponer credenciales.

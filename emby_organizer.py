@@ -68,6 +68,11 @@ def redact_secrets(text: str) -> str:
             value = value.replace(secret, "[REDACTADO]")
     return value
 
+def error_summary(exc: Exception) -> str:
+    detail = str(exc).strip()
+    return redact_secrets(f"{type(exc).__name__}: {detail}" if detail else f"{type(exc).__name__}: conexión cerrada o sin detalle")
+
+
 VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi", ".mov", ".m4v", ".ts"}
 IGNORE_EXTENSIONS = {".part", ".tmp", ".crdownload", ".!qB", ".aria2"}
 IGNORE_FILENAMES = {"canal telegram oficial.url"}
@@ -193,6 +198,7 @@ class SftpUploader:
             and self._transport
             and self._transport.is_active()
             and self._active_key == key
+            and not self._sftp.get_channel().closed
         ):
             return self._sftp, target
 
@@ -223,9 +229,11 @@ class SftpUploader:
             if transport is None or not transport.is_active():
                 raise OrganizerError("La conexión SSH no quedó activa")
 
+            transport.set_keepalive(30)
             self._ssh = client
             self._transport = transport
             self._sftp = client.open_sftp()
+            self._sftp.get_channel().settimeout(15)
             self._active_key = key
             return self._sftp, target
         except paramiko.BadHostKeyException as exc:
@@ -236,7 +244,7 @@ class SftpUploader:
             ) from exc
         except paramiko.SSHException as exc:
             client.close()
-            message = redact_secrets(str(exc))
+            message = error_summary(exc)
             if "not found in known_hosts" in message.lower() or "known_hosts" in message.lower():
                 raise OrganizerError(
                     f"El servidor {target.host}:{target.port} no está validado en "
@@ -246,7 +254,7 @@ class SftpUploader:
         except Exception as exc:
             client.close()
             raise OrganizerError(
-                f"No se pudo abrir la conexión SSH/SFTP: {redact_secrets(str(exc))}"
+                f"No se pudo abrir la conexión SSH/SFTP: {error_summary(exc)}"
             ) from exc
 
     def close(self):
@@ -271,23 +279,22 @@ class SftpUploader:
         self._active_key = None
 
     def _with_reconnect(self, category: str, operation):
-        """
-        Ejecuta una operación SFTP. Si la conexión quedó muerta
-        (por ejemplo: OSError: Socket is closed), reconecta y reintenta una vez.
-        """
-        try:
-            sftp, _ = self._connect(category)
-            return operation(sftp)
-        except (OSError, EOFError):
-            logging.warning("Conexión SFTP cerrada. Reconectando y reintentando...")
-            self.close()
-            sftp, _ = self._connect(category)
-            return operation(sftp)
+        """Recupera canales cerrados con un único reintento y mantiene el pinning SSH."""
+        for attempt in range(2):
+            try:
+                sftp, _ = self._connect(category)
+                return operation(sftp)
+            except (OSError, EOFError, paramiko.SSHException) as exc:
+                self.close()
+                if attempt:
+                    raise
+                logging.warning("Conexión SSH/SFTP interrumpida (%s). Reconectando una vez...", error_summary(exc))
 
     def storage_info(self, category: str = "movies") -> dict:
-        """Devuelve espacio total/usado/disponible del filesystem remoto por SFTP."""
-        sftp, target = self._connect(category)
+        return self._with_reconnect(category, lambda sftp: self._storage_info_once(sftp, self.targets[category]))
 
+    def _storage_info_once(self, sftp, target) -> dict:
+        """Devuelve espacio total/usado/disponible del filesystem remoto por SFTP."""
         try:
             stat = sftp.statvfs(target.path)
             block_size = int(stat.f_frsize or stat.f_bsize or 4096)
@@ -307,6 +314,7 @@ class SftpUploader:
             channel = self._transport.open_session(timeout=8)
             try:
                 command_path = target.path.replace("'", "'\"'\"'")
+                channel.settimeout(10)
                 channel.exec_command(f"df -Pk '{command_path}'")
                 stdout = channel.makefile("r", -1).read()
                 stderr = channel.makefile_stderr("r", -1).read()
@@ -334,13 +342,16 @@ class SftpUploader:
                 channel.close()
 
     def system_info(self, category: str = "movies") -> dict:
+        return self._with_reconnect(category, lambda _: self._system_info_once())
+
+    def _system_info_once(self) -> dict:
         """Obtiene CPU, RAM y carga del host Linux remoto usando la conexión SSH ya abierta."""
-        self._connect(category)
         if self._transport is None:
             raise OrganizerError("No hay transporte SSH disponible")
 
         channel = self._transport.open_session(timeout=8)
         try:
+            channel.settimeout(10)
             channel.exec_command("cat /proc/stat | head -1; sleep 0.25; cat /proc/stat | head -1; cat /proc/meminfo; cat /proc/loadavg")
             stdout = channel.makefile("r", -1).read()
             stderr = channel.makefile_stderr("r", -1).read()
@@ -443,19 +454,16 @@ class SftpUploader:
         return self._with_reconnect(category, op)
 
     def list_remote_dirs(self, category: str) -> list[str]:
-        sftp, target = self._connect(category)
-        try:
-            entries = sftp.listdir_attr(target.path)
-        except FileNotFoundError:
-            return []
-
-        result = []
-        for entry in entries:
-            if entry.filename.startswith("."):
-                continue
-            if entry.st_mode and (entry.st_mode & 0o170000) == 0o040000:
-                result.append(entry.filename)
-        return result
+        target = self.targets[category]
+        def op(sftp):
+            try:
+                entries = sftp.listdir_attr(target.path)
+            except FileNotFoundError:
+                return []
+            return [entry.filename for entry in entries
+                    if not entry.filename.startswith('.') and entry.st_mode
+                    and (entry.st_mode & 0o170000) == 0o040000]
+        return self._with_reconnect(category, op)
 
     def build_remote_path(self, media: MediaInfo) -> str:
         target = self.targets[media.category]
@@ -513,7 +521,7 @@ class MediaOrganizer:
                 info["total"] / 1_000_000_000_000,
             )
         except Exception as exc:
-            safe_error = redact_secrets(str(exc))
+            safe_error = error_summary(exc)
             mark_emby_storage_error(safe_error)
             logging.warning("No se pudo actualizar el espacio de Emby: %s", safe_error)
 
@@ -535,7 +543,7 @@ class MediaOrganizer:
                 (info["ram_used"] * 100 / info["ram_total"]) if info["ram_total"] else 0,
             )
         except Exception as exc:
-            safe_error = redact_secrets(str(exc))
+            safe_error = error_summary(exc)
             mark_emby_system_error(safe_error)
             logging.warning("No se pudieron actualizar CPU/RAM de Emby: %s", safe_error)
 
@@ -777,7 +785,7 @@ class MediaOrganizer:
             try:
                 directories = self.uploader.list_remote_dirs(category)
             except Exception as exc:
-                raise OrganizerError("No se pudo comprobar la biblioteca remota") from exc
+                raise OrganizerError(f"No se pudo comprobar la biblioteca remota ({category}): {error_summary(exc)}") from exc
             matches = [name for name in directories if self.normalize_name(name) == normalized_target]
             if len(matches) > 1:
                 raise OrganizerError("Hay varias carpetas remotas con el mismo título normalizado")
@@ -1249,7 +1257,7 @@ class MediaOrganizer:
             try:
                 self.process_file(item)
             except Exception as exc:
-                logging.error("No se pudo procesar %s: %s", item, redact_secrets(str(exc)))
+                logging.error("No se pudo procesar %s: %s", item, error_summary(exc))
 
         if not found_any:
             logging.info("No se encontraron archivos dentro de %s", INBOX_DIR)
