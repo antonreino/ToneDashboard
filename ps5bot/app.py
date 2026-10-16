@@ -11,9 +11,10 @@ import threading
 import time
 from urllib.parse import urlsplit
 from .network import fetch, FetchError, Telegram
-from .parsers import parse_page, ParseError
+from .parsers import parse_page, ParseError, discover_product_urls
 from .store import Store
 from .models import FAMILIES
+from .products import list_products, product_sources
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = logging.getLogger('ps5bot')
@@ -163,6 +164,18 @@ def collect(source, cfg, diagnostics=None):
                 cfg.get('include_used', False),
                 report,
             )
+            if source.get('product_ean') and source['parser'] != 'chollometro':
+                detail_urls = discover_product_urls(html, url, source)
+                detail_successes = 0
+                for detail_url in detail_urls:
+                    try:
+                        detail_html = fetch_source_url(detail_url, source, cfg)
+                        parsed.extend(parse_page(detail_html, detail_url, source, cfg.get('model_overrides'), cfg.get('include_used', False)))
+                        detail_successes += 1
+                    except (FetchError, ParseError) as exc:
+                        failures.append(exc)
+                if detail_urls and not detail_successes and not parsed:
+                    raise FetchError("No se pudieron verificar las fichas EAN descubiertas")
             successful_urls += 1
             for offer in parsed:
                 offers[offer.key] = offer
@@ -298,8 +311,12 @@ def run(cfg, store, stop):
     started = time.monotonic()
     due = {s['name']: started + max(0, float(s.get('initial_delay_seconds', 0))) for s in sources}
     interval = cfg['interval_seconds']
-    with ThreadPoolExecutor(max_workers=max(1, len(sources))) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        refreshed = 0.0
         while not stop.is_set():
+            if time.monotonic() - refreshed >= 15:
+                sources = [s for s in cfg["sources"] if s.get("enabled", True)] + product_sources(list_products(ROOT / "data/prices.sqlite3"), cfg["sources"])
+                refreshed = time.monotonic()
             for s in sources:
                 name = s['name']
                 job = jobs.get(name)

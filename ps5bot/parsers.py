@@ -57,19 +57,29 @@ def parse_page(html, page_url, source, overrides=None, include_used=False, diagn
     if expected_eans and labeled_eans and not labeled_eans.intersection(expected_eans):
         raise ParseError('EAN/GTIN de la ficha no coincide con el esperado')
 
+    product_ean = source.get("product_ean")
     found = {}
     recognized = False
     allowed_models = FAMILIES.get(source.get('family'), tuple(m for v in FAMILIES.values() for m in v))
+    if product_ean:
+        allowed_models = ("ean:" + product_ean,)
     if diagnostics is not None:
         diagnostics.update(url=page_url, candidates=0, accepted=0, samples=[])
 
-    def add(name, url, price, *, seller="", stock="unknown", shipping=None, condition="unknown", forced_model=None):
+    def add(name, url, price, *, seller="", stock="unknown", shipping=None, condition="unknown", forced_model=None, identity=""):
         if not isinstance(name, str) or not isinstance(url, str):
             return
         url = canonical(urljoin(page_url, url))
         if not url:
             return
-        model = forced_model or classify(name, url, overrides, include_used)
+        if product_ean:
+            # Identidad en esta ficha concreta, nunca en recomendaciones de la página.
+            evidence = str(identity).strip() or name
+            if not re.search(r'(?<![0-9])' + re.escape(product_ean) + r'(?![0-9])', evidence):
+                return
+            model = 'ean:' + product_ean
+        else:
+            model = forced_model or classify(name, url, overrides, include_used)
         p = cents(price)
         if diagnostics is not None:
             diagnostics['candidates'] += 1
@@ -126,7 +136,20 @@ def parse_page(html, page_url, source, overrides=None, include_used=False, diagn
                 add(product.get("name"), offer.get("url") or product.get("url") or product.get("@id") or page_url,
                     offer.get("lowPrice") if aggregate else offer.get("price"),
                     seller=seller, stock=availability(offer.get("availability", "")), shipping=shipping,
-                    condition=offer.get("itemCondition", product.get("itemCondition", "unknown")))
+                    condition=offer.get("itemCondition", product.get("itemCondition", "unknown")),
+                    identity=" ".join(str(product.get(k, "")) for k in ("gtin", "gtin8", "gtin12", "gtin13", "gtin14")))
+
+    if product_ean:
+        for card in soup.select('[data-component-type="s-search-result"], article.thread, article[id^="thread_"], [class*="resultList__item_"]'):
+            text = card.get_text(' ', strip=True)
+            codes = re.findall(r'(?i)\b(?:EAN|GTIN(?:13|8)?)\b\s*[:#-]?\s*([0-9]{8,14})\b', text)
+            if product_ean not in codes:
+                continue
+            link = card.select_one('h2 a[href], a.cept-tt[href], a.thread-title--list[href], a[href*="/precios/"]')
+            price = card.select_one('.a-price:not(.a-text-price) .a-offscreen, .thread-price, .cept-tp, [class*="detailedPriceInfo__price_"]')
+            if link and price:
+                recognized = True
+                add(link.get_text(' ', strip=True), link['href'], price.get_text(' ', strip=True), identity=' '.join(codes))
 
     parser = source["parser"]
     if parser == "idealo":
@@ -311,14 +334,14 @@ def parse_page(html, page_url, source, overrides=None, include_used=False, diagn
                     merchant = item.find('{http://www.pepper.com/rss}merchant')
                     if merchant is not None and merchant.get('price'):
                         if not re.search(r'agotad|caducad|expirad', normalize(name)):
-                            add(name, item.findtext('link', ''), merchant.get('price'), seller=merchant.get('name', ''))
+                            add(name, item.findtext('link', ''), merchant.get('price'), seller=merchant.get('name', ''), identity=desc)
                         continue
                     prices = re.findall(r'(\d+(?:[.,]\d+)*)\s*€', name)
                     if not prices:
                         prices = re.findall(r'(\d+(?:[.,]\d+)*)\s*€', desc)
                     # Solo una cantidad: evita elegir PVP anterior o cuotas.
                     if len(prices) == 1 and not re.search(r'agotad|caducad|expirad', normalize(name + ' ' + desc)):
-                        add(name, item.findtext('link', ''), prices[0])
+                        add(name, item.findtext('link', ''), prices[0], identity=desc)
             except ET.ParseError as exc:
                 raise ParseError("RSS inválido") from exc
     if not recognized:
@@ -326,3 +349,30 @@ def parse_page(html, page_url, source, overrides=None, include_used=False, diagn
     if diagnostics is not None:
         diagnostics['accepted'] = len(found)
     return list(found.values())
+
+
+def discover_product_urls(html, page_url, source, limit=3):
+    """Solo fichas Product publicadas por la búsqueda, acotadas al dominio de la tienda."""
+    from urllib.parse import urlsplit
+    soup = BeautifulSoup(html, 'html.parser')
+    candidates = []
+    for script in soup.select('script[type="application/ld+json"]'):
+        try:
+            data = json.loads(script.string or script.get_text())
+        except (ValueError, TypeError):
+            continue
+        for node in walk(data):
+            types = node.get('@type', '')
+            if 'Product' not in ([types] if isinstance(types, str) else types):
+                continue
+            raw = node.get('url')
+            if not isinstance(raw, str):
+                continue
+            url = canonical(urljoin(page_url, raw))
+            parts = urlsplit(url)
+            if (parts.scheme != 'https' or parts.hostname != urlsplit(page_url).hostname
+                    or parts.port not in (None, 443) or url == canonical(page_url)):
+                continue
+            if url not in candidates:
+                candidates.append(url)
+    return candidates[:limit]

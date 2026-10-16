@@ -60,3 +60,14 @@ Después de instalar, ejecuta:
 Después consulta `/estado` en el bot. Si Amazon o Fnac siguen fallando, esas fuentes no estarán monitorizando precios aunque el resto funcione. Sus adaptadores necesitarán una vía de acceso permitida y comprobar el HTML recibido. No des por operativo el conjunto de seis fuentes hasta resolverlo.
 
 - **Carrefour · Switch 2 Zelda**: desactivada temporalmente. La URL configurada devuelve al cliente HTTP la categoría general de consolas en vez de la ficha específica; no se fuerza el parser para evitar falsos positivos.
+
+## Validación local · 16 octubre 2026 · EAN
+
+- 60 pruebas Python correctas: regresiones del monitor y Telegram, EAN-8/EAN-13 y ceros iniciales, checksum, persistencia, concurrencia, límite, altas repetidas, descubrimiento limitado al dominio, precio/moneda/estado, identidad por producto, fallos de ficha y alta incorporada por el planificador sin reiniciar.
+- EAN 0711719021247: búsquedas reales PcComponentes y MediaMarkt, lectura posterior de cada ficha y GTIN confirmado; ambas devolvieron 649,00 EUR. No se añadió este producto al catálogo real del usuario.
+- Amazon: 48 candidatos sin precio; Idealo: 403; Chollometro RSS: respuesta válida con 30 candidatos sin PS5 en esa muestra, búsqueda pública `/search` con 410. Las fuentes bloqueadas permanecen desactivadas. No se ha validado Creators API sin sus credenciales.
+- ToneDashboard: 91 pruebas Python, pruebas HTTP autenticadas y de origen, agrupación y orden; JavaScript comprobado y renderizado probado con precios numéricos, enlaces y texto escapado.
+- ToneDashboardApps: pruebas API, contratos y paridad incluidas altas EAN y errores; compilaciones macOS/iOS Simulator y Release firmadas para macOS/iOS físico; versión1.3(4) instalada en Mac e iPhone conectado.
+- Servicios tracker y dashboard reiniciados; API real con autenticación devuelve ofertas ordenadas y formulario EAN; EAN inválido devuelve400. SQLite `integrity_check=ok`, respaldo previo e historial conservados. No se enviaron avisos Telegram de prueba.
+
+No equivale a una prueba prolongada de todos los productos/tiendas. La cobertura EAN depende de que la fuente publique el identificador exacto; no se inventan coincidencias. La revisión remota CI se comprueba aparte de estas pruebas locales.

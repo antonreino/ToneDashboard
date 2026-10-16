@@ -97,14 +97,14 @@ class Store:
                         delta = offer.price - old['price']
                         direction = '📉 Bajada' if delta < 0 else '📈 Subida'
                         pct = abs(delta) * 100 / old['price']
-                        body = (f'{direction} · {escape(LABELS[offer.model])}\n'
+                        body = (f'{direction} · {escape(LABELS.get(offer.model, offer.title))}\n'
                                 f'{escape(prefix)}\n{euro(old["price"])} → <b>{euro(offer.price)}</b> '
                                 f'({"+" if delta > 0 else "−"}{euro(abs(delta))}; {pct:.1f} %)')
                     elif old is None:
-                        body = f'🆕 Nueva ficha · {escape(LABELS[offer.model])}\n{escape(prefix)} · <b>{euro(offer.price)}</b>'
+                        body = f'🆕 Nueva ficha · {escape(LABELS.get(offer.model, offer.title))}\n{escape(prefix)} · <b>{euro(offer.price)}</b>'
                     elif json.loads(old['payload'])['availability'] == 'out_of_stock' and offer.availability in ('in_stock', 'preorder'):
                         label = 'Reserva disponible' if offer.availability == 'preorder' else 'Vuelve el stock'
-                        body = f'📦 {label} · {escape(LABELS[offer.model])}\n{escape(prefix)} · <b>{euro(offer.price)}</b>'
+                        body = f'📦 {label} · {escape(LABELS.get(offer.model, offer.title))}\n{escape(prefix)} · <b>{euro(offer.price)}</b>'
                     if body:
                         body += f'\n{escape(offer.title)}'
                         if offer.seller:

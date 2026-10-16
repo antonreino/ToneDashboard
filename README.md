@@ -183,3 +183,19 @@ Los avisos enviados se registran de forma persistente en SQLite (`published_noti
 ### Carrefour Switch 2 Zelda
 
 `Carrefour · Switch 2 Zelda` queda **desactivada temporalmente**. La URL de producto pública puede abrirse en navegador, pero la respuesta HTTP recibida por el bot devuelve la categoría general de consolas (sin Zelda, sin 519 € y sin EAN de la edición), por lo que mantenerla activa podría producir falsos positivos. Carrefour sigue activo para PS5.
+
+## Productos por EAN · octubre 2026
+
+En Ofertas de ToneDashboard y ToneDashboardApps (iOS/macOS), introduce un EAN-8 o EAN-13 con dígito de control correcto. Se conserva como texto, incluidos los ceros iniciales. Cada producto crea una tarjeta persistente aunque todavía no haya resultados. Las ofertas se ordenan por precio del artículo, de menor a mayor; el envío se muestra aparte y puede ser desconocido. Hasta 20 productos, sin duplicar un EAN ya registrado.
+
+El registro `tracked_products` vive en `data/prices.sqlite3`: no requiere otro servicio ni reiniciar por cada alta. El bot lo relee cada 15 segundos y aplica las pausas y límites de cada tienda. Busca por EAN en PcComponentes y MediaMarkt y verifica el identificador en cada ficha; sigue hasta tres fichas por búsqueda dentro del mismo dominio. No considera el EAN de la URL de búsqueda como prueba de identidad. El RSS compartido de Chollometro admite anuncios que incluyan ese EAN; no garantiza cubrir todos los anuncios históricos. Un producto sin coincidencias no genera ofertas inventadas. Los avisos de precio y su cola Telegram existentes siguen funcionando.
+
+### Fuentes pendientes: comprobación del 16/10/2026
+
+Se revisaron README, VALIDACION, adaptadores y fixtures previos antes de probar de nuevo:
+
+- **Amazon**: la búsqueda devuelve HTML con 48 candidatos pero sin precios; no se reactiva. La vía oficial es [Creators API](https://affiliate-program.amazon.com/creatorsapi/docs/en-us/introduction), que requiere acceso aprobado y credenciales de Amazon Associates. No hay credenciales configuradas ni integración API validada en esta versión. No se sustituye un precio ausente por otro dato de la página.
+- **Idealo**: sigue devolviendo HTTP 403. Se conserva desactivado; no se ha encontrado y validado una vía pública alternativa desde esta conexión.
+- **Chollometro**: el RSS público responde y el parser lee sus precios. Cero coincidencias PS5 en la muestra no significa fallo ni oferta disponible. La ruta `/search` publicada por el formulario devuelve HTTP 410; `/buscar` devuelve 404. Se mantienen RSS y categorías existentes, con caché compartida y sin eludir bloqueos.
+
+Las fuentes desactivadas no se reactivan al añadir un EAN. Para comprobar proveedores utiliza `--check --diagnose`; las pruebas no deben enviar mensajes reales ni borrar historial.
