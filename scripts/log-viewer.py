@@ -1088,6 +1088,15 @@ document.getElementById('eanProductForm').addEventListener('submit',async event=
     document.getElementById('eanProductInput').value='';message.textContent='Producto guardado. El seguimiento se incorpora automáticamente; la primera lectura puede tardar unos minutos.';await loadDeals();
   } catch(e){message.textContent=e.message} finally {button.disabled=false}
 });
+document.getElementById('eanProductCards').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-remove-ean]');if(!button)return;
+  const ean=button.dataset.removeEan;if(!confirm('¿Dejar de seguir el producto EAN '+ean+'? Se conservará el historial.'))return;
+  button.disabled=true;
+  try {
+    const r=await fetch('/api/deals/products/remove',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify({ean})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'No se pudo eliminar el producto');await loadDeals();
+  }catch(e){document.getElementById('eanProductMessage').textContent=e.message;button.disabled=false}
+});
 async function loadDeals(){
   const r=await fetch(`/api/deals?lines=${linesEl.value}`,{cache:'no-store'}),d=await r.json();
   const status=document.getElementById('dealStatus'),ps5=document.getElementById('activeDealsPs5'),sw=document.getElementById('activeDealsSwitch'),history=document.getElementById('dealHistory'),events=document.getElementById('dealEvents'),log=document.getElementById('dealLog');
@@ -1103,7 +1112,7 @@ async function loadDeals(){
   }
   const ps5Offers=d.active_offers.filter(o=>o.family==='ps5');
   const switchOffers=d.active_offers.filter(o=>o.family==='switch2');
-  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>EAN ${esc(p.ean)}</small></h2></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>o.ean===p.ean),'Buscando ofertas con este EAN. Todavía no hay coincidencias verificadas.')}</div></div></section>`).join('');
+  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>EAN ${esc(p.ean)}</small></h2><button type="button" class="button" data-remove-ean="${esc(p.ean)}" aria-label="Dejar de seguir EAN ${esc(p.ean)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>o.ean===p.ean),'Buscando ofertas con este EAN. Todavía no hay coincidencias verificadas.')}</div></div></section>`).join('');
   status.textContent=`${ps5Offers.length} PS5 · ${switchOffers.length} Switch Zelda`;
   ps5.innerHTML=renderActiveDeals(ps5Offers,'No hay ofertas activas de PS5.');
   sw.innerHTML=renderActiveDeals(switchOffers,'No hay ofertas activas de Switch Zelda.');
@@ -1829,7 +1838,7 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
-        if parsed.path == '/api/deals/products':
+        if parsed.path in ('/api/deals/products', '/api/deals/products/remove'):
             try:
                 length = int(self.headers.get('Content-Length', '0'))
                 if not 0 < length <= 1024:
@@ -1837,8 +1846,13 @@ class Handler(BaseHTTPRequestHandler):
                 body = json.loads(self.rfile.read(length))
                 if not isinstance(body, dict):
                     raise ValueError('Solicitud no válida')
-                product = _tracked_products_module().add_product(PRICE_BOT_DB, body.get('ean'))
-                self.send_bytes(json.dumps({'ok': True, 'product': product}).encode(), 'application/json', 200)
+                module = _tracked_products_module()
+                if parsed.path.endswith('/remove'):
+                    removed = module.remove_product(PRICE_BOT_DB, body.get('ean'))
+                    result = {'ok': True, 'removed': removed}
+                else:
+                    result = {'ok': True, 'product': module.add_product(PRICE_BOT_DB, body.get('ean'))}
+                self.send_bytes(json.dumps(result).encode(), 'application/json', 200)
             except (ValueError, UnicodeError) as exc:
                 self.send_bytes(json.dumps({'error': str(exc)}).encode(), 'application/json', 400)
             except (OSError, sqlite3.Error):

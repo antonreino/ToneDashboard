@@ -210,3 +210,5 @@ En **Ofertas**, el formulario EAN permite añadir productos de 8 o 13 cifras con
 PcComponentes y MediaMarkt se han validado con búsquedas y fichas reales. Chollometro se consulta por sus fuentes públicas existentes y exige coincidencia EAN para productos añadidos. Amazon (sin precios) e Idealo (403) continúan desactivados; no se presentan como fuentes operativas.
 
 Validación local de esta actualización: 91 pruebas Python correctas, API HTTP con autenticación y control de origen, orden numérico de ofertas y comprobación JavaScript. Servicio reiniciado y API real comprobada, con SQLite íntegro y respaldo previo. No se enviaron mensajes de prueba a Telegram.
+
+Cada tarjeta EAN incluye **Eliminar**, con confirmación. Deja de seguir ese producto y cancela sus avisos pendientes sin borrar el historial. Los productos nuevos notifican por el bot Telegram y a los destinatarios existentes.
