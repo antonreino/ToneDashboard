@@ -2,7 +2,9 @@
 
 Panel de control personal para **Mac mini, automatización Emby, descargas, Telegram, estadísticas, ofertas y Orbit Zero**. Web responsive que sirve de backend a [ToneDashboardApps](https://github.com/antonreino/ToneDashboardApps) para macOS/iOS/iPadOS.
 
-> Cambio de marca de `emby-organizer`: los ejecutables de Emby y los identificadores de los LaunchAgents se mantienen a propósito para conservar el servicio y el historial. **No cambies la ruta del repositorio en el Mac sin reinstalar los LaunchAgents.** El nombre `ToneDashboard` corresponde al proyecto, a la interfaz y al repositorio de GitHub, no a una migración destructiva de las rutas actuales.
+Repositorio: [antonreino/ToneDashboard](https://github.com/antonreino/ToneDashboard). Apps nativas: [antonreino/ToneDashboardApps](https://github.com/antonreino/ToneDashboardApps).
+
+> **Instalaciones existentes:** la carpeta `emby-organizer`, el ejecutable `emby_organizer.py` y los identificadores `com.tone.emby-*` se conservan por compatibilidad con los servicios y el historial. **No renombres la carpeta activa sin actualizar las rutas de los LaunchAgents.**
 
 ## Funciones actuales
 
@@ -15,7 +17,7 @@ Panel de control personal para **Mac mini, automatización Emby, descargas, Tele
 | Orbit Zero | Catálogo y progreso de Orbit desde el Mac mini mediante proxy autenticado de mismo origen |
 | Logs | Consulta de procesos Organizer, Telegram y alertas |
 
-Emby Organizer **sigue** clasificando Series/Anime/Películas, consultando opcionalmente TMDb, enviando por SFTP al LXC Emby, vigilando estabilidad de archivos y registrando resultados. No se han eliminado estas funcionalidades.
+El organizador de ToneDashboard clasifica Series/Anime/Películas, consulta opcionalmente TMDb, envía por SFTP al servidor Emby, vigila la estabilidad de los archivos y registra los resultados.
 
 ## Arquitectura
 
@@ -55,6 +57,24 @@ PRICE_BOT_DIR=/Volumes/Datos/Proyectos/Scripts/ps5-price-bot
 ```
 
 Utiliza `.env.example` para el resto (Emby/SFTP/TMDb/Telegram). `.env` no debe subirse nunca a GitHub. El estado histórico se almacena en SQLite y queda fuera del repositorio.
+
+## Obtener ToneDashboard
+
+Para una copia nueva del código:
+
+```bash
+git clone https://github.com/antonreino/ToneDashboard.git
+cd ToneDashboard
+```
+
+Si ya tienes un clon instalado en `emby-organizer`, actualiza su remoto y conserva esa carpeta:
+
+```bash
+git remote set-url origin https://github.com/antonreino/ToneDashboard.git
+git pull --ff-only
+```
+
+Ejecuta estos dos últimos comandos dentro del clon existente. La app nativa se obtiene del repositorio independiente **ToneDashboardApps**.
 
 ## Instalación / actualización sobre el Mac existente
 
