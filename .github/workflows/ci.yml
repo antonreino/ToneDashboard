@@ -27,4 +27,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --check orbit_devices.js && node --check orbit_bridge_shim.js && node tests/test_orbit_devices_ui.js
+      - run: node --check orbit_devices.js && node --check orbit_bridge_shim.js && node tests/test_orbit_devices_ui.js && node tests/test_tracking_ui.js

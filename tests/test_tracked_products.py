@@ -36,6 +36,9 @@ class DashboardEANTests(unittest.TestCase):
     self.assertEqual(post('{bad',auth)[0],400);self.assertEqual(post('[]',auth)[0],400);self.assertEqual(post('x'*1025,auth)[0],400)
     self.assertEqual(post('{"ean":"0711719021247"}',auth)[0],200);registry.return_value.add_product.assert_called_once_with(self.db,'0711719021247')
     conn=http.client.HTTPConnection(*server.server_address);registry.return_value.remove_product.return_value=True;conn.request('POST','/api/deals/products/remove','{"ean":"0711719021247"}',auth);response=conn.getresponse();self.assertEqual(response.status,200);self.assertTrue(json.loads(response.read())['removed']);conn.close();registry.return_value.remove_product.assert_called_once_with(self.db,'0711719021247')
+    for action,method in [('remove','remove_tracking'),('restore','restore_tracking')]:
+     getattr(registry.return_value,method).return_value=True
+     conn=http.client.HTTPConnection(*server.server_address);conn.request('POST','/api/deals/products/'+action,'{"id":"ps5"}',auth);response=conn.getresponse();self.assertEqual(response.status,200);response.read();conn.close();getattr(registry.return_value,method).assert_called_once_with(self.db,'ps5')
    finally:server.shutdown();server.server_close();thread.join()
  def test_web_form_and_group_exist(self):
   for token in ['id="eanProductForm"','id="eanProductInput"','id="eanProductCards"','/api/deals/products','d.products||[]']:self.assertIn(token,viewer.HTML)

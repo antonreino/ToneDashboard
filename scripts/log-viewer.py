@@ -842,16 +842,8 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
       <p id="eanProductMessage" role="status">Las ofertas se agrupan por producto y se ordenan de menor a mayor precio. Solo se aceptan coincidencias del EAN.</p>
     </form>
     <div id="eanProductCards" class="layout" style="margin-bottom:18px"></div>
-    <div class="layout" style="margin-bottom:18px;">
-      <section class="panel">
-        <div class="panel__head"><h2 class="section-title">🎮 PS5 <small>ofertas activas</small></h2></div>
-        <div class="panel__body pad"><div class="deal-grid" id="activeDealsPs5"></div></div>
-      </section>
-      <section class="panel">
-        <div class="panel__head"><h2 class="section-title">🗡️ Switch Zelda <small>ofertas activas</small></h2></div>
-        <div class="panel__body pad"><div class="deal-grid" id="activeDealsSwitch"></div></div>
-      </section>
-    </div>
+    <div id="inactiveProducts" class="pad"></div>
+    <div hidden><div id="activeDealsPs5"></div><div id="activeDealsSwitch"></div></div>
     <div class="layout">
       <section class="panel">
         <div class="panel__head"><h2 class="section-title">🧾 Historial <small>Avisos publicados</small></h2></div>
@@ -1089,12 +1081,19 @@ document.getElementById('eanProductForm').addEventListener('submit',async event=
   } catch(e){message.textContent=e.message} finally {button.disabled=false}
 });
 document.getElementById('eanProductCards').addEventListener('click',async event=>{
-  const button=event.target.closest('[data-remove-ean]');if(!button)return;
-  const ean=button.dataset.removeEan;if(!confirm('¿Dejar de seguir el producto EAN '+ean+'? Se conservará el historial.'))return;
+  const button=event.target.closest('[data-remove-tracking]');if(!button)return;
+  const id=button.dataset.removeTracking;if(!confirm('¿Dejar de seguir '+id+'? Se conservará el historial.'))return;
   button.disabled=true;
   try {
-    const r=await fetch('/api/deals/products/remove',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify({ean})});
+    const r=await fetch('/api/deals/products/remove',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify({id})});
     const d=await r.json();if(!r.ok)throw new Error(d.error||'No se pudo eliminar el producto');await loadDeals();
+  }catch(e){document.getElementById('eanProductMessage').textContent=e.message;button.disabled=false}
+});
+document.getElementById('inactiveProducts').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-restore-tracking]');if(!button)return;button.disabled=true;
+  try{
+    const r=await fetch('/api/deals/products/restore',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify({id:button.dataset.restoreTracking})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'No se pudo recuperar el seguimiento');await loadDeals();
   }catch(e){document.getElementById('eanProductMessage').textContent=e.message;button.disabled=false}
 });
 async function loadDeals(){
@@ -1112,7 +1111,8 @@ async function loadDeals(){
   }
   const ps5Offers=d.active_offers.filter(o=>o.family==='ps5');
   const switchOffers=d.active_offers.filter(o=>o.family==='switch2');
-  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>EAN ${esc(p.ean)}</small></h2><button type="button" class="button" data-remove-ean="${esc(p.ean)}" aria-label="Dejar de seguir EAN ${esc(p.ean)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>o.ean===p.ean),'Buscando ofertas con este EAN. Todavía no hay coincidencias verificadas.')}</div></div></section>`).join('');
+  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>${p.family==='ean'?'EAN '+esc(p.ean):'Seguimiento'}</small></h2><button type="button" class="button" data-remove-tracking="${esc(p.id||p.ean)}" aria-label="Dejar de seguir ${esc(p.name)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>p.family&&p.family!=='ean'?o.family===p.family:o.ean===p.ean),'Todavía no hay ofertas verificadas para este seguimiento.')}</div></div></section>`).join('');
+  document.getElementById('inactiveProducts').innerHTML=(d.inactive_products||[]).map(p=>`<button class="button" type="button" data-restore-tracking="${esc(p.id)}">Volver a seguir ${esc(p.name)}</button>`).join(' ');
   status.textContent=`${ps5Offers.length} PS5 · ${switchOffers.length} Switch Zelda`;
   ps5.innerHTML=renderActiveDeals(ps5Offers,'No hay ofertas activas de PS5.');
   sw.innerHTML=renderActiveDeals(switchOffers,'No hay ofertas activas de Switch Zelda.');
@@ -1416,7 +1416,14 @@ def _tracked_products_module():
 
 
 def tracked_products():
-    return _tracked_products_module().list_products(PRICE_BOT_DB)
+    return _tracked_products_module().list_tracking(PRICE_BOT_DB)
+
+
+def inactive_tracking():
+    try:
+        return _tracked_products_module().list_tracking(PRICE_BOT_DB, enabled=False)
+    except (OSError, ImportError):
+        return []
 
 
 def _price_bot_policy() -> tuple[set[str] | None, float | None]:
@@ -1424,8 +1431,7 @@ def _price_bot_policy() -> tuple[set[str] | None, float | None]:
         cfg = json.loads(PRICE_BOT_CONFIG.read_text(encoding="utf-8"))
         enabled = {
             str(source.get("name"))
-            for source in cfg.get("sources", [])
-            if source.get("enabled", True)
+            for source in _tracked_products_module().configured_sources(PRICE_BOT_DB, cfg.get("sources", []))
         }
         module = _tracked_products_module()
         enabled.update(s["name"] for s in module.product_sources(module.list_products(PRICE_BOT_DB), cfg.get("sources", [])))
@@ -1688,12 +1694,12 @@ def price_bot_snapshot(log_lines: int = 300) -> dict:
         active.sort(key=lambda o: (o.get('price') if isinstance(o.get('price'), int) else float('inf'), str(o.get('source', '')), str(o.get('url', ''))))
         products = tracked_products()
         for product in products:
-            match = next((o for o in active if o.get('ean') == product['ean']), None)
+            match = next((o for o in active if product.get('family', 'ean') == 'ean' and o.get('ean') == product['ean']), None)
             if match:
                 product['name'] = match.get('title') or product['name']
         history = [{"body": _plain_telegram_html(r["body"]), "created_iso": _epoch_iso(r["created"])} for r in conn.execute("SELECT body,created FROM published_notifications ORDER BY created DESC LIMIT 120")]
         events = [{"name": r["name"], "level": r["level"], "detail": r["detail"], "created_iso": _epoch_iso(r["created"])} for r in conn.execute("SELECT name,level,detail,created FROM source_events ORDER BY id DESC LIMIT 100")]
-        return {"available": True, "products": products, "active_offers": active, "history": history, "events": events, "log": log_text}
+        return {"available": True, "products": products, "inactive_products": inactive_tracking(), "active_offers": active, "history": history, "events": events, "log": log_text}
     except sqlite3.Error as exc:
         return {"available": False, "error": f"No se pudo leer SQLite del bot de precios: {exc}", "active_offers": [], "history": [], "events": [], "log": log_text}
     finally:
@@ -1838,7 +1844,7 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
-        if parsed.path in ('/api/deals/products', '/api/deals/products/remove'):
+        if parsed.path in ('/api/deals/products', '/api/deals/products/remove', '/api/deals/products/restore'):
             try:
                 length = int(self.headers.get('Content-Length', '0'))
                 if not 0 < length <= 1024:
@@ -1848,8 +1854,10 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError('Solicitud no válida')
                 module = _tracked_products_module()
                 if parsed.path.endswith('/remove'):
-                    removed = module.remove_product(PRICE_BOT_DB, body.get('ean'))
+                    removed = module.remove_tracking(PRICE_BOT_DB, body['id']) if 'id' in body else module.remove_product(PRICE_BOT_DB, body.get('ean'))
                     result = {'ok': True, 'removed': removed}
+                elif parsed.path.endswith('/restore'):
+                    result = {'ok': True, 'restored': module.restore_tracking(PRICE_BOT_DB, body.get('id'))}
                 else:
                     result = {'ok': True, 'product': module.add_product(PRICE_BOT_DB, body.get('ean'))}
                 self.send_bytes(json.dumps(result).encode(), 'application/json', 200)

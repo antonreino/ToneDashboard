@@ -212,3 +212,5 @@ PcComponentes y MediaMarkt se han validado con búsquedas y fichas reales. Choll
 Validación local de esta actualización: 91 pruebas Python correctas, API HTTP con autenticación y control de origen, orden numérico de ofertas y comprobación JavaScript. Servicio reiniciado y API real comprobada, con SQLite íntegro y respaldo previo. No se enviaron mensajes de prueba a Telegram.
 
 Cada tarjeta EAN incluye **Eliminar**, con confirmación. Deja de seguir ese producto y cancela sus avisos pendientes sin borrar el historial. Los productos nuevos notifican por el bot Telegram y a los destinatarios existentes.
+
+**PS5 y Switch también son eliminables** desde su tarjeta, igual que los EAN. Al retirarlas se detienen sus consultas y avisos, no solo se ocultan. Las familias retiradas muestran **Volver a seguir**. El historial se conserva y los EAN continúan usando sus tiendas, aunque se retire PS5 o Switch. El mismo control existe en iOS y macOS1.4(6).
