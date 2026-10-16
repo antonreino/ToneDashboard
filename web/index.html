@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es" data-version="{{VERSION}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tone Dashboard">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app-icon.png">
+<title>Tone Dashboard · {{VERSION}}</title>
+<!-- DASHBOARD_STYLE -->
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div class="hero__main">
+      <div class="eyebrow">Tone Dashboard</div>
+      <h1>Control total, limpio y moderno</h1>
+      <p>Estado de servicios, descargas, historial y logs en tiempo real, optimizado para Mac, iPad y iPhone.</p>
+    </div>
+    <div class="hero__side">
+      <div class="status-badge">
+        <div>
+          <strong>Estado del panel</strong><br>
+          <span>Actualización automática cada 3 segundos</span>
+        </div>
+        <span id="updated">Cargando…</span>
+      </div>
+      <div class="controls">
+        <a class="github-link"
+           href="https://github.com/antonreino/Tone Dashboard"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Abrir repositorio en GitHub"
+           aria-label="Abrir repositorio Tone Dashboard en GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 .7a11.3 11.3 0 0 0-3.57 22c.57.1.78-.24.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.03 0 0 .96-.31 3.12 1.17A10.85 10.85 0 0 1 12 5.91c.97 0 1.94.13 2.85.38 2.16-1.48 3.11-1.17 3.11-1.17.63 1.57.24 2.74.12 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.05.78 2.12v3.17c0 .31.2.66.79.55A11.3 11.3 0 0 0 12 .7Z"/>
+          </svg>
+          GitHub
+        </a>
+        <label class="select-wrap">Líneas de log
+          <select id="lines">
+            <option>100</option>
+            <option selected>300</option>
+            <option>1000</option>
+          </select>
+        </label>
+        <button class="button" onclick="refreshAll()">Actualizar ahora</button>
+      </div>
+    </div>
+  </header>
+
+
+  <nav class="tabs" aria-label="Secciones del dashboard">
+    <button class="tab active" data-view="inicio">Inicio</button>
+    <button class="tab" data-view="estadisticas">Estadísticas</button>
+    <button class="tab" data-view="orbitzero">Orbit Zero</button>
+    <button class="tab" data-view="chollos">Chollos</button>
+  </nav>
+
+  <div id="view-inicio" class="view active">
+  <section class="services" id="services"></section>
+
+  <section class="metrics">
+    <div class="metric-card">
+      <div class="metric-card__label">Procesados · 24 h</div>
+      <div class="metric-card__value" id="hcount">0</div>
+      <div class="metric-card__hint">Total de eventos recientes registrados</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Correctos · 24 h</div>
+      <div class="metric-card__value" id="hsuccess">0</div>
+      <div class="metric-card__hint">Eventos finalizados correctamente</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Errores · 24 h</div>
+      <div class="metric-card__value" id="herrors">0</div>
+      <div class="metric-card__hint">Fallos detectados en el último día</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Descargados · 24 h</div>
+      <div class="metric-card__value" id="hdownloadbytes">0 B</div>
+      <div class="metric-card__hint">Descargas directas completadas</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Movidos a Emby · 24 h</div>
+      <div class="metric-card__value" id="hmovedbytes">0 B</div>
+      <div class="metric-card__hint">Contenido enviado a las bibliotecas Emby</div>
+    </div>
+  </section>
+
+  <section class="host-layout" aria-label="Estado de equipos">
+    <section class="host-panel">
+      <div class="host-panel__head">
+        <div>
+          <div class="host-panel__title">🖥️ Mac mini</div>
+          <div class="host-panel__sub">Sistema local · Apple Silicon</div>
+        </div>
+      </div>
+      <div class="host-metrics">
+        <div class="host-metric">
+          <div class="host-metric__label">CPU</div>
+          <div class="host-metric__value" id="sysCpu">—</div>
+          <div class="host-metric__hint">Uso total</div>
+        </div>
+        <div class="host-metric">
+          <div class="host-metric__label">GPU</div>
+          <div class="host-metric__value" id="sysGpu">—</div>
+          <div class="host-metric__hint" id="sysGpuHint">Apple Silicon</div>
+        </div>
+        <div class="host-metric">
+          <div class="host-metric__label">Memoria</div>
+          <div class="host-metric__value" id="sysRam">—</div>
+          <div class="host-metric__hint" id="sysRamHint">Memoria unificada</div>
+        </div>
+        <div class="host-metric">
+          <div class="host-metric__label">Temperatura</div>
+          <div class="host-metric__value" id="sysTemp">—</div>
+          <div class="host-metric__hint" id="sysTempHint">Sensor térmico</div>
+        </div>
+        <div class="host-metric" style="grid-column:1/-1">
+          <div class="host-metric__label">Red</div>
+          <div class="host-metric__value" id="sysNet">—</div>
+          <div class="host-metric__hint">Recepción y envío en tiempo real</div>
+        </div>
+      </div>
+      <div class="host-storage" id="macStorage"></div>
+      <div class="host-note" id="memoryNote"></div>
+    </section>
+
+    <section class="host-panel">
+      <div class="host-panel__head">
+        <div>
+          <div class="host-panel__title">🗄️ Servidor Emby</div>
+          <div class="host-panel__sub">Sistema Linux remoto · métricas vía SSH</div>
+        </div>
+      </div>
+      <div class="host-metrics">
+        <div class="host-metric">
+          <div class="host-metric__label">CPU</div>
+          <div class="host-metric__value" id="embyCpu">—</div>
+          <div class="host-metric__hint">Uso total del servidor</div>
+        </div>
+        <div class="host-metric">
+          <div class="host-metric__label">RAM</div>
+          <div class="host-metric__value" id="embyRam">—</div>
+          <div class="host-metric__hint" id="embyRamHint">Memoria del servidor</div>
+        </div>
+        <div class="host-metric" style="grid-column:1/-1">
+          <div class="host-metric__label">Carga</div>
+          <div class="host-metric__value" id="embyLoad">—</div>
+          <div class="host-metric__hint" id="embySystemHint">1 · 5 · 15 minutos</div>
+        </div>
+      </div>
+      <div class="host-storage" id="serverStorage"></div>
+    </section>
+  </section>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="panel__head">
+        <h2 class="section-title">📥 Cola y descargas recientes <small>Estado y progreso en vivo</small></h2>
+      </div>
+      <form class="download-form" id="downloadForm">
+        <input id="downloadUrl" type="url" autocomplete="off" placeholder="Pega aquí la URL directa del juego…" required>
+        <button type="submit">Descargar</button>
+      </form>
+      <div class="download-form__status" id="downloadFormStatus"></div>
+      <form class="torrent-form" id="torrentForm">
+        <input id="torrentFile" type="file" accept=".torrent,application/x-bittorrent" required>
+        <button type="submit">Añadir torrent</button>
+      </form>
+      <div class="torrent-form__status" id="torrentFormStatus">Se guardará en la misma carpeta que los torrents recibidos por Telegram.</div>
+      <div class="panel__body" id="downloads"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__head">
+        <h2 class="section-title">ℹ️ Estado de descarga <small>Detalles útiles</small></h2>
+      </div>
+      <div class="panel__body pad">
+        <div class="muted" style="line-height:1.7">
+          Las descargas directas usan el disco <strong style="color:var(--text)">Datos</strong>.
+          El tiempo restante se calcula con la velocidad observada y puede fluctuar durante los primeros segundos.
+          Telegram seguirá notificando inicio, reintentos, finalización y errores.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-bottom:18px;">
+    <div class="panel__head">
+      <h2 class="section-title">🕘 Historial reciente <small>Últimos eventos del sistema</small></h2>
+      </div>
+    <div class="panel__body" id="history"></div>
+  </section>
+
+  <section class="logs">
+    <section class="panel log-panel">
+      <div class="panel__head">
+        <h2 class="section-title">Organizer <small>Salida estándar</small></h2>
+      </div>
+      <pre id="organizer_out"></pre>
+    </section>
+
+    <section class="panel log-panel error">
+      <div class="panel__head">
+        <h2 class="section-title">Organizer · stderr <small>Errores y trazas</small></h2>
+      </div>
+      <pre id="organizer_err"></pre>
+    </section>
+
+    <section class="panel log-panel">
+      <div class="panel__head">
+        <h2 class="section-title">Telegram bot <small>Actividad del bot</small></h2>
+      </div>
+      <pre id="telegram_out"></pre>
+    </section>
+
+    <section class="panel log-panel error">
+      <div class="panel__head">
+        <h2 class="section-title">Telegram · stderr <small>Errores del bot</small></h2>
+      </div>
+      <pre id="telegram_err"></pre>
+    </section>
+  </section>
+
+  </div>
+
+  <div id="view-estadisticas" class="view">
+    <section class="stats-grid">
+      <div class="metric-card">
+        <div class="metric-card__label">Descargado · histórico</div>
+        <div class="stat-big" id="statDownloaded">0 B</div>
+        <div class="stat-sub" id="statDownloadCount">0 descargas completadas</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">Movido a Emby · histórico</div>
+        <div class="stat-big" id="statMoved">0 B</div>
+        <div class="stat-sub" id="statMovedCount">0 archivos enviados</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">Datos gestionados · histórico</div>
+        <div class="stat-big" id="statTotal">0 B</div>
+        <div class="stat-sub">Descargas + transferencias a Emby</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">Historial disponible desde</div>
+        <div class="stat-big" id="statSince" style="font-size:22px">—</div>
+        <div class="stat-sub">Los totales empiezan cuando se activó SQLite</div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="panel__head">
+          <h2 class="section-title">📊 Datos por periodo <small>Descargado frente a movido</small></h2>
+        </div>
+        <div class="panel__body" id="periodStats"></div>
+      </section>
+      <section class="panel">
+        <div class="panel__head">
+          <h2 class="section-title">🎬 Bibliotecas Emby <small>Histórico por categoría</small></h2>
+        </div>
+        <div class="panel__body" id="categoryStats"></div>
+      </section>
+    </div>
+  </div>
+
+
+  <div id="view-orbitzero" class="view">
+    <section class="panel" aria-label="Orbit Zero integrado">
+      <div class="panel__body">
+        <div class="orbit-toolbar">
+          <h2 class="section-title">🪐 Orbit Zero <small>Mac mini · PS5</small></h2>
+          <div class="orbit-toolbar-buttons">
+            <button class="button" id="orbitStart" type="button" hidden>Iniciar Orbit</button>
+            <button class="button" id="orbitReveal" type="button">Ver código</button>
+            <button class="button" id="orbitRetry" type="button">Reconectar</button>
+            <a class="button" id="orbitOpen" href="/orbit-bridge/zero/" target="_blank" rel="noopener noreferrer">Abrir aparte ↗</a>
+          </div>
+        </div>
+        <p class="orbit-status" id="orbitStatus" role="status">Comprobando Orbit Zero…</p>
+        <iframe class="orbit-frame" id="orbitFrame" title="Orbit Zero integrado" loading="lazy" referrerpolicy="same-origin" src="about:blank"></iframe>
+        <p class="orbit-note">Para vincular un dispositivo utiliza el código que muestra Orbit Zero en <b>Consola → Cómo funciona</b> de la aplicación del Mac. «Ver código» consulta el código actual del Mac y lo oculta después de 60 segundos. Fuera de casa utiliza una VPN privada y HTTPS.</p>
+      </div>
+    </section>
+    <dialog id="orbitPairDialog" class="orbit-password-dialog">
+      <form id="orbitPairForm">
+        <h3>Código de Orbit</h3>
+        <label for="orbitPairPassword">Contraseña para mostrar el código</label>
+        <input id="orbitPairPassword" type="password" required autocomplete="off" minlength="12">
+        <p id="orbitPairResult" role="status" style="white-space:pre-wrap"></p>
+        <menu><button class="button" type="button" id="orbitPairClose">Cerrar</button><button class="button" type="submit">Mostrar código</button></menu>
+      </form>
+    </dialog>
+    <dialog id="orbitControlDialog" class="orbit-password-dialog" aria-labelledby="orbitControlTitle">
+      <form method="dialog" id="orbitControlForm">
+        <h3 id="orbitControlTitle">Arrancar Orbit Zero</h3>
+        <p class="orbit-note">Introduce la contraseña adicional para autorizar el inicio de Orbit en el Mac mini.</p>
+        <label for="orbitControlPassword">Contraseña de control</label>
+        <input id="orbitControlPassword" type="password" required autocomplete="off" minlength="8">
+        <menu><button class="button" value="cancel" type="button" id="orbitCancelStart">Cancelar</button><button class="button" type="submit">Iniciar Orbit</button></menu>
+      </form>
+    </dialog>
+  </div>
+
+  <div id="view-chollos" class="view">
+    <div class="panel__head" style="margin-bottom:12px;">
+      <h2 class="section-title">🔥 Ofertas <small>datos del bot de precios</small></h2>
+      <span class="deal-status" id="dealStatus">Cargando…</span>
+    </div>
+    <form id="eanProductForm" class="panel pad" style="margin-bottom:18px">
+      <label for="eanProductInput">Seguir otro producto por EAN</label>
+      <input id="eanProductInput" type="text" inputmode="numeric" maxlength="13" pattern="[0-9]{8}|[0-9]{13}" required placeholder="EAN de 8 o 13 cifras" aria-describedby="eanProductMessage">
+      <button class="button" type="submit">Añadir producto</button>
+      <p id="eanProductMessage" role="status">Las ofertas se agrupan por producto y se ordenan de menor a mayor precio. Solo se aceptan coincidencias del EAN.</p>
+    </form>
+    <div id="eanProductCards" class="layout" style="margin-bottom:18px"></div>
+    <div id="inactiveProducts" class="pad"></div>
+    <div hidden><div id="activeDealsPs5"></div><div id="activeDealsSwitch"></div></div>
+    <div class="layout">
+      <section class="panel">
+        <div class="panel__head"><h2 class="section-title">🧾 Historial <small>Avisos publicados</small></h2></div>
+        <div class="panel__body" id="dealHistory"></div>
+      </section>
+      <section class="panel">
+        <div class="panel__head"><h2 class="section-title">🛰 Eventos técnicos <small>Errores y recuperaciones</small></h2></div>
+        <div class="panel__body" id="dealEvents"></div>
+      </section>
+    </div>
+    <section class="panel log-panel">
+      <div class="panel__head"><h2 class="section-title">🛍 Bot de precios · log <small>PS5 + Switch 2</small></h2></div>
+      <pre id="dealLog">(cargando)</pre>
+    </section>
+  </div>
+</div>
+
+<!-- DASHBOARD_SCRIPT -->
+</body>
+</html>

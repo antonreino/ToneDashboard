@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const source = fs.readFileSync(path.join(__dirname,'../scripts/log-viewer.py'),'utf8');
+const source = fs.readFileSync(path.join(__dirname,'../../web/dashboard.js'),'utf8');
 const script = source.slice(source.indexOf('function euroPrice('),source.indexOf('async function loadLogs(){'));
 const nodes = new Map();
 const get = id => {

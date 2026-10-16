@@ -1,3 +1,2 @@
-paramiko
-python-dotenv
-requests
+-r server/requirements.txt
+-r workers/price_tracker/requirements.txt

@@ -9,13 +9,14 @@ from datetime import datetime
 from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parent.parent
-TARGET = Path(sys.argv[1]).expanduser().resolve() if len(sys.argv) > 1 else Path('/Volumes/Datos/Proyectos/Scripts/emby-organizer')
+TARGET = Path(sys.argv[1]).expanduser().resolve() if len(sys.argv) > 1 else SOURCE
 FILES = [
     '.env.example',
     '.gitignore',
     'README.md',
     'MACOS_MIGRATION.md',
     'requirements.txt',
+    'web_assets.py',
     'emby_organizer.py',
     'state_db.py',
     'torrent_utils.py',
@@ -97,6 +98,8 @@ def apply_update(source, target):
 
 
 def main():
+    if (SOURCE.parent / 'VERSION').is_file():
+        raise SystemExit('Proyecto unificado: actualiza desde la raíz con git pull --ff-only, instala requirements.txt y ejecuta bash scripts/install-macos-services.sh. No se admiten actualizaciones parciales del servidor.')
     try:
         backup = apply_update(SOURCE, TARGET)
     except (OSError, ValueError, SyntaxError) as exc:

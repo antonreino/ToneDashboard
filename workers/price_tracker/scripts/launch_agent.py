@@ -20,7 +20,7 @@ def main():
         (ROOT / 'logs').mkdir(exist_ok=True)
         payload = {
             'Label': LABEL,
-            'ProgramArguments': [str(ROOT / '.venv/bin/python'), '-m', 'ps5bot.app'],
+            'ProgramArguments': [str(ROOT.parents[1] / '.venv/bin/python'), '-m', 'ps5bot.app'],
             'WorkingDirectory': str(ROOT),
             'RunAtLoad': True,
             'KeepAlive': True,

@@ -54,6 +54,8 @@ def package_files(root):
 
 
 def main():
+    if (PACKAGE.parents[1] / 'VERSION').is_file():
+        raise SystemExit('Proyecto unificado: actualiza Tone Dashboard desde su raíz; no se admiten actualizaciones parciales del tracker. Consulta README.md en la raíz.')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('target', type=Path, help='Carpeta del bot ya instalado')
     args = parser.parse_args()

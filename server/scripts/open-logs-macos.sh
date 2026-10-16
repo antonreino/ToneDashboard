@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_PYTHON="$HOME/.venvs/emby-organizer/bin/python"
+VENV_PYTHON="$(cd "$(dirname "$0")/../.." && pwd)/.venv/bin/python"
 PORT="${LOG_VIEWER_PORT:-8765}"
 URL="http://127.0.0.1:${PORT}"
 VIEWER_LOG="$HOME/Library/Logs/emby-log-viewer.log"

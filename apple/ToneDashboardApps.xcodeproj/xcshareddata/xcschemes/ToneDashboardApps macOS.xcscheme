@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C276F70E6D3FBCBBB24ADB95"
                BuildableName = "ToneDashboardApps.app"
+               BlueprintName = "ToneDashboardApps macOS"
                ReferencedContainer = "container:ToneDashboardApps.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,6 +47,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C276F70E6D3FBCBBB24ADB95"
             BuildableName = "ToneDashboardApps.app"
+            BlueprintName = "ToneDashboardApps macOS"
             ReferencedContainer = "container:ToneDashboardApps.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -62,6 +64,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C276F70E6D3FBCBBB24ADB95"
             BuildableName = "ToneDashboardApps.app"
+            BlueprintName = "ToneDashboardApps macOS"
             ReferencedContainer = "container:ToneDashboardApps.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

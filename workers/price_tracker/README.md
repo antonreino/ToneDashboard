@@ -2,33 +2,13 @@
 
 Proyecto Python para vigilar PS5 Fat y Slim, digitales y con lector, excluyendo PS5 Pro, y la consola **Nintendo Switch 2 — Zelda 40.º aniversario**. Envía avisos por Telegram y responde a `/ps5` y `/switch2`. Preparado para ejecutarse en tu Mac mediante launchd; también funciona en Linux.
 
-**Si ya instalaste la versión PS5, sigue `ACTUALIZAR.md`: conserva el mismo bot, token, chat e historial.** Para una instalación nueva, sigue los pasos de abajo. Las fuentes son páginas públicas: la lectura puede fallar por bloqueo o cambios de formato. Consulta `VALIDACION.md` para distinguir las integraciones probadas de las pendientes. No incorpora precios inventados ni APIs privadas supuestas.
+## Instalación integrada
 
-## Instalación en tu Mac
+Este worker forma parte de [Tone Dashboard 1.0.0](../../README.md). Instala o actualiza desde la raíz del repositorio con su entorno `.venv` y `scripts/install-macos-services.sh`. No necesita otro clon, otro entorno virtual ni un bot nuevo en instalaciones migradas.
 
-1. Descomprime el ZIP y coloca la carpeta `ps5-price-bot` en una ubicación permanente de tu elección.
-2. Necesitas **Python 3.10 o superior**, con `pip` y `venv`. Compruébalo con `python3 --version`.
-3. En Terminal:
+La configuración propia permanece en `workers/price_tracker/.env` y `config.json`; conserva el bot, todos los `TELEGRAM_CHAT_IDS`, `data/prices.sqlite3` y `logs/`. El bot de descargas y este worker deben mantener tokens distintos para no interferir en `getUpdates`.
 
-```bash
-cd "/ruta/a/ps5-price-bot"
-bash scripts/install-macos.sh
-```
-
-Sustituye `/ruta/a/ps5-price-bot` por la ruta donde hayas colocado la carpeta.
-
-El instalador crea un entorno virtual, instala las dependencias y abre el asistente:
-
-- Crea un **bot nuevo** en [@BotFather](https://t.me/BotFather), enviando `/newbot`.
-- Pega el token en Terminal cuando lo pida; no se muestra al escribir ni debes pegarlo en esta conversación.
-- El asistente te dará el enlace a tu nuevo bot y un mensaje `/start CÓDIGO`. Envíalo en privado a ese bot.
-- Se guarda `.env` con permisos restringidos y se instala el servicio de inicio de macOS.
-
-Utiliza un token exclusivo: dos programas leyendo el mismo bot por `getUpdates` se interferirían. El asistente no cambia ni elimina un webhook existente. Este proyecto es independiente de tus otros bots.
-
-Al arrancar recibirás un aviso de inicio. Envía `/estado` para comprobar cada fuente y `/ps5` después de la primera lectura. **Un aviso de inicio no significa que todas las tiendas funcionen.**
-
-El servicio arranca al iniciar sesión y se reinicia si falla. El Mac debe permanecer encendido, con conexión y sin suspensión; la carpeta del proyecto debe estar accesible. Si está en un SSD externo, este debe estar montado. El instalador no cambia los ajustes de energía.
+Los comandos de diagnóstico siguientes se ejecutan desde esta carpeta, usando `../../.venv/bin/python`. No arrancar una segunda instancia de producción.
 
 ## Comandos de Telegram
 
@@ -101,7 +81,7 @@ El mínimo se calcula por **precio publicado del artículo**, sin añadir envío
 Comprobar las seis fuentes una vez, **sin Telegram ni modificar el historial**:
 
 ```bash
-.venv/bin/python -m ps5bot.app --check
+../../.venv/bin/python -m ps5bot.app --check
 ```
 
 Devuelve código 0 si las fuentes se pueden interpretar, 2 si alguna falla. Cero fichas identificadas puede ser un resultado válido de una página de productos que no contiene consolas clasificables, pero se marca en amarillo como **sin coincidencias válidas**, no como una fuente con precios vigilados. Un cambio de diseño sin fichas reconocibles se informa como error.
@@ -109,21 +89,21 @@ Devuelve código 0 si las fuentes se pueden interpretar, 2 si alguna falla. Cero
 Para diagnosticar Amazon sin imprimir credenciales ni HTML completo:
 
 ```bash
-.venv/bin/python -m ps5bot.app --check --source Amazon --diagnose
+../../.venv/bin/python -m ps5bot.app --check --source Amazon --diagnose
 ```
 
 Ver logs, reiniciar tras editar la configuración o consultar el servicio:
 
 ```bash
 tail -n 80 logs/bot.log
-.venv/bin/python scripts/launch_agent.py restart
-.venv/bin/python scripts/launch_agent.py status
+../../.venv/bin/python scripts/launch_agent.py restart
+../../.venv/bin/python scripts/launch_agent.py status
 ```
 
 Quitar el servicio manteniendo los datos:
 
 ```bash
-.venv/bin/python scripts/launch_agent.py uninstall
+../../.venv/bin/python scripts/launch_agent.py uninstall
 ```
 
 Si la fuente devuelve 403/503/CAPTCHA o requiere JavaScript, el adaptador HTTP no puede leerla. No lleva proxies, soluciones de CAPTCHA ni métodos para eludir controles. Las alternativas son una integración autorizada de esa fuente o actualizar el adaptador cuando vuelva a permitir la lectura. Que tu navegador abra una página no garantiza que la petición del bot funcione.
@@ -147,9 +127,9 @@ En `.env`, `TELEGRAM_CHAT_IDS` permite varios identificadores separados por coma
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python scripts/configure.py
-.venv/bin/python -m ps5bot.app
+../../.venv/bin/python -m pip install -r requirements.txt
+../../.venv/bin/python scripts/configure.py
+../../.venv/bin/python -m ps5bot.app
 ```
 
 No ejecutes el modo manual a la vez que el servicio. En Linux puedes mantener este proceso con tu gestor de servicios habitual; el instalador incluido solo configura launchd en macOS. Las horas de los mensajes se muestran en Europe/Madrid.
@@ -157,7 +137,7 @@ No ejecutes el modo manual a la vez que el servicio. En Linux puedes mantener es
 ## Desarrollo y pruebas
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v
+../../.venv/bin/python -m unittest discover -s tests -v
 ```
 
 Los 37 tests cubren formatos de precios, modelos, Pro/accesorios, HTML real reducido de las fuentes accesibles, agotados, antigüedad, fallos, reinicios, cambios de un céntimo, cambios de ofertas no mínimas, autorización y cola de Telegram. También cubren la edición Zelda, reservas, separación de familias, diagnóstico de Amazon y actualización conservando la configuración. Amazon y Fnac tienen fixtures sintéticas, que verifican la lógica pero no demuestran compatibilidad con su web actual.
