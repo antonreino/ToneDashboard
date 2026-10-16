@@ -137,3 +137,7 @@ Validación1.3(4): pruebas API, contratos de respuestas y paridad correctas; com
 Botón **Eliminar producto** con confirmación en cada tarjeta EAN, tanto iOS como macOS. El servidor retira el seguimiento y los avisos pendientes conservando el historial. Los productos por EAN usan automáticamente el bot Telegram y los destinatarios existentes, incluida su primera oferta encontrada.
 
 Validación1.3.1(5): compilaciones Release firmadas de macOS/iOS correctas y pruebas nativas de eliminación y paridad correctas; servidor validado con 65 pruebas del tracker y 91 del dashboard.
+
+### Versión1.4(6): seguimientos uniformes
+
+PS5, Switch y EAN utilizan las mismas tarjetas, con **Eliminar producto** y confirmación. Las familias PS5/Switch retiradas pueden recuperarse con **Volver a seguir**; un EAN eliminado se añade de nuevo mediante su código. Retirar un seguimiento detiene sus consultas/avisos y conserva el historial. No se retira ningún seguimiento automáticamente al actualizar.

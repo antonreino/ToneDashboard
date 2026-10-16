@@ -43,8 +43,19 @@ struct FunctionalParityTests {
             precondition(request.value(forHTTPHeaderField: "X-Dashboard-Action") == "write")
             return (200, "{\"ok\":true,\"removed\":true}")
         }
-        let removed = try await api.removeTrackedProduct(ean: "0711719021247")
+        let removed = try await api.removeTrackedProduct(id: "ean:0711719021247")
         precondition(removed.ok == true)
+        let trackingJSON = #"{"available":true,"products":[{"id":"ps5","ean":"","name":"PS5","family":"ps5"}],"inactive_products":[{"id":"switch2","ean":"","name":"Switch","family":"switch2"}],"active_offers":[],"history":[],"events":[]}"#
+        let trackers = try JSONDecoder().decode(DealsResponse.self, from: Data(trackingJSON.utf8))
+        precondition(trackers.products?.first?.id == "ps5")
+        precondition(trackers.inactiveProducts?.first?.id == "switch2")
+        MockProtocol.handler = { request in
+            precondition(request.url?.path == "/api/deals/products/restore")
+            precondition(request.httpMethod == "POST")
+            return (200, "{\"ok\":true}")
+        }
+        let restored = try await api.restoreTrackedProduct(id: "ps5")
+        precondition(restored.ok == true)
         let secret = "pair-only-password"
         let request = try api.request(path: "/api/orbit/pair-code", method: "POST", body: Data("{}".utf8), extraHeaders: ["X-Orbit-Action":"reveal-code", "X-Orbit-Pair-Password":secret])
         precondition(request.httpMethod == "POST")

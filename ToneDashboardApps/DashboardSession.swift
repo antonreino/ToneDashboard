@@ -184,10 +184,25 @@ final class DashboardSession: ObservableObject {
         }
     }
 
-    func removeTrackedProduct(ean: String) async -> Bool {
+    func removeTrackedProduct(id: String) async -> Bool {
         guard let client else { return false }
         do {
-            _ = try await client.removeTrackedProduct(ean: ean)
+            _ = try await client.removeTrackedProduct(id: id)
+            let fetched = try await client.deals(lines: logLines)
+            guard connectionMatches(client) else { return false }
+            deals = fetched
+            lastError = nil
+            return true
+        } catch {
+            if connectionMatches(client) { lastError = error.localizedDescription }
+            return false
+        }
+    }
+
+    func restoreTrackedProduct(id: String) async -> Bool {
+        guard let client else { return false }
+        do {
+            _ = try await client.restoreTrackedProduct(id: id)
             let fetched = try await client.deals(lines: logLines)
             guard connectionMatches(client) else { return false }
             deals = fetched

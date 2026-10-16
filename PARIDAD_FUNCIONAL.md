@@ -35,3 +35,5 @@ Los tests no descargan archivos, no envían torrents, no arrancan Orbit ni obtie
 - 1.3 (4): alta EAN mediante `POST /api/deals/products`, listado `products` y ofertas con campo `ean` en `/api/deals`. Formulario, tarjeta por producto y orden ascendente de precios en web, iOS y macOS. Errores de validación del servidor visibles; sin productos duplicados.
 
 - 1.3.1 (5): eliminación confirmada mediante `POST /api/deals/products/remove` en web, iOS y macOS. Conservación del historial y cancelación de avisos EAN pendientes en el tracker; Telegram compartido para todos los EAN.
+
+- 1.4(6): tarjetas uniformes para PS5, Switch y EAN, con identidad `id`/`family`; eliminación aplicable a todos, restauración de familias retiradas mediante `/api/deals/products/restore` e `inactive_products` en respuestas. Seguimientos originales conservados activos en la actualización.

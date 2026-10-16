@@ -8,14 +8,6 @@ struct DealsView: View {
     @State private var productToRemove: TrackedProduct?
     @State private var confirmRemoval = false
 
-    private var ps5Offers: [Offer] {
-        (session.deals?.activeOffers ?? []).filter { ($0.family ?? "").lowercased() == "ps5" }
-    }
-
-    private var switchOffers: [Offer] {
-        (session.deals?.activeOffers ?? []).filter { ($0.family ?? "").lowercased() == "switch2" }
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -48,56 +40,23 @@ struct DealsView: View {
                     }
                     ForEach(deals.products ?? []) { product in
                         VStack(alignment: .trailing, spacing: 6) {
-                        OfferFamilyCard(title: product.name, subtitle: "EAN \(product.ean)",
-                                        systemImage: "barcode", accent: DashboardPalette.cyan,
-                                        offers: deals.activeOffers.filter { $0.ean == product.ean })
+                        OfferFamilyCard(title: product.name, subtitle: product.family == "ean" || product.family == nil ? "EAN \(product.ean)" : "Seguimiento de ofertas",
+                                        systemImage: product.family == "ean" || product.family == nil ? "barcode" : "gamecontroller.fill", accent: DashboardPalette.cyan,
+                                        offers: deals.activeOffers.filter { product.family == "ean" || product.family == nil ? $0.ean == product.ean : $0.family == product.family })
                         Button("Eliminar producto", role: .destructive) {
                             productToRemove = product
                             confirmRemoval = true
                         }.disabled(savingProduct)
                         }
                     }
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .top, spacing: 16) {
-                            OfferFamilyCard(
-                                title: "PlayStation 5",
-                                subtitle: "Ofertas de PS5",
-                                systemImage: "gamecontroller.fill",
-                                accent: DashboardPalette.accent,
-                                offers: ps5Offers
-                            )
-                            .frame(minWidth: 320, maxWidth: .infinity, alignment: .topLeading)
-
-                            OfferFamilyCard(
-                                title: "Nintendo Switch",
-                                subtitle: "Ofertas de Switch",
-                                systemImage: "gamecontroller",
-                                accent: DashboardPalette.cyan,
-                                offers: switchOffers
-                            )
-                            .frame(minWidth: 320, maxWidth: .infinity, alignment: .topLeading)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-
-                        VStack(alignment: .leading, spacing: 16) {
-                            OfferFamilyCard(
-                                title: "PlayStation 5",
-                                subtitle: "Ofertas de PS5",
-                                systemImage: "gamecontroller.fill",
-                                accent: DashboardPalette.accent,
-                                offers: ps5Offers
-                            )
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-
-                            OfferFamilyCard(
-                                title: "Nintendo Switch",
-                                subtitle: "Ofertas de Switch",
-                                systemImage: "gamecontroller",
-                                accent: DashboardPalette.cyan,
-                                offers: switchOffers
-                            )
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                        }
+                    ForEach(deals.inactiveProducts ?? []) { product in
+                        Button("Volver a seguir \(product.name)") {
+                            savingProduct = true
+                            Task {
+                                _ = await session.restoreTrackedProduct(id: product.id)
+                                savingProduct = false
+                            }
+                        }.disabled(savingProduct)
                     }
 
                     DashboardPanel {
@@ -163,14 +122,14 @@ struct DealsView: View {
             Button("Eliminar producto", role: .destructive) {
                 savingProduct = true
                 Task {
-                    _ = await session.removeTrackedProduct(ean: product.ean)
+                    _ = await session.removeTrackedProduct(id: product.id)
                     savingProduct = false
                     productToRemove = nil
                 }
             }
             Button("Cancelar", role: .cancel) { productToRemove = nil }
         } message: { product in
-            Text("EAN \(product.ean). Dejarás de recibir avisos de este producto. Se conservará el historial.")
+            Text("\(product.name). Dejarás de recibir avisos de este producto. Se conservará el historial.")
         }
         .background(DashboardBackground())
         .navigationTitle("Ofertas")

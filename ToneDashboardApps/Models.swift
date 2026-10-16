@@ -246,21 +246,29 @@ struct LogResponse: Codable {
 }
 
 struct TrackedProduct: Codable, Identifiable {
-    var id: String { ean }
+    var id: String { trackingId ?? ean }
+    var trackingId: String?
+    var family: String?
     var ean: String
     var name: String
+    enum CodingKeys: String, CodingKey {
+        case trackingId = "id"
+        case family, ean, name
+    }
 }
 
 struct DealsResponse: Codable {
     var available: Bool
     var error: String?
     var products: [TrackedProduct]?
+    var inactiveProducts: [TrackedProduct]?
     var activeOffers: [Offer]
     var history: [DealHistory]
     var events: [DealEvent]
     var log: String?
     enum CodingKeys: String, CodingKey {
         case available, error, history, events, log, products
+        case inactiveProducts = "inactive_products"
         case activeOffers = "active_offers"
     }
 }
