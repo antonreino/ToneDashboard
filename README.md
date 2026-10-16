@@ -1,6 +1,8 @@
 # ToneDashboardApps
 
-Aplicación nativa en **SwiftUI** para **macOS, iPhone y iPad**, que acompaña a [ToneDashboard](https://github.com/antonreino/ToneDashboard). Reemplaza el nombre anterior `EmbyDashboardNative` / `Emby Dashboard`.
+Aplicación nativa en **SwiftUI** para **macOS, iPhone y iPad**, que acompaña al servidor web [ToneDashboard](https://github.com/antonreino/ToneDashboard).
+
+Repositorio: [antonreino/ToneDashboardApps](https://github.com/antonreino/ToneDashboardApps). Proyecto Xcode: `ToneDashboardApps.xcodeproj`. Esquemas: **ToneDashboardApps iOS** y **ToneDashboardApps macOS**.
 
 ## Funciones
 
@@ -27,9 +29,10 @@ Orbit sigue generando los códigos de vinculación. «Ver código» consulta el 
 
 ## Abrir el proyecto
 
-En el Mac con Xcode:
+Para un clon nuevo en el Mac con Xcode:
 
 ```bash
+git clone https://github.com/antonreino/ToneDashboardApps.git
 cd ToneDashboardApps
 open ToneDashboardApps.xcodeproj
 ```
@@ -38,11 +41,23 @@ Esquemas: **ToneDashboardApps iOS** y **ToneDashboardApps macOS**. Si cambias fi
 
 En **Ajustes**, introduce la URL del dashboard `https://...`, usuario y contraseña. La URL debe ser HTTPS y se conserva en `UserDefaults`, mientras que la contraseña va a **Keychain**. El host de Orbit siempre será el mismo del dashboard, nunca una IP local solicitada al iPhone. Para un acceso remoto fiable utiliza una VPN privada y certificado correcto.
 
-## Actualizar desde la app anterior
+## Actualizar un clon existente
+
+Desde la carpeta donde tengas el proyecto (por ejemplo, `ToneDashboardApps-git`):
+
+```bash
+git remote set-url origin https://github.com/antonreino/ToneDashboardApps.git
+git pull --ff-only
+open ToneDashboardApps.xcodeproj
+```
+
+El nombre de la carpeta local puede conservarse. Compila e instala la app para actualizar el binario del dispositivo; cambiar el remoto o ejecutar `git pull` solo actualiza el código.
+
+## Compatibilidad con instalaciones anteriores
 
 Se conserva el identificador de paquete previo (`ovh.tonecas.embydashboard.ios` y `.macos`) **intencionadamente** para permitir actualizar la instalación existente y conservar ajustes y Keychain. El nombre visual y los esquemas de Xcode ahora son **ToneDashboardApps**. No cambies el identificador de paquete sin planear la migración de credenciales.
 
-La carpeta raíz y el `.xcodeproj` pasan a llamarse `ToneDashboardApps`; abre el nuevo proyecto en lugar del anterior. Conserva una copia del proyecto antiguo hasta compilar y probar Mac + simulador iPhone en tu Xcode.
+Los clones nuevos usan la carpeta `ToneDashboardApps`. En un clon existente puedes mantener su ruta actual y abrir `ToneDashboardApps.xcodeproj`. Los nombres anteriores `EmbyDashboardNative` y `Emby Dashboard` solo identifican versiones antiguas; no son los nombres actuales de los repositorios.
 
 ## Seguridad y límites
 
