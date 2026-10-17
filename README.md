@@ -8,7 +8,7 @@ Un único proyecto para web, macOS/iOS, Organizer, descargas, Telegram, ofertas 
 - `server/`: API autenticada, proxy Orbit, métricas, historial, Organizer y automatización de descargas.
 - `workers/price_tracker/`: PS5/Switch/EAN y bot Telegram; la API utiliza este mismo paquete dentro del repositorio.
 - `apple/`: contenedor SwiftUI/WebKit para macOS/iOS. Solo ajustes, llavero, aislamiento por origen/cuenta, selección de archivos y diálogos nativos. No replica pantallas ni modelos de ofertas.
-- `VERSION`: versión común. La compilación Apple crece independientemente para permitir actualizaciones.
+- `VERSION`: versión común. El contador interno de Apple se conserva para permitir actualizaciones y no se muestra al usuario.
 
 Los historiales Git originales están integrados mediante subtrees sin squash. Los datos y secretos quedan fuera de Git.
 
@@ -31,7 +31,7 @@ El dashboard mantiene el puerto8765 y las rutas API. El tracker utiliza `workers
 
 ## Apps Apple
 
-Abrir `apple/ToneDashboardApps.xcodeproj`: versión1.1.0, compilación10. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
+Abrir `apple/ToneDashboardApps.xcodeproj`: versión 1.1.0. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
 
 Las apps cargan `/` del dashboard HTTPS. Las mejoras de interfaz se reciben al recargar; cambios del contenedor requieren nueva compilación. Autenticación y navegación quedan limitadas al origen configurado. No se entregan contraseñas a JavaScript ni hay un puente de ejecución de comandos.
 
@@ -72,3 +72,7 @@ Las tarjetas muestran primero nombre, estado y progreso; los detalles se desplie
 Controles persistentes de descargas y aMule; revisión de cuarentena y reglas recordadas; alertas por producto/destinatario; historial paginado y recorrido de archivos; diagnóstico exportable y copias SQLite diarias verificadas. Se optimizan las consultas por sección, las métricas compartidas y la lectura de logs. El llavero pasa a separar credenciales por servidor, puerto y usuario, conservando la cuenta instalada.
 
 Consulta [Operación y recuperación](docs/OPERACIONES.md) para conocer límites, restauración, pruebas y preparación del aislamiento opcional de Orbit. Este último permanece desactivado hasta configurar y probar su segundo dominio HTTPS.
+
+## Numeración de versiones
+
+La próxima versión publicada será **1.1.1**, seguida de 1.1.2, …, 1.1.9 y **1.2.0**. Cada versión publicada incrementa el último dígito; después de 9, ese dígito vuelve a 0 y se incrementa el componente central. La versión principal permanece en 1 hasta que el propietario autorice expresamente cambiarla. La versión pública es común a web, macOS e iOS y se presenta sin sufijos ni números entre paréntesis. El contador interno de Apple no forma parte del nombre público.

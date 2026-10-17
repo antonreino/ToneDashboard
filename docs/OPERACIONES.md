@@ -1,6 +1,6 @@
 # Tone Dashboard 1.1 · operación y recuperación
 
-La interfaz y las operaciones siguen compartidas por web, iOS y macOS. No se añaden servicios LaunchAgent. La versión Apple es 1.1.0 (10).
+La interfaz y las operaciones siguen compartidas por web, iOS y macOS. No se añaden servicios LaunchAgent. La versión pública es 1.1.0, sin sufijo de compilación.
 
 ## Datos y actualización
 
