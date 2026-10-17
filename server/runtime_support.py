@@ -47,17 +47,19 @@ def backup_database(source, directory, retain=14):
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     name = source.stem + '-' + time.strftime('%Y%m%d-%H%M%S') + '-' + str(time.time_ns()) + '.sqlite3'
     target = directory/name
-    fd = os.open(target, os.O_WRONLY|os.O_CREAT|os.O_EXCL, 0o600);os.close(fd)
+    staging=target.with_suffix('.partial')
+    fd = os.open(staging, os.O_WRONLY|os.O_CREAT|os.O_EXCL, 0o600);os.close(fd)
     try:
-        with closing(sqlite3.connect(source.resolve().as_uri()+'?mode=ro', uri=True)) as src, closing(sqlite3.connect(target)) as dst:
+        with closing(sqlite3.connect(source.resolve().as_uri()+'?mode=ro', uri=True)) as src, closing(sqlite3.connect(staging)) as dst:
             src.backup(dst)
             if dst.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
                 raise ValueError('La copia SQLite no supera la comprobación de integridad')
+        os.replace(staging,target)
         for old in sorted(directory.glob(source.stem+'-*.sqlite3'), key=lambda p:p.stat().st_mtime, reverse=True)[retain:]:
             if old.is_file() and not old.is_symlink():old.unlink()
         return target
     except Exception:
-        target.unlink(missing_ok=True)
+        staging.unlink(missing_ok=True)
         raise
 
 

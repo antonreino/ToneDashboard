@@ -57,6 +57,11 @@ class OperationalTests(unittest.TestCase):
         with self.assertRaises(ValueError):m.restore(backup,target)
         for _ in range(4):backup_database(db.DB_PATH,self.root/'backups',retain=2)
         self.assertEqual(len(list((self.root/'backups').glob('*.sqlite3'))),2)
+    def test_failed_backup_never_publishes_an_unverified_snapshot(self):
+        broken=self.root/'broken.sqlite3';broken.write_bytes(b'not a SQLite file')
+        folder=self.root/'snapshots'
+        with self.assertRaises(sqlite3.DatabaseError):backup_database(broken,folder)
+        self.assertEqual(list(folder.iterdir()),[])
     def test_bounded_tail_unicode_and_partial_line(self):
         p=self.root/'large.log';p.write_text('x'*100000+'\nuno\ndos á\ntres\n')
         self.assertEqual(tail_text(p,2),'dos á\ntres')
