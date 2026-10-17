@@ -389,6 +389,75 @@ document.getElementById('orbitControlForm').addEventListener('submit',async e=>{
  }catch(err){status.textContent='No se pudo iniciar Orbit: '+err.message;}
 });
 
+// aMule: structured local EC data through the authenticated server.
+let amuleEpoch=0,amuleLoading=false,amuleSearchId='',amuleSearchBusy=false;
+const amulePending=new Set();
+function renderAmule(d){
+  amuleSearchId=d.search_id||'';
+  document.getElementById('amuleStatus').textContent=`aMule disponible · Bajada ${size(d.download_speed)}/s · Subida ${size(d.upload_speed)}/s · Kad: ${d.kad_nodes||0} nodos`;
+  document.getElementById('amuleResultsTitle').textContent=d.query?`Resultados de «${d.query}» · ${d.total}${d.total>500?' (primeros 500)':''}`:'Resultados';
+  const queued=new Set((d.downloads||[]).map(r=>r.hash));
+  document.getElementById('amuleResults').innerHTML=(d.results||[]).length?table(d.results,[
+    ['Archivo',r=>esc(r.name)],['Tamaño',r=>size(r.size)],['Fuentes',r=>esc(r.sources)],
+    ['Acción',r=>queued.has(r.hash)?'<span class="badge ok">En la cola</span>':`<button class="button" type="button" data-amule-hash="${esc(r.hash)}" ${amulePending.has(r.hash)?'disabled':''}>Descargar</button>`]
+  ]):`<div class="empty">${d.query?'Todavía no hay resultados. Espera unos segundos; puedes probar otra red o un término más amplio.':'Escribe un título para buscar.'}</div>`;
+  document.getElementById('amuleDownloads').innerHTML=table(d.downloads||[],[
+    ['Archivo',r=>esc(r.name)],['Tamaño',r=>size(r.size)],['Completado',r=>`${esc(r.progress)}% · ${size(r.completed)}`],['Velocidad',r=>`${size(r.speed)}/s`],['Fuentes',r=>esc(r.sources)]
+  ]);
+}
+async function loadAmule(){
+  if(amuleLoading)return;
+  amuleLoading=true;const epoch=amuleEpoch;
+  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
+  try{
+    const r=await fetch('/api/amule',{cache:'no-store',signal:controller.signal});const d=await r.json();
+    if(epoch!==amuleEpoch)return;
+    if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
+    renderAmule(d);
+  }catch(e){
+    if(epoch===amuleEpoch){
+      amuleSearchId='';
+      document.getElementById('amuleStatus').textContent=e.name==='AbortError'?'aMule no respondió a tiempo. Reintentaremos la conexión.':e.message;
+      document.getElementById('amuleResults').innerHTML='<div class="empty">Resultados no disponibles mientras se restablece la conexión.</div>';
+    }
+  }finally{clearTimeout(timeout);amuleLoading=false;}
+}
+async function amulePost(path,body){
+  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
+  try{
+    const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify(body),signal:controller.signal});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);return d;
+  }catch(e){if(e.name==='AbortError')throw new Error('No se pudo confirmar la operación. Comprueba la cola antes de repetirla.');throw e;}
+  finally{clearTimeout(timeout);}
+}
+document.getElementById('amuleSearchForm').addEventListener('submit',async e=>{
+  e.preventDefault();if(amuleSearchBusy)return;
+  const query=document.getElementById('amuleQuery').value.trim();
+  const status=document.getElementById('amuleActionStatus');
+  if(query.length<2||query.length>160){status.textContent='Escribe entre 2 y 160 caracteres.';return;}
+  amuleSearchBusy=true;amuleEpoch++;amuleSearchId='';
+  const button=e.currentTarget.querySelector('button[type="submit"]');button.disabled=true;
+  document.getElementById('amuleResults').innerHTML='<div class="empty">Iniciando búsqueda…</div>';
+  try{
+    await amulePost('/api/amule/search',{query,network:document.getElementById('amuleNetwork').value,type:document.getElementById('amuleType').value});
+    status.textContent='Búsqueda iniciada. Los resultados aparecerán automáticamente.';await loadAmule();
+  }catch(err){status.textContent=err.message;}
+  finally{amuleSearchBusy=false;button.disabled=false;}
+});
+document.getElementById('amuleResults').addEventListener('click',async e=>{
+  const button=e.target.closest('[data-amule-hash]');if(!button||!amuleSearchId)return;
+  const hash=button.dataset.amuleHash;if(amulePending.has(hash))return;
+  amulePending.add(hash);button.disabled=true;
+  const status=document.getElementById('amuleActionStatus');
+  try{
+    const d=await amulePost('/api/amule/download',{hash,search_id:amuleSearchId});
+    status.textContent=d.already_queued?'El archivo ya está en la cola de aMule.':'Descarga añadida a aMule en el Mac mini.';
+    await loadAmule();
+  }catch(err){status.textContent=err.message;}
+  finally{amulePending.delete(hash);button.disabled=false;}
+});
+setInterval(()=>{if(!document.hidden&&document.getElementById('view-amule').classList.contains('active'))loadAmule();},4000);
+
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===tab));
@@ -410,6 +479,7 @@ async function refreshAll(){
     const tasks=[loadDashboard()];
     if(document.getElementById('view-logs').classList.contains('active'))tasks.push(loadLogs());
     if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
+    if(document.getElementById('view-amule').classList.contains('active'))tasks.push(loadAmule());
     await Promise.all(tasks);
   }catch(e){
     document.getElementById('updated').textContent='Error de actualización';

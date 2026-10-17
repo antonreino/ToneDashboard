@@ -474,3 +474,15 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   #view-chollos>.panel__head{flex-wrap:wrap;gap:10px}
   #inactiveProducts{display:grid;gap:10px}
 }
+
+/* aMule uses the same responsive table layout as the rest of the dashboard. */
+.amule-search{display:grid;grid-template-columns:minmax(160px,1fr) 180px 160px auto;align-items:end;gap:12px;padding:18px}
+.amule-search label{display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--muted);min-width:0}
+.amule-search input,.amule-search select{width:100%;min-height:44px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px;font:inherit;box-sizing:border-box}
+#view-amule td{overflow-wrap:anywhere}#view-amule button:disabled{opacity:.55;cursor:wait}#amuleActionStatus{min-height:1.4em}
+@media(max-width:900px){.amule-search{grid-template-columns:1fr 1fr}.amule-search label:first-child{grid-column:1/-1}}
+@media(max-width:450px){.amule-search{grid-template-columns:1fr;padding:13px}.amule-search label:first-child{grid-column:auto}.amule-search button{width:100%}}
+#view-amule [data-amule-hash]{white-space:nowrap;min-width:110px}
+#view-amule .panel__body>p,#view-amule .panel__body>h3{margin-left:18px;margin-right:18px}
+@media(min-width:721px){#amuleResults table{table-layout:fixed}#amuleResults th:nth-child(2){width:110px}#amuleResults th:nth-child(3){width:80px}#amuleResults th:last-child{width:140px}#amuleResults td:not(:first-child){overflow-wrap:normal}}
+@media(max-width:600px){#view-amule .panel__body>p,#view-amule .panel__body>h3{margin-left:13px;margin-right:13px}}

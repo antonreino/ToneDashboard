@@ -557,6 +557,11 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/amule':
+            from amule_dashboard import handle
+            result,code=handle('GET',parsed.path)
+            self.send_bytes(json.dumps(result,ensure_ascii=False).encode(), 'application/json; charset=utf-8',code)
+            return
         if parsed.path == '/api/orbit/status':
             from orbit_dashboard_control import get_status
             self.send_bytes(json.dumps(get_status(),ensure_ascii=False).encode('utf-8'),'application/json; charset=utf-8')
@@ -632,6 +637,19 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path in ('/api/amule/search','/api/amule/download'):
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                if not 0 < length <= 2048: raise ValueError()
+                body=json.loads(self.rfile.read(length))
+                if not isinstance(body,dict): raise ValueError()
+            except (ValueError,UnicodeError):
+                self.send_bytes(b'{"error":"Solicitud aMule no valida"}', 'application/json',400)
+                return
+            from amule_dashboard import handle
+            result,code=handle('POST',parsed.path,body)
+            self.send_bytes(json.dumps(result,ensure_ascii=False).encode(), 'application/json; charset=utf-8',code)
+            return
         if parsed.path in ('/api/deals/products', '/api/deals/products/remove', '/api/deals/products/restore'):
             try:
                 length = int(self.headers.get('Content-Length', '0'))

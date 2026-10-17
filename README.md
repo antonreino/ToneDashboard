@@ -50,3 +50,13 @@ CI ejecuta regresiones de servidor/tracker, pruebas de la interfaz común, segur
 Organizer y SFTP, refresco Emby, métricas, cola de descargas/torrents, logs, estadísticas e historial; ofertas PS5/Switch/EAN con eliminación/restauración y Telegram; Orbit integrado, código protegido y autorización persistente.
 
 Amazon e Idealo mantienen sus limitaciones previas; la migración no elimina sus bloqueos. Jarvis permanece como proyecto independiente.
+
+## aMule integrado
+
+La pestaña aMule permite buscar por Kad, el servidor conectado o todos los servidores, filtrar por tipo y añadir resultados directamente a la cola del aMule que ya corre en el Mac. Web, macOS e iOS comparten esta misma interfaz. Las búsquedas pertenecen a una sola instancia de aMule: una nueva búsqueda sustituye la anterior también en otros dispositivos. La cola sigue funcionando al cerrar Dashboard.
+
+El servidor se conecta por EC 0x0204 exclusivamente a `127.0.0.1:4712`; no añade otro motor ni un servicio permanente. Configurar `[ExternalConnect]` de aMule con `AcceptExternalConnections=1`, `ECAddress=127.0.0.1`, `ECPort=4712` y una credencial interna. En `server/.env`, `AMULE_ENABLED=true` y `AMULE_EC_PASSWORD_HASH` y `ECPassword` de aMule deben contener exactamente el mismo hash MD5 de la contraseña elegida (no volver a hashear ese valor). No exponer ese puerto a Internet ni incluir el hash en Git. aMule puede requerir un reinicio ordenado para aplicar estos ajustes.
+
+No se ejecutan comandos de consola recibidos del cliente. Las operaciones usan el protocolo EC con autenticación, límites de tamaño y tiempo; el navegador recibe nombres, tamaños, fuentes y progreso, nunca la credencial interna. Descargar valida la generación de búsqueda y el hash exacto, evita duplicados y comprueba que el archivo aparece en la cola. Las mutaciones mantienen la autenticación y protección de origen del Dashboard.
+
+Se muestran como máximo 500 resultados, ordenados por fuentes. Un archivo con cero fuentes puede quedar esperando indefinidamente. Organizer procesa los archivos terminados de la carpeta de entrada existente; los parciales de aMule deben permanecer en otra carpeta. En la instalación actual, aMule y Organizer ya comparten `~/Documents/Torrent`. Esta integración no modifica renombres, bibliotecas o historial existentes.

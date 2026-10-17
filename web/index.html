@@ -59,6 +59,7 @@
     <button class="tab" data-view="estadisticas">Estadísticas</button>
     <button class="tab" data-view="orbitzero">Orbit Zero</button>
     <button class="tab" data-view="chollos">Chollos</button>
+    <button class="tab" data-view="amule">aMule</button>
     <button class="tab" data-view="logs">Logs</button>
   </nav>
 
@@ -200,6 +201,29 @@
   </section>
 
 
+  </div>
+
+  <div id="view-amule" class="view">
+    <section class="panel">
+      <div class="panel__head"><h2 class="section-title">aMule <small>Buscar y descargar en el Mac mini</small></h2></div>
+      <form id="amuleSearchForm" class="amule-search">
+        <label>Buscar<input id="amuleQuery" type="search" minlength="2" maxlength="160" placeholder="Título o nombre del archivo…" required></label>
+        <label>Red<select id="amuleNetwork"><option value="kad">Kad</option><option value="global">Todos los servidores</option><option value="local">Servidor conectado</option></select></label>
+        <label>Tipo<select id="amuleType"><option value="">Todos</option><option value="Video">Vídeo</option><option value="Audio">Audio</option><option value="Doc">Documentos</option><option value="Iso">Imágenes de disco</option><option value="Arc">Comprimidos</option></select></label>
+        <button class="button" type="submit">Buscar en aMule</button>
+      </form>
+      <div class="panel__body">
+        <p id="amuleStatus" role="status" aria-live="polite">Comprobando aMule…</p>
+        <p id="amuleActionStatus" role="status" aria-live="polite"></p>
+        <p class="muted">La búsqueda se comparte entre web, Mac e iPhone. Al iniciar otra, se sustituyen los resultados anteriores. Los archivos terminados siguen la ruta habitual de Organizer hacia Emby.</p>
+        <h3 id="amuleResultsTitle">Resultados</h3>
+        <div id="amuleResults"><div class="empty">Escribe un título para buscar.</div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel__head"><h2 class="section-title">Descargas de aMule <small>Cola del Mac mini</small></h2></div>
+      <div class="panel__body" id="amuleDownloads"><div class="empty">Sin datos todavía.</div></div>
+    </section>
   </div>
 
   <div id="view-estadisticas" class="view">
