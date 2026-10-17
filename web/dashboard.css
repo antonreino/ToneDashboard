@@ -584,7 +584,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 @media(min-width:601px){
   :root{--bg:#0b111b;--panel:#121c2a;--muted:#a8b6cb}
   body::before{display:none}
-  .app{width:auto;max-width:1600px;margin:0 0 0 204px;padding:28px 32px 48px;min-width:0}
+  .app{width:auto;max-width:none;margin:0 0 0 204px;padding:28px 32px 48px;min-width:0}
   .phone-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;gap:16px}
   .phone-brand{font-size:11px;letter-spacing:.15em;color:var(--muted);font-weight:700}
   .phone-header h1{font-size:32px;margin:6px 0 0;letter-spacing:-.04em;outline:none}
@@ -595,10 +595,10 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .phone-nav svg{width:22px;height:22px;flex-shrink:0}
   .phone-nav button[aria-current=page]{background:#253a58;color:#d3e5ff}
   .phone-nav button:hover{background:#1b2c43}
-  .phone-home{display:block;max-width:1100px}
-  .phone-summary-grid{max-width:760px}.phone-summary{padding:25px;min-height:170px;cursor:pointer}.phone-summary strong{font-size:48px}
+  .phone-home{display:block;max-width:none}
+  .phone-summary-grid{max-width:none}.phone-summary{padding:25px;min-height:170px;cursor:pointer}.phone-summary strong{font-size:48px}
   .phone-home .phone-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.phone-home .phone-menu>button{border-bottom:0;border-right:1px solid var(--border)}.phone-home .phone-menu>button:last-child{border-right:0}
-  #view-mas .phone-menu{max-width:850px}
+  #view-mas .phone-menu{max-width:none}
   .phone-segment{display:flex;max-width:520px}
   .phone-back{display:block;cursor:pointer}
   .phone-info{margin-bottom:20px}.phone-info>div{padding:0 18px 18px}
@@ -618,4 +618,11 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .app{margin-left:164px;padding:24px 18px}.phone-nav{width:164px;padding-left:10px;padding-right:10px}
   .phone-home .phone-menu{grid-template-columns:1fr}.phone-home .phone-menu>button{border-right:0;border-bottom:1px solid var(--border)}
   .host-layout{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(min-width:1200px){
+  #view-mas .phone-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view-mas .phone-menu>button{border-right:1px solid var(--border)}
+  #view-mas .phone-menu>button:nth-child(even){border-right:0}
+  #view-mas .phone-menu>button:last-child{grid-column:1/-1}
 }
