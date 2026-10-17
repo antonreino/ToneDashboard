@@ -1,24 +1,28 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const source=fs.readFileSync('web/dashboard.js','utf8');
-const html=fs.readFileSync('web/index.html','utf8');
+const source=fs.readFileSync('web/dashboard.js','utf8'),html=fs.readFileSync('web/index.html','utf8');
 const names=[...html.matchAll(/class="tab(?: active)?" data-view="([^"]+)"/g)].map(m=>m[1]);
 assert.equal(names.at(-1),'logs');
-const logStart=html.indexOf('id="view-logs"');
-assert(logStart>html.indexOf('id="view-chollos"'));
-for(const id of ['organizer_out','organizer_err','telegram_out','telegram_err'])assert(html.indexOf(`id="${id}"`)>logStart);
-const makeClasses=active=>({active,contains(){return this.active},remove(){this.active=false},add(){this.active=true},toggle(_,on){this.active=on}});
-const views=names.map(name=>({id:'view-'+name,classList:makeClasses(name==='inicio')}));
-const tabs=names.map(name=>({dataset:{view:name},classList:makeClasses(name==='inicio'),addEventListener(_,fn){this.click=fn}}));
-const counts={dashboard:0,logs:0,deals:0,orbit:0,amule:0};
-const nodes=new Map(views.map(v=>[v.id,v]));nodes.set('lines',{value:'300',addEventListener(){}});nodes.set('updated',{});
-const context={console,document:{hidden:false,getElementById:id=>nodes.get(id),querySelectorAll:sel=>sel==='.tab'?tabs:views},loadDashboard:async()=>{counts.dashboard++},loadLogs:async()=>{counts.logs++},loadDeals:async()=>{counts.deals++},loadAmule:async()=>{counts.amule++},orbitEnsureLoaded:()=>{counts.orbit++},setInterval:()=>{}};
-vm.createContext(context);vm.runInContext(source.slice(source.indexOf("document.querySelectorAll('.tab')"),source.indexOf('// Native containers')),context);
+const phoneTabs=[...html.matchAll(/data-phone-tab="([^"]+)"/g)].map(m=>m[1]);assert.deepEqual(phoneTabs,['inicio','descargas','chollos','orbitzero','mas']);
+const allNames=[...names,'descargas','mas','equipos','historial','ajustes'];
+const classes=active=>({active,contains(c){return c==='phone-view'?false:this.active},remove(){this.active=false},add(){this.active=true},toggle(c,on){this.active=on}});
+const views=allNames.map(name=>({id:'view-'+name,classList:classes(name==='inicio')}));
+const tabs=names.map(name=>({dataset:{view:name},classList:classes(name==='inicio'),addEventListener(_,fn){this.click=fn}}));
+const phones=phoneTabs.map(name=>({dataset:{phoneTab:name},setAttribute(k,v){this[k]=v},removeAttribute(k){delete this[k]}}));
+const nodes=new Map(views.map(v=>[v.id,v]));for(const id of ['phoneTitle','lines','updated'])nodes.set(id,{value:'300',addEventListener(){},focus(){}});
+const counts={dashboard:0,logs:0,deals:0,orbit:0,amule:0,clear:0};
+const context={console,document:{hidden:false,getElementById:id=>nodes.get(id),querySelectorAll:sel=>sel==='.tab'?tabs:sel==='[data-phone-tab]'?phones:views},phoneTitles:{},phoneMedia:{matches:true},window:{scrollTo(){}},clearOrbitCode:()=>counts.clear++,loadDashboard:async()=>counts.dashboard++,loadLogs:async()=>counts.logs++,loadDeals:async()=>counts.deals++,loadAmule:async()=>counts.amule++,orbitEnsureLoaded:()=>counts.orbit++,setInterval(){}};
+vm.createContext(context);
+vm.runInContext(source.slice(source.indexOf('function phoneGroup'),source.indexOf('function applyPhoneLayout')),context);
+vm.runInContext(source.slice(source.indexOf("document.querySelectorAll('.tab').forEach"),source.indexOf('// Phone layout:')),context);
+context.refreshAll();
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
- await settle();assert.equal(counts.logs,0);assert.equal(counts.deals,0);
- tabs.find(t=>t.dataset.view==='logs').click();await settle();assert.equal(counts.logs,1);assert(views.find(v=>v.id==='view-logs').classList.active);
- tabs.find(t=>t.dataset.view==='chollos').click();await settle();assert.equal(counts.logs,1);assert.equal(counts.deals,1);
- tabs.find(t=>t.dataset.view==='amule').click();await settle();assert.equal(counts.amule,1);
- tabs.find(t=>t.dataset.view==='orbitzero').click();await settle();assert.equal(counts.orbit,1);
- console.log('Navigation: separate final Logs tab; logs/deals fetched only in their sections; Orbit navigation preserved');
+ await settle();assert.equal(counts.logs,0);
+ for(const view of ['logs','chollos','amule','orbitzero','descargas','mas','equipos','historial','ajustes']){
+  context.navigateDashboard(view,{focus:true});await settle();assert(views.find(v=>v.id==='view-'+view).classList.active);
+  assert.equal(views.filter(v=>v.classList.active).length,1);
+  assert.equal(phones.find(p=>p['aria-current']==='page').dataset.phoneTab,context.phoneGroup(view));
+ }
+ assert.equal(counts.logs,1);assert.equal(counts.deals,1);assert(counts.amule>=2);assert.equal(counts.orbit,1);assert(counts.clear>0);
+ console.log('Navigation: desktop sections preserved; five phone tabs; More/subviews, aMule and Orbit routes; lazy loading and secret clearing');
 })().catch(e=>{console.error(e);process.exitCode=1});

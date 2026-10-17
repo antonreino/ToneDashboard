@@ -43,11 +43,19 @@ function progress(r){
   const eta=r.eta_seconds!=null&&active?` · quedan ~${duration(r.eta_seconds)}`:'';
   return `<div class="progress"><div class="progress-track"><div class="progress-fill" style="width:${p}%"></div></div><div class="progress-label">${p.toFixed(1)}% · ${size(r.downloaded_bytes)} / ${size(r.size_bytes)}${speed}${eta}</div></div>`;
 }
+const expandedPhoneRows=new Set();
 function table(rows, cols){
   if(!rows.length)return '<div class="empty">Sin datos todavía.</div>';
+  const title=cols.findIndex(c=>['Nombre','Archivo','Título'].includes(c[0]));
+  const primary=new Set(['Estado','Progreso','Tamaño','Fuentes','Acción','Completado','Velocidad','Fecha']);
   const head=`<thead><tr>${cols.map(c=>`<th>${esc(c[0])}</th>`).join("")}</tr></thead>`;
-  const body=`<tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td data-label="${esc(c[0])}">${c[1](r)}</td>`).join("")}</tr>`).join("")}</tbody>`;
-  return `<table>${head}${body}</table>`;
+  const body=`<tbody>${rows.map(r=>{
+    const key=cols.map(c=>c[0]).join('~')+'|'+String(r.id??r.hash??[r.created_at,r.title,r.name].join('|'));
+    const extra=title>=0&&cols.some((c,i)=>i!==title&&!primary.has(c[0]));
+    const expanded=expandedPhoneRows.has(key);
+    return `<tr class="${['completed','success','done','ok','cancelled','canceled'].includes(String(r.status).toLowerCase())?'row-finished ':''}${expanded?'phone-expanded':''}">${cols.map((c,i)=>`<td class="${i===title?'card-title':title>=0&&!primary.has(c[0])?'card-secondary':''}" data-label="${esc(c[0])}">${c[1](r)}</td>`).join("")}${extra?`<td class="phone-card-toggle"><button type="button" data-row-toggle="${esc(key)}" aria-expanded="${expanded}">${expanded?'Ocultar detalles':'Ver detalles'}</button></td>`:''}</tr>`;
+  }).join("")}</tbody>`;
+  return `<table class="${title>=0?'phone-card-table':''}">${head}${body}</table>`;
 }
 function embyStorageMeta(emby){
   if(!emby.updated_at)return 'Sin fecha de lectura';
@@ -64,6 +72,7 @@ function formatHistoryDate(value){
 async function loadDashboard(){
   const r=await fetch('/api/dashboard',{cache:'no-store'});
   const d=await r.json();
+  renderPhoneSummary(d);
 
   document.getElementById('services').innerHTML=Object.entries(d.services).map(([k,v])=>{
     const tone=serviceTone(v.running,v.state);
@@ -89,6 +98,8 @@ async function loadDashboard(){
     ['Tamaño',r=>size(r.size_bytes)],
     ['Intento',r=>esc(r.attempt||0)]
   ]);
+
+  if(!d.downloads.some(r=>!['completed','success','done','ok','cancelled','canceled'].includes(String(r.status).toLowerCase())))document.getElementById('downloads').insertAdjacentHTML('afterbegin','<p class="phone-only phone-active-empty">No hay descargas de enlaces en curso. Puedes consultar las anteriores en Historial.</p>');
 
   document.getElementById('history').innerHTML=table(d.history,[
     ['Fecha',r=>formatHistoryDate(r.created_at)],
@@ -198,6 +209,7 @@ function safeDealURL(raw){
   try{const url=new URL(raw);return ['http:','https:'].includes(url.protocol)?url.href:'#';}
   catch{return '#';}
 }
+const phoneExpandedProducts=new Set();
 function renderActiveDeals(rows,emptyText="No hay ofertas activas disponibles."){
   if(!rows.length)return `<div class="empty" style="grid-column:1/-1">${esc(emptyText)}</div>`;
   return [...rows].sort((a,b)=>Number(a.price)-Number(b.price)).map(o=>`<article class="deal-card">
@@ -247,7 +259,10 @@ async function loadDeals(){
   }
   const ps5Offers=d.active_offers.filter(o=>o.family==='ps5');
   const switchOffers=d.active_offers.filter(o=>o.family==='switch2');
-  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>`<section class="panel product-group"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>${p.family==='ean'?'EAN '+esc(p.ean):'Seguimiento'}</small></h2><button type="button" class="button" data-remove-tracking="${esc(p.id||p.ean)}" aria-label="Dejar de seguir ${esc(p.name)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(d.active_offers.filter(o=>p.family&&p.family!=='ean'?o.family===p.family:o.ean===p.ean),'Todavía no hay ofertas verificadas para este seguimiento.')}</div></div></section>`).join('');
+  document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>{
+    const offers=d.active_offers.filter(o=>p.family&&p.family!=='ean'?o.family===p.family:o.ean===p.ean),id=String(p.id||p.ean),expanded=phoneExpandedProducts.has(id);
+    return `<section class="panel product-group ${expanded?'phone-product-expanded':''}"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>${p.family==='ean'?'EAN '+esc(p.ean):'Seguimiento'}</small></h2><button type="button" class="button" data-remove-tracking="${esc(id)}" aria-label="Dejar de seguir ${esc(p.name)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(offers,'Todavía no hay ofertas verificadas para este seguimiento.')}</div>${offers.length>1?`<button class="phone-product-toggle phone-only" type="button" data-product-expand="${esc(id)}" aria-expanded="${expanded}">${expanded?'Mostrar solo la mejor oferta':`Ver otras ${offers.length-1} ofertas`}</button>`:''}</div></section>`;
+  }).join('');
   document.getElementById('inactiveProducts').innerHTML=(d.inactive_products||[]).map(p=>`<button class="button" type="button" data-restore-tracking="${esc(p.id)}">Volver a seguir ${esc(p.name)}</button>`).join(' ');
   status.textContent=`${ps5Offers.length} PS5 · ${switchOffers.length} Switch Zelda`;
   ps5.innerHTML=renderActiveDeals(ps5Offers,'No hay ofertas activas de PS5.');
@@ -394,6 +409,7 @@ let amuleEpoch=0,amuleLoading=false,amuleSearchId='',amuleSearchBusy=false;
 const amulePending=new Set();
 function renderAmule(d){
   amuleSearchId=d.search_id||'';
+  phoneAmuleCount=(d.downloads||[]).length;updatePhoneDownloadCount();
   document.getElementById('amuleStatus').textContent=`aMule disponible · Bajada ${size(d.download_speed)}/s · Subida ${size(d.upload_speed)}/s · Kad: ${d.kad_nodes||0} nodos`;
   document.getElementById('amuleResultsTitle').textContent=d.query?`Resultados de «${d.query}» · ${d.total}${d.total>500?' (primeros 500)':''}`:'Resultados';
   const queued=new Set((d.downloads||[]).map(r=>r.hash));
@@ -416,9 +432,10 @@ async function loadAmule(){
     renderAmule(d);
   }catch(e){
     if(epoch===amuleEpoch){
-      amuleSearchId='';
+      amuleSearchId='';phoneAmuleCount=null;updatePhoneDownloadCount();
       document.getElementById('amuleStatus').textContent=e.name==='AbortError'?'aMule no respondió a tiempo. Reintentaremos la conexión.':e.message;
       document.getElementById('amuleResults').innerHTML='<div class="empty">Resultados no disponibles mientras se restablece la conexión.</div>';
+      document.getElementById('amuleDownloads').innerHTML='<div class="empty">No se pudo consultar la cola de aMule. Comprueba que esté abierto en el Mac.</div>';
     }
   }finally{clearTimeout(timeout);amuleLoading=false;}
 }
@@ -456,18 +473,9 @@ document.getElementById('amuleResults').addEventListener('click',async e=>{
   }catch(err){status.textContent=err.message;}
   finally{amulePending.delete(hash);button.disabled=false;}
 });
-setInterval(()=>{if(!document.hidden&&document.getElementById('view-amule').classList.contains('active'))loadAmule();},4000);
+setInterval(()=>{if(!document.hidden&&(document.getElementById('view-amule').classList.contains('active')||(phoneMedia.matches&&document.getElementById('view-descargas').classList.contains('active'))))loadAmule();},4000);
 
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===tab));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    const target=document.getElementById(`view-${tab.dataset.view}`);
-    if(target)target.classList.add('active');
-    if(tab.dataset.view==='orbitzero')orbitEnsureLoaded();
-    else refreshAll();
-  });
-});
+document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>navigateDashboard(tab.dataset.view)));
 const linesEl=document.getElementById('lines');
 linesEl.addEventListener('change',()=>{loadLogs();loadDeals();});
 let refreshingWeb=false;
@@ -479,15 +487,76 @@ async function refreshAll(){
     const tasks=[loadDashboard()];
     if(document.getElementById('view-logs').classList.contains('active'))tasks.push(loadLogs());
     if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
-    if(document.getElementById('view-amule').classList.contains('active'))tasks.push(loadAmule());
+    if(document.getElementById('view-amule').classList.contains('active')||(phoneMedia.matches&&['inicio','descargas'].some(v=>document.getElementById('view-'+v).classList.contains('active'))))tasks.push(loadAmule());
     await Promise.all(tasks);
   }catch(e){
     document.getElementById('updated').textContent='Error de actualización';
     console.error(e);
   }finally{refreshingWeb=false;}
 }
+
+// Phone layout: relocate existing nodes rather than duplicate forms, IDs or state.
+document.addEventListener('click',e=>{
+  const product=e.target.closest('[data-product-expand]');
+  if(product){const key=product.dataset.productExpand,on=!phoneExpandedProducts.has(key);if(on)phoneExpandedProducts.add(key);else phoneExpandedProducts.delete(key);product.closest('.product-group').classList.toggle('phone-product-expanded',on);product.setAttribute('aria-expanded',String(on));product.textContent=on?'Mostrar solo la mejor oferta':'Ver todas las ofertas';return;}
+  const button=e.target.closest('[data-row-toggle]');if(!button)return;
+  const key=button.dataset.rowToggle,expanded=!expandedPhoneRows.has(key);
+  if(expanded){if(expandedPhoneRows.size>=1000)expandedPhoneRows.delete(expandedPhoneRows.values().next().value);expandedPhoneRows.add(key);}else expandedPhoneRows.delete(key);
+  button.closest('tr').classList.toggle('phone-expanded',expanded);button.setAttribute('aria-expanded',String(expanded));button.textContent=expanded?'Ocultar detalles':'Ver detalles';
+});
+const phoneMedia=window.matchMedia('(max-width:600px)');
+const phoneMoves=[];
+let phoneDirectCount=0,phoneAmuleCount=null;
+function updatePhoneDownloadCount(){
+  document.getElementById('phoneDownloadCount').textContent=String(phoneDirectCount+(phoneAmuleCount||0));
+  document.getElementById('phoneDownloadHint').textContent=phoneAmuleCount==null?'Cola de enlaces':'Enlaces y aMule';
+}
+const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias'};
+function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes'].includes(view)?'mas':view;}
+function navigateDashboard(view,{focus=false}={}){
+  const target=document.getElementById('view-'+view);if(!target)return;
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v===target));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+  document.querySelectorAll('[data-phone-tab]').forEach(b=>{
+    if(b.dataset.phoneTab===phoneGroup(view))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
+  const title=document.getElementById('phoneTitle');title.textContent=phoneTitles[view]||'Tone Dashboard';
+  if(view!=='orbitzero')clearOrbitCode();
+  if(view==='orbitzero')orbitEnsureLoaded();else refreshAll();
+  if(phoneMedia.matches){window.scrollTo({top:0,behavior:'instant'});if(focus)title.focus({preventScroll:true});}
+}
+function applyPhoneLayout(){
+  if(phoneMedia.matches){
+    if(!phoneMoves.length){
+      for(const [id,slot] of [['services','phoneServicesSlot'],['homeHosts','phoneHostsSlot'],['homeMetrics','phoneMetricsSlot'],['amuleQueuePanel','phoneAmuleQueueSlot'],['downloadPanel','phoneDownloadSlot'],['downloadInfo','phoneDownloadInfoSlot'],['historyPanel','phoneHistorySlot'],['lines','phoneSettingsSlot']]){
+        let node=document.getElementById(id);if(id==='lines')node=node.closest('label');
+        const anchor=document.createComment('desktop '+id);node.before(anchor);phoneMoves.push({node,anchor});document.getElementById(slot).append(node);
+      }
+    }
+  }else{
+    while(phoneMoves.length){const {node,anchor}=phoneMoves.pop();anchor.replaceWith(node);}
+    const active=document.querySelector('.view.active');
+    if(active?.classList.contains('phone-view'))navigateDashboard('inicio');
+  }
+  document.querySelectorAll('[data-phone-fold]').forEach(d=>d.open=!phoneMedia.matches);
+}
+function renderPhoneSummary(d){
+  const services=Object.values(d.services||{}),failed=services.filter(s=>!s.running).length;
+  const active=(d.downloads||[]).filter(r=>['active','queued','pending','running','processing'].includes(String(r.status).toLowerCase())).length;
+  const h=d.summary?.history_24h||{};
+  document.getElementById('phoneHealth').textContent=!services.length?'Estado de servicios no disponible':failed?`${failed} servicio${failed===1?'':'s'} por revisar`:'Todo en orden';
+  phoneDirectCount=active;updatePhoneDownloadCount();
+  document.getElementById('phoneSuccessCount').textContent=String(h.success||0);
+  const alert=document.getElementById('phoneAlert');alert.hidden=!failed&&!h.errors;
+  alert.textContent=`${failed?'Hay servicios que revisar. ':''}${h.errors?`${h.errors} errores registrados en 24 h. `:''}Ver diagnóstico ›`;
+  document.getElementById('phoneLatest').textContent=d.history?.[0]?.title||'Consulta tu historial';
+  document.getElementById('phoneUpdated').textContent='Actualizado · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+}
+document.querySelectorAll('[data-phone-go]').forEach(b=>b.addEventListener('click',()=>navigateDashboard(b.dataset.phoneGo,{focus:true})));
+document.querySelectorAll('[data-download-filter]').forEach(b=>b.addEventListener('click',()=>{document.getElementById('downloadPanel').dataset.phoneFilter=b.dataset.downloadFilter;document.querySelectorAll('[data-download-filter]').forEach(t=>{t.classList.toggle('selected',t===b);t.setAttribute('aria-pressed',String(t===b));});}));
+phoneMedia.addEventListener('change',applyPhoneLayout);applyPhoneLayout();
 refreshAll();
-setInterval(refreshAll, 12000);
+setInterval(refreshAll,12000);
 
 // Native containers call the same cleanup used when the page leaves the foreground.
 window.ToneDashboard = Object.freeze({

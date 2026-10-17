@@ -60,3 +60,9 @@ El servidor se conecta por EC 0x0204 exclusivamente a `127.0.0.1:4712`; no añad
 No se ejecutan comandos de consola recibidos del cliente. Las operaciones usan el protocolo EC con autenticación, límites de tamaño y tiempo; el navegador recibe nombres, tamaños, fuentes y progreso, nunca la credencial interna. Descargar valida la generación de búsqueda y el hash exacto, evita duplicados y comprueba que el archivo aparece en la cola. Las mutaciones mantienen la autenticación y protección de origen del Dashboard.
 
 Se muestran como máximo 500 resultados, ordenados por fuentes. Un archivo con cero fuentes puede quedar esperando indefinidamente. Organizer procesa los archivos terminados de la carpeta de entrada existente; los parciales de aMule deben permanecer en otra carpeta. En la instalación actual, aMule y Organizer ya comparten `~/Documents/Torrent`. Esta integración no modifica renombres, bibliotecas o historial existentes.
+
+## Presentación de iPhone
+
+En pantallas de hasta 600 px, la interfaz utiliza cinco accesos inferiores: Inicio, Descargas, Chollos, Orbit y Más. Inicio resume servicios y actividad; Descargas reúne la cola de aMule y las descargas del panel, con historial separado. El buscador aMule mantiene sus filtros plegables. Más agrupa equipos, estadísticas, historial, preferencias de lectura y Logs como última opción. Los ajustes de conexión permanecen en el contenedor nativo.
+
+Las tarjetas muestran primero nombre, estado y progreso; los detalles se despliegan y conservan su apertura durante las actualizaciones. Chollos destaca la oferta más barata por producto y permite abrir las demás. En escritorio se mantiene la organización anterior: los mismos formularios se recolocan al cambiar de tamaño, conservando sus valores y sin duplicar identificadores, credenciales ni lógica del servidor.

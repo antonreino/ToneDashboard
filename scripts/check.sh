@@ -9,3 +9,4 @@ node --check web/dashboard.js
 node server/tests/test_tracking_ui.js
 node server/tests/test_navigation_ui.js
 node server/tests/test_amule_ui.js
+node server/tests/test_phone_ui.js
