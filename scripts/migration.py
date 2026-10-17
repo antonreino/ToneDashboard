@@ -1,4 +1,5 @@
 """Copias SQLite verificadas, sin eliminar el origen ni cambiar sus datos."""
+from contextlib import closing
 import hashlib
 import json
 import sqlite3
@@ -8,7 +9,7 @@ from pathlib import Path
 def database_manifest(path):
     path = Path(path).resolve()
     # A verification must never create an empty database at a mistaken path.
-    with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as conn:
+    with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as conn:
         integrity = conn.execute('PRAGMA integrity_check').fetchone()[0]
         if integrity != 'ok':
             raise ValueError('SQLite integrity check failed')
@@ -27,7 +28,7 @@ def verified_database_copy(source, target):
         raise ValueError('Source and target must differ')
     before = database_manifest(source)
     target.parent.mkdir(parents=True,exist_ok=True)
-    with sqlite3.connect(source) as src,sqlite3.connect(target) as dst:
+    with closing(sqlite3.connect(source)) as src,closing(sqlite3.connect(target)) as dst:
         src.backup(dst)
     after = database_manifest(target)
     if before != after:

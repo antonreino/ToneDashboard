@@ -1,3 +1,7 @@
+async function dashboardJSON(path){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+  try{const r=await fetch(path,{cache:'no-store',signal:controller.signal});if(!r.ok)throw new Error('No se pudo actualizar el panel');return await r.json();}finally{clearTimeout(timer);}
+}
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function size(n){if(n==null)return "—";let v=Number(n),u=["B","KB","MB","GB","TB"],i=0;while(v>=1000&&i<u.length-1){v/=1000;i++}return `${v.toFixed(i?1:0)} ${u[i]}`}
 function serviceLabel(k){return {organizer:"Organizer",telegram:"Telegram bot",viewer:"Dashboard",alerts:"Alertas"}[k]||k}
@@ -70,8 +74,8 @@ function formatHistoryDate(value){
   return esc(d.toLocaleString("es-ES"));
 }
 async function loadDashboard(){
-  const r=await fetch('/api/dashboard',{cache:'no-store'});
-  const d=await r.json();
+  const section=document.querySelector('.view.active')?.id.replace('view-','')||'inicio';
+  const d=await dashboardJSON('/api/dashboard?section='+encodeURIComponent(section));
   renderPhoneSummary(d);
 
   document.getElementById('services').innerHTML=Object.entries(d.services).map(([k,v])=>{
@@ -96,7 +100,8 @@ async function loadDashboard(){
     ['Estado',r=>`<span class="pill ${statusTone(r.status)}">${esc(statusLabel(r.status))}</span>`],
     ['Progreso',r=>progress(r)],
     ['Tamaño',r=>size(r.size_bytes)],
-    ['Intento',r=>esc(r.attempt||0)]
+    ['Intento',r=>esc(r.attempt||0)],
+    ['Acción',r=>window.ToneOperations?window.ToneOperations.downloadButtons(r):'']
   ]);
 
   if(!d.downloads.some(r=>!['completed','success','done','ok','cancelled','canceled'].includes(String(r.status).toLowerCase())))document.getElementById('downloads').insertAdjacentHTML('afterbegin','<p class="phone-only phone-active-empty">No hay descargas de enlaces en curso. Puedes consultar las anteriores en Historial.</p>');
@@ -245,7 +250,7 @@ document.getElementById('inactiveProducts').addEventListener('click',async event
   }catch(e){document.getElementById('eanProductMessage').textContent=e.message;button.disabled=false}
 });
 async function loadDeals(){
-  const r=await fetch(`/api/deals?lines=${linesEl.value}`,{cache:'no-store'}),d=await r.json();
+  const d=await dashboardJSON(`/api/deals?lines=${linesEl.value}`);
   const status=document.getElementById('dealStatus'),ps5=document.getElementById('activeDealsPs5'),sw=document.getElementById('activeDealsSwitch'),history=document.getElementById('dealHistory'),events=document.getElementById('dealEvents'),log=document.getElementById('dealLog');
   if(!d.available){
     status.textContent='Bot no disponible';
@@ -261,7 +266,7 @@ async function loadDeals(){
   const switchOffers=d.active_offers.filter(o=>o.family==='switch2');
   document.getElementById('eanProductCards').innerHTML=(d.products||[]).map(p=>{
     const offers=d.active_offers.filter(o=>p.family&&p.family!=='ean'?o.family===p.family:o.ean===p.ean),id=String(p.id||p.ean),expanded=phoneExpandedProducts.has(id);
-    return `<section class="panel product-group ${expanded?'phone-product-expanded':''}"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>${p.family==='ean'?'EAN '+esc(p.ean):'Seguimiento'}</small></h2><button type="button" class="button" data-remove-tracking="${esc(id)}" aria-label="Dejar de seguir ${esc(p.name)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(offers,'Todavía no hay ofertas verificadas para este seguimiento.')}</div>${offers.length>1?`<button class="phone-product-toggle phone-only" type="button" data-product-expand="${esc(id)}" aria-expanded="${expanded}">${expanded?'Mostrar solo la mejor oferta':`Ver otras ${offers.length-1} ofertas`}</button>`:''}</div></section>`;
+    return `<section class="panel product-group ${expanded?'phone-product-expanded':''}"><div class="panel__head"><h2 class="section-title">${esc(p.name)} <small>${p.family==='ean'?'EAN '+esc(p.ean):'Seguimiento'}</small></h2><button type="button" class="button" data-alert-preferences="${esc(id)}">Alertas</button><button type="button" class="button" data-remove-tracking="${esc(id)}" aria-label="Dejar de seguir ${esc(p.name)}">Eliminar</button></div><div class="panel__body pad"><div class="deal-grid">${renderActiveDeals(offers,'Todavía no hay ofertas verificadas para este seguimiento.')}</div>${offers.length>1?`<button class="phone-product-toggle phone-only" type="button" data-product-expand="${esc(id)}" aria-expanded="${expanded}">${expanded?'Mostrar solo la mejor oferta':`Ver otras ${offers.length-1} ofertas`}</button>`:''}</div></section>`;
   }).join('');
   document.getElementById('inactiveProducts').innerHTML=(d.inactive_products||[]).map(p=>`<button class="button" type="button" data-restore-tracking="${esc(p.id)}">Volver a seguir ${esc(p.name)}</button>`).join(' ');
   status.textContent=`${ps5Offers.length} PS5 · ${switchOffers.length} Switch Zelda`;
@@ -275,8 +280,7 @@ async function loadDeals(){
 
 async function loadLogs(){
   const lines=linesEl.value;
-  const r=await fetch(`/api/logs?lines=${lines}`,{cache:'no-store'});
-  const d=await r.json();
+  const d=await dashboardJSON(`/api/logs?lines=${lines}`);
   for(const [k,v] of Object.entries(d.logs)){
     const el=document.getElementById(k);
     if(!el)continue;
@@ -374,7 +378,11 @@ async function orbitRefreshStatus(loadFrame=false){
   start.hidden=Boolean(d.running)||!d.can_start;
   if(d.running){
     status.textContent='Orbit Zero disponible en el Mac mini.';
-    if(loadFrame&&!orbitLoaded){document.getElementById('orbitFrame').src='/orbit-bridge/zero/';orbitLoaded=true;}
+    if(loadFrame&&!orbitLoaded){
+      let url='/orbit-bridge/zero/';
+      if(d.isolated){const response=await fetch('/api/orbit/isolation-ticket',{method:'POST',headers:{'X-Dashboard-Action':'write'}});if(!response.ok)throw new Error('No se pudo autorizar el origen aislado');url=(await response.json()).url;}
+      document.getElementById('orbitFrame').src=url;document.getElementById('orbitOpen').href=d.isolated?new URL('/orbit-bridge/zero/',url).href:url;orbitLoaded=true;
+    }
   }else{
     status.textContent=d.can_start?'Orbit Zero no está iniciado. Pulsa «Iniciar Orbit» para abrirlo en el Mac mini.':'Orbit Zero no responde. Comprueba que está instalado y que el control de inicio está configurado.';
     if(loadFrame){document.getElementById('orbitFrame').src='about:blank';orbitLoaded=false;}
@@ -418,7 +426,7 @@ function renderAmule(d){
     ['Acción',r=>queued.has(r.hash)?'<span class="badge ok">En la cola</span>':`<button class="button" type="button" data-amule-hash="${esc(r.hash)}" ${amulePending.has(r.hash)?'disabled':''}>Descargar</button>`]
   ]):`<div class="empty">${d.query?'Todavía no hay resultados. Espera unos segundos; puedes probar otra red o un término más amplio.':'Escribe un título para buscar.'}</div>`;
   document.getElementById('amuleDownloads').innerHTML=table(d.downloads||[],[
-    ['Archivo',r=>esc(r.name)],['Tamaño',r=>size(r.size)],['Completado',r=>`${esc(r.progress)}% · ${size(r.completed)}`],['Velocidad',r=>`${size(r.speed)}/s`],['Fuentes',r=>esc(r.sources)]
+    ['Archivo',r=>esc(r.name)],['Tamaño',r=>size(r.size)],['Completado',r=>`${esc(r.progress)}% · ${size(r.completed)}`],['Velocidad',r=>`${size(r.speed)}/s`],['Fuentes',r=>esc(r.sources)],['Acción',r=>window.ToneOperations?window.ToneOperations.amuleButtons(r):'']
   ]);
 }
 async function loadAmule(){
@@ -488,9 +496,13 @@ async function refreshAll(){
     if(document.getElementById('view-logs').classList.contains('active'))tasks.push(loadLogs());
     if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
     if(document.getElementById('view-amule').classList.contains('active')||['inicio','descargas'].some(v=>document.getElementById('view-'+v).classList.contains('active')))tasks.push(loadAmule());
-    await Promise.all(tasks);
+    if(window.ToneOperations)tasks.push(window.ToneOperations.refresh());
+    const results=await Promise.allSettled(tasks);
+    if(results.some(r=>r.status==='rejected'))throw new Error('Actualización incompleta');
+    const notice=document.getElementById('connectionNotice');if(notice)notice.hidden=true;
   }catch(e){
     document.getElementById('updated').textContent='Error de actualización';
+    const notice=document.getElementById('connectionNotice');notice.hidden=false;notice.textContent='Sin conexión o actualización fallida. Los datos visibles corresponden a la última lectura correcta.';
     console.error(e);
   }finally{refreshingWeb=false;}
 }
@@ -511,8 +523,8 @@ function updatePhoneDownloadCount(){
   document.getElementById('phoneDownloadCount').textContent=String(phoneDirectCount+(phoneAmuleCount||0));
   document.getElementById('phoneDownloadHint').textContent=phoneAmuleCount==null?'Cola de enlaces':'Enlaces y aMule';
 }
-const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias'};
-function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes'].includes(view)?'mas':view;}
+const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',diagnostico:'Diagnóstico'};
+function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes','organizer','diagnostico'].includes(view)?'mas':view;}
 function navigateDashboard(view,{focus=false}={}){
   const target=document.getElementById('view-'+view);if(!target)return;
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v===target));

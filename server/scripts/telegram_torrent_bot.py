@@ -17,7 +17,9 @@ from dotenv import load_dotenv
 
 APP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(APP_DIR))
-from download_security import validate_url, open_public, close_public, download_public, UnsafeDownload
+from runtime_support import tail_text
+from task_store import activity, pending_commands, finish_command, download_record
+from download_security import DownloadStopped, validate_url, open_public, close_public, download_public, UnsafeDownload
 from torrent_utils import is_torrent_file, safe_torrent_name, unique_target
 from state_db import (
     add_history,
@@ -107,9 +109,7 @@ def tail_log(path: Path, lines: int = TELEGRAM_LOG_LINES) -> str:
     if not path.exists():
         return "(sin archivo de log)"
     try:
-        with path.open("r", encoding="utf-8", errors="replace") as handle:
-            tail = deque(handle, maxlen=max(1, lines))
-        text = "".join(tail).strip()
+        text = tail_text(path,max(1,lines)).strip()
         return redact_secrets(text) if text else "(vacío)"
     except Exception as exc:
         return f"(error leyendo {path.name}: {exc})"
@@ -305,6 +305,36 @@ def start_queued_downloads():
         thread.start()
 
 
+def apply_download_commands():
+    for cmd in pending_commands():
+        try:
+            ident,action=cmd['job_id'],cmd['action']
+            record=download_record(ident)
+            if not record:raise ValueError('Descarga no encontrada')
+            allowed={'pause':('queued','active'),'cancel':('queued','active','paused'),'resume':('paused',),'retry':('failed','cancelled')}
+            if record['status'] not in allowed[action]:raise ValueError('La descarga cambió de estado antes de ejecutar la orden')
+            with DOWNLOAD_LOCK:
+                active=ACTIVE_DOWNLOADS.get(ident)
+                queued=next((j for j in QUEUED_DOWNLOADS if j['id']==ident),None)
+                if action in ('pause','cancel'):
+                    if active:
+                        active['stop_action']=action;active['command_id']=cmd['id']
+                        continue  # Confirm only once the transfer has stopped.
+                    if queued:QUEUED_DOWNLOADS.remove(queued);KNOWN_TARGETS.discard(str(queued['target']))
+                    update_download(ident,status='paused' if action=='pause' else 'cancelled')
+                else:
+                    if active or queued:raise ValueError('La descarga ya está activa')
+                    target=Path(record['target'])
+                    if str(target) in KNOWN_TARGETS:raise ValueError('Ya hay otra descarga para este destino')
+                    job={'id':ident,'chat_id':record['chat_id'],'url':record['url'],'name':record['name'],'target':target,'size':record['size_bytes'],'resume':record['resume_supported'],'queued_at':time.time(),'started_at':None,'attempt':0,'pid':None,'status':'queued'}
+                    KNOWN_TARGETS.add(str(target));QUEUED_DOWNLOADS.append(job)
+                    update_download(ident,status='queued',error=None,finished_at=None)
+            activity(record['target'], 'paused' if action=='pause' else 'cancelled' if action=='cancel' else 'queued')
+            finish_command(cmd['id'])
+        except Exception as exc:finish_command(cmd['id'],redact_secrets(str(exc)))
+    start_queued_downloads()
+
+
 def finish_job(job: dict):
     with DOWNLOAD_LOCK:
         ACTIVE_DOWNLOADS.pop(job["id"], None)
@@ -320,6 +350,8 @@ def run_game_download(job: dict):
     resume = job.get("resume")
 
     awake = None
+    def check():
+        if job.get('stop_action'):raise DownloadStopped(job['stop_action'])
     try:
         if sys.platform == 'darwin':
             awake = subprocess.Popen(['/usr/bin/caffeinate', '-i'], stdin=subprocess.DEVNULL,
@@ -332,6 +364,7 @@ def run_game_download(job: dict):
             return
 
         GAME_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        activity(target,"downloading")
         resume_text = "Sí" if resume is True else "No" if resume is False else "No se pudo comprobar"
         start_text = (
             f"⬇️ Descarga iniciada #{job['id']}:\n{name}\n"
@@ -344,17 +377,20 @@ def run_game_download(job: dict):
         log(f"Juego #{job['id']}: {name} | Destino: {target}")
 
         for attempt in range(1, GAME_MAX_RETRIES + 1):
+            check()
             job["attempt"] = attempt
             update_download(job["id"], attempt=attempt)
             error = None
             try:
-                download_public(url, target, resume=resume is not False)
+                download_public(url, target, resume=resume is not False,check=check)
+                check()
             except UnsafeDownload:
                 raise
             except (OSError, ValueError, http.client.HTTPException) as exc:
                 error = redact_secrets(str(exc))
 
             if error is None:
+                activity(target,"downloaded")
                 final_size = file_size(target)
                 update_download(
                     job["id"], status="completed", finished_at=time.time(),
@@ -396,6 +432,11 @@ def run_game_download(job: dict):
             f"❌ DESCARGA FALLIDA #{job['id']}\n\n🎮 {name}\n"
             f"Se agotaron los {GAME_MAX_RETRIES} intentos.",
         )
+    except DownloadStopped as exc:
+        state='paused' if str(exc)=='pause' else 'cancelled'
+        update_download(job['id'],status=state,error=None)
+        activity(target,state)
+        if job.get('command_id'):finish_command(job['command_id'])
     except Exception as exc:
         safe_error = redact_secrets(str(exc))
         update_download(job["id"], status="failed", finished_at=time.time(), error=safe_error)
@@ -478,6 +519,7 @@ def dashboard_request_loop():
     recover_download_requests()
     while True:
         try:
+            apply_download_commands()
             requests_to_process = claim_download_requests(5)
             if not requests_to_process:
                 time.sleep(1)

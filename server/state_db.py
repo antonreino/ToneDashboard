@@ -573,3 +573,26 @@ def dashboard_summary() -> dict[str, Any]:
             "moved_bytes": int(history_24h["moved_bytes"] or 0),
         },
     }
+
+
+def download_page(limit=40, before=None):
+    """Every unfinished job plus a cursor page; URLs and chat IDs stay private."""
+    init_db()
+    limit = max(1, min(int(limit), 100))
+    columns = 'id,created_at,updated_at,name,target,size_bytes,resume_supported,status,queued_at,started_at,finished_at,attempt,error'
+    with closing(connect()) as conn:
+        active = [dict(r) for r in conn.execute(f"SELECT {columns} FROM downloads WHERE status IN ('queued','active','paused') ORDER BY id DESC")]
+        history = [dict(r) for r in conn.execute(f"SELECT {columns} FROM downloads WHERE status NOT IN ('queued','active','paused') AND id < ? ORDER BY id DESC LIMIT ?", (int(before) if before else 2**63-1, limit+1))]
+    with closing(connect()) as conn:
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='job_commands'").fetchone():
+            for item in active+history:
+                command=conn.execute('SELECT action,status,error FROM job_commands WHERE job_id=? ORDER BY id DESC LIMIT 1',(item['id'],)).fetchone()
+                if command:item['command']=dict(command)
+    return {'active':active, 'history':history[:limit], 'next_cursor':history[limit-1]['id'] if len(history)>limit else None}
+
+
+def history_page(limit=40, before=None):
+    init_db();limit=max(1,min(int(limit),100))
+    with closing(connect()) as conn:
+        rows=[dict(r) for r in conn.execute('SELECT * FROM history WHERE id < ? ORDER BY id DESC LIMIT ?', (int(before) if before else 2**63-1,limit+1))]
+    return {'items':rows[:limit],'next_cursor':rows[limit-1]['id'] if len(rows)>limit else None}

@@ -8,6 +8,14 @@ enum DashboardOrigin {
     static func trusted(_ url: URL, baseURL: URL) -> Bool {
         valid(url) && valid(baseURL) && url.host?.lowercased() == baseURL.host?.lowercased() && (url.port ?? 443) == (baseURL.port ?? 443)
     }
+    static func diagnosticBlob(_ url: URL, sourceURL: URL, baseURL: URL) -> Bool {
+        guard trusted(sourceURL,baseURL:baseURL), url.scheme == "blob",
+              let inner = URL(string:String(url.absoluteString.dropFirst(5))) else { return false }
+        return trusted(inner,baseURL:baseURL)
+    }
+    static func permitsFrame(_ url: URL, sourceURL: URL, baseURL: URL) -> Bool {
+        valid(url) && (trusted(sourceURL,baseURL:baseURL) || trusted(url,baseURL:sourceURL))
+    }
     static func request(baseURL: URL) -> URLRequest {
         var request = URLRequest(url: URL(string: "/", relativeTo: baseURL)!.absoluteURL)
         request.cachePolicy = .reloadIgnoringLocalCacheData

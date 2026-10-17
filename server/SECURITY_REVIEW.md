@@ -28,3 +28,15 @@ Orbit comparte origen con la API: un script comprometido de Orbit conserva capac
 Las dependencias Python siguen sin versiones fijadas; esta revisión no determina vulnerabilidades de todas sus versiones. Los tests de red usan dobles y servidores locales; no se han descargado juegos reales ni probado dispositivos físicos.
 
 Actualizar la app y reiniciar los procesos Python es necesario para activar todos los cambios. Los clientes antiguos sin `X-Dashboard-Action: write` tendrán que actualizarse. El actualizador puede restaurar fallos de aplicación detectados, pero no ofrece una transacción única frente a un corte de corriente ni revierte errores de launchctl.
+
+## Actualización 17 de octubre de 2026 · versión 1.1
+
+Se añaden controles persistentes de descarga, revisión de cuarentena y preferencias de notificación detrás de la autenticación y del control de origen existentes. Las entradas validan objetos JSON y límites de tamaño, identificadores y estados; ninguna acepta comandos ni rutas de archivos proporcionadas por el cliente. Las revisiones comprueban firma y confinamiento del archivo. Los controles de aMule validan el hash contra la cola actual y no usan DELETE.
+
+La descarga reanudada utiliza If-Range y un validador remoto; sin identidad conocida reinicia el contenido. Comprueba espacio libre antes de escribir y durante la transferencia. Los destinos y metadatos rechazan enlaces simbólicos. El aviso de desconexión es visible y las consultas principales tienen timeout. El listener limita peticiones simultáneas y esperas de cabeceras, conservando la conexión WebSocket tras su handshake.
+
+El llavero utiliza autoridad HTTPS y usuario; la credencial antigua solo se migra al servidor ya configurado. La exportación nativa admite exclusivamente el blob del Dashboard y el nombre de diagnóstico previsto. No se entrega contraseña a JavaScript. El diagnóstico omite credenciales, cookies, enlaces privados, rutas locales y logs.
+
+Las dependencias Python del entorno validado quedan fijadas en `requirements.lock`. La auditoría ejecutada no encontró vulnerabilidades conocidas en esas versiones; esto no equivale a una garantía de ausencia de fallos. Las copias SQLite se verifican y las restauraciones se realizan a destinos nuevos.
+
+El origen aislado de Orbit queda preparado y **desactivado por decisión del propietario** hasta configurar y probar su dominio HTTPS. La separación real de origen no se atribuye a la instalación actual. Véase `docs/OPERACIONES.md`. Las pruebas automatizadas cubren tickets de un uso, cookies y rechazo de APIs del Dashboard desde el host aislado, pero la infraestructura real queda pendiente.

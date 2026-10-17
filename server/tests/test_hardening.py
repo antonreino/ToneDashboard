@@ -73,6 +73,7 @@ class DownloadSecurityTests(unittest.TestCase):
         for status, content_range, expected in ((206, 'bytes 3-5/6', b'abcdef'), (200, None, b'def')):
             with tempfile.TemporaryDirectory() as tmp:
                 target = Path(tmp) / 'file'; target.write_bytes(b'abc')
+                Path(str(target)+'.resume.json').write_text(__import__('json').dumps({'url':'https://example.com/','validator':'"stable"'}))
                 response = mock.MagicMock(status=status)
                 response.getheader.side_effect = lambda name, default=None: {'Content-Range': content_range, 'Content-Length': '3'}.get(name, default)
                 response.read.side_effect = [b'def', b'']

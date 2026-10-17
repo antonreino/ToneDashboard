@@ -20,7 +20,7 @@ class MigrationTests(unittest.TestCase):
  def test_source_never_overwritten(self):
   with self.assertRaises(ValueError):migration.verified_database_copy(ROOT/'VERSION',ROOT/'VERSION')
  def test_one_interface_and_version(self):
-  version=(ROOT/'VERSION').read_text().strip();self.assertEqual(version,'1.0.0')
+  version=(ROOT/'VERSION').read_text().strip();self.assertRegex(version,r'^\d+\.\d+\.\d+$')
   source=(ROOT/'server/scripts/log-viewer.py').read_text();self.assertIn('HTML = dashboard_html()',source);self.assertNotIn('HTML = r',source);self.assertNotIn('spec_from_file_location',source)
   swift=list((ROOT/'apple/ToneDashboardApps').glob('*.swift'));self.assertEqual(len(swift),5)
   self.assertIn('MARKETING_VERSION = '+version+';',(ROOT/'apple/ToneDashboardApps.xcodeproj/project.pbxproj').read_text())

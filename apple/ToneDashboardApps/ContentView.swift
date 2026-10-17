@@ -70,11 +70,12 @@ struct ConnectionSettings: View {
     }
 }
 
-@MainActor final class DashboardWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+@MainActor final class DashboardWebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
     let session: DashboardSession
     let baseURL: URL
     private var lastReload: Int
     private var lastSuspend: Int
+    private var diagnosticDownload: URL?
     init(session: DashboardSession,baseURL: URL) {
         self.session = session; self.baseURL = baseURL; lastReload = session.reload; lastSuspend = session.suspend
     }
@@ -98,7 +99,12 @@ struct ConnectionSettings: View {
     }
     func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
+        if action.shouldPerformDownload, DashboardOrigin.diagnosticBlob(url,sourceURL:action.sourceFrame.request.url ?? baseURL,baseURL:baseURL) { decisionHandler(.download); return }
         if DashboardOrigin.trusted(url,baseURL:baseURL) || url.absoluteString == "about:blank" { decisionHandler(.allow); return }
+        // Embedded HTTPS frames receive no Dashboard authentication challenges.
+        // The server CSP restricts them to the explicitly configured Orbit origin.
+        if action.targetFrame?.isMainFrame == false,
+           DashboardOrigin.permitsFrame(url,sourceURL:action.sourceFrame.request.url ?? baseURL,baseURL:baseURL) { decisionHandler(.allow); return }
         if action.navigationType == .linkActivated, ["https","http"].contains(url.scheme?.lowercased() ?? ""), url.user == nil, url.password == nil {
             #if os(macOS)
             NSWorkspace.shared.open(url)
@@ -107,6 +113,40 @@ struct ConnectionSettings: View {
             #endif
         }
         decisionHandler(.cancel)
+    }
+    func webView(_ webView: WKWebView,navigationAction: WKNavigationAction,didBecome download: WKDownload) { download.delegate = self }
+    func download(_ download: WKDownload,decideDestinationUsing response: URLResponse,suggestedFilename: String,completionHandler: @escaping (URL?) -> Void) {
+        guard suggestedFilename == "tone-diagnostic.json" else { completionHandler(nil); return }
+        let folder=FileManager.default.temporaryDirectory.appendingPathComponent("ToneDiagnostic-"+UUID().uuidString,isDirectory:true)
+        do { try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true,attributes:[.posixPermissions:0o700]) }
+        catch { completionHandler(nil);return }
+        let destination=folder.appendingPathComponent("tone-diagnostic.json")
+        diagnosticDownload=destination;completionHandler(destination)
+    }
+    func downloadDidFinish(_ download: WKDownload) {
+        guard let url=diagnosticDownload else { return };diagnosticDownload=nil
+        #if os(macOS)
+        let panel=NSSavePanel();panel.nameFieldStringValue="tone-diagnostic.json"
+        panel.begin { result in
+            defer { try? FileManager.default.removeItem(at:url.deletingLastPathComponent()) }
+            guard result == .OK,let target=panel.url else { return }
+            do { let data=try Data(contentsOf:url);try data.write(to:target,options:.atomic) }
+            catch { self.session.lastError="No se pudo guardar el diagnóstico." }
+        }
+        #else
+        guard let scene=UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first(where:{ $0.activationState == .foregroundActive }),
+              var controller=scene.windows.first(where:{ $0.isKeyWindow })?.rootViewController else { try? FileManager.default.removeItem(at:url.deletingLastPathComponent());return }
+        while let presented=controller.presentedViewController { controller=presented }
+        let sheet=UIActivityViewController(activityItems:[url],applicationActivities:nil)
+        sheet.popoverPresentationController?.sourceView=controller.view
+        sheet.popoverPresentationController?.sourceRect=CGRect(x:controller.view.bounds.midX,y:controller.view.bounds.midY,width:1,height:1)
+        sheet.completionWithItemsHandler={ _,_,_,_ in try? FileManager.default.removeItem(at:url.deletingLastPathComponent()) }
+        controller.present(sheet,animated:true)
+        #endif
+    }
+    func download(_ download: WKDownload,didFailWithError error: Error,resumeData: Data?) {
+        if let url=diagnosticDownload { try? FileManager.default.removeItem(at:url.deletingLastPathComponent()) };diagnosticDownload=nil
+        session.lastError="No se pudo exportar el diagnóstico."
     }
     func webView(_ webView: WKWebView,createWebViewWith configuration: WKWebViewConfiguration,for action: WKNavigationAction,windowFeatures: WKWindowFeatures) -> WKWebView? {
         if let url = action.request.url, DashboardOrigin.trusted(url,baseURL:baseURL) { webView.load(action.request) }

@@ -23,6 +23,7 @@ APP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(APP_DIR))
 sys.path.insert(0, str(APP_DIR.parent / 'workers' / 'price_tracker'))
 from state_db import (
+    download_page, history_page,
     dashboard_statistics,
     dashboard_summary,
     emby_storage_snapshot,
@@ -33,6 +34,8 @@ from state_db import (
     recent_downloads,
     recent_history,
 )
+from runtime_support import tail_text, snapshots, BoundedHTTPServer
+from system_metrics import mac_system_snapshot
 from torrent_utils import save_torrent_bytes
 from download_security import validate_url, UnsafeDownload
 from request_security import allowed_mutation
@@ -53,8 +56,6 @@ PRICE_BOT_CONFIG = PRICE_BOT_DIR / "config.json"
 TELEGRAM_CHAT_ID = (os.getenv("TELEGRAM_CHAT_ID") or "").strip()
 _DOWNLOAD_SPEED_SAMPLES = {}
 _DOWNLOAD_SPEED_LOCK = threading.Lock()
-_NET_SAMPLE = None
-_METRICS_CACHE = {"at": 0.0, "value": None}
 LOGS = {
     "organizer_out": LOG_DIR / "emby-organizer.out.log",
     "organizer_err": LOG_DIR / "emby-organizer.err.log",
@@ -97,8 +98,7 @@ def tail(path: Path, lines: int) -> str:
     if not path.exists():
         return "(sin archivo de log)"
     try:
-        with path.open("r", encoding="utf-8", errors="replace") as handle:
-            raw = "".join(deque(handle, maxlen=lines)).strip()
+        raw = tail_text(path, lines).strip()
         return format_log_timestamps(raw)
     except Exception as exc:
         return f"(error leyendo {path.name}: {exc})"
@@ -226,228 +226,6 @@ def _price_bot_policy() -> tuple[set[str] | None, float | None]:
         return None, None
 
 
-def _parse_bytes(value: str) -> int | None:
-    match = re.match(r"\s*([0-9.]+)\s*([KMGT]?)(?:B)?\s*$", str(value), re.I)
-    if not match:
-        return None
-    factor = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}[match.group(2).upper()]
-    return int(float(match.group(1)) * factor)
-
-
-def _network_totals() -> tuple[int, int]:
-    proc = subprocess.run(
-        ["/usr/sbin/netstat", "-ibn"],
-        capture_output=True, text=True, timeout=2,
-    )
-    if proc.returncode != 0:
-        return 0, 0
-    lines = proc.stdout.splitlines()
-    if not lines:
-        return 0, 0
-    header = re.split(r"\s+", lines[0].strip())
-    try:
-        name_i, ibytes_i, obytes_i = header.index("Name"), header.index("Ibytes"), header.index("Obytes")
-    except ValueError:
-        return 0, 0
-    per_iface = {}
-    for line in lines[1:]:
-        cols = re.split(r"\s+", line.strip())
-        if len(cols) <= max(name_i, ibytes_i, obytes_i):
-            continue
-        name = cols[name_i]
-        if name == "lo0":
-            continue
-        try:
-            ibytes, obytes = int(cols[ibytes_i]), int(cols[obytes_i])
-        except ValueError:
-            continue
-        previous = per_iface.get(name, (0, 0))
-        per_iface[name] = (max(previous[0], ibytes), max(previous[1], obytes))
-    return sum(v[0] for v in per_iface.values()), sum(v[1] for v in per_iface.values())
-
-
-def _apple_silicon_metrics() -> dict:
-    """GPU y temperaturas en Apple Silicon.
-
-    Prioriza macmon porque expone GPU y temperaturas reales sin sudo.
-    Si no está instalado, cae a powermetrics para GPU + presión térmica.
-    """
-    macmon_candidates = [
-        Path("/opt/homebrew/bin/macmon"),
-        Path("/usr/local/bin/macmon"),
-    ]
-    macmon = next((path for path in macmon_candidates if path.exists()), None)
-
-    if macmon is not None:
-        try:
-            proc = subprocess.run(
-                [str(macmon), "pipe", "-s", "1", "-i", "250"],
-                capture_output=True, text=True, timeout=4,
-            )
-            lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-            if proc.returncode == 0 and lines:
-                data = json.loads(lines[-1])
-                temp = data.get("temp") or {}
-                cpu_temp = temp.get("cpu_temp_avg")
-                gpu_temp = temp.get("gpu_temp_avg")
-
-                gpu_active = data.get("gpu_active_ratio")
-                if gpu_active is None:
-                    gpu_usage = data.get("gpu_usage")
-                    if isinstance(gpu_usage, list) and len(gpu_usage) >= 2:
-                        gpu_active = gpu_usage[1]
-
-                return {
-                    "gpu_percent": float(gpu_active) * 100 if gpu_active is not None else None,
-                    "cpu_temperature_c": float(cpu_temp) if cpu_temp is not None else None,
-                    "gpu_temperature_c": float(gpu_temp) if gpu_temp is not None else None,
-                    "thermal_state": None,
-                    "note": "macmon",
-                }
-        except Exception:
-            pass
-
-    gpu_percent = None
-    thermal_state = None
-    note = "macmon no instalado"
-
-    try:
-        gpu_proc = subprocess.run(
-            ["/usr/bin/sudo", "-n", "/usr/bin/powermetrics",
-             "--samplers", "gpu_power", "-n", "1", "-i", "250"],
-            capture_output=True, text=True, timeout=4,
-        )
-        if gpu_proc.returncode == 0:
-            match = re.search(
-                r"GPU HW active residency:\s*([0-9.]+)%",
-                gpu_proc.stdout,
-                re.I,
-            )
-            if match:
-                gpu_percent = float(match.group(1))
-            note = "powermetrics"
-    except Exception:
-        pass
-
-    try:
-        thermal_proc = subprocess.run(
-            ["/usr/bin/sudo", "-n", "/usr/bin/powermetrics",
-             "--samplers", "thermal", "-n", "1", "-i", "250"],
-            capture_output=True, text=True, timeout=4,
-        )
-        if thermal_proc.returncode == 0:
-            match = re.search(
-                r"Current pressure level:\s*([A-Za-z]+)",
-                thermal_proc.stdout,
-                re.I,
-            )
-            if match:
-                thermal_state = match.group(1)
-    except Exception:
-        pass
-
-    return {
-        "gpu_percent": gpu_percent,
-        "cpu_temperature_c": None,
-        "gpu_temperature_c": None,
-        "thermal_state": thermal_state,
-        "note": note,
-    }
-
-def mac_system_snapshot() -> dict:
-    global _NET_SAMPLE, _METRICS_CACHE
-
-    now = time.monotonic()
-    cpu_percent = None
-    ram_total = None
-    ram_used = None
-
-    try:
-        proc = subprocess.run(
-            ["/usr/bin/top", "-l", "1", "-n", "0"],
-            capture_output=True, text=True, timeout=3,
-        )
-        cpu = re.search(r"CPU usage:\s*([0-9.]+)% user,\s*([0-9.]+)% sys", proc.stdout)
-        if cpu:
-            cpu_percent = float(cpu.group(1)) + float(cpu.group(2))
-        phys = re.search(r"PhysMem:\s*([^ ]+) used.*?,\s*([^ ]+) unused", proc.stdout)
-        if phys:
-            ram_used = _parse_bytes(phys.group(1))
-            ram_free = _parse_bytes(phys.group(2))
-            if ram_used is not None and ram_free is not None:
-                ram_total = ram_used + ram_free
-    except Exception:
-        pass
-
-    memory_free_percent = None
-    swap_used = None
-    try:
-        mp = subprocess.run(
-            ["/usr/bin/memory_pressure", "-Q"],
-            capture_output=True, text=True, timeout=2,
-        )
-        m = re.search(r"free percentage:\s*([0-9.]+)%", mp.stdout, re.I)
-        if m:
-            memory_free_percent = float(m.group(1))
-    except Exception:
-        pass
-
-    try:
-        sw = subprocess.run(
-            ["/usr/sbin/sysctl", "-n", "vm.swapusage"],
-            capture_output=True, text=True, timeout=2,
-        )
-        m = re.search(r"used\s*=\s*([0-9.]+)([MGT])", sw.stdout, re.I)
-        if m:
-            factor = {"M": 1024**2, "G": 1024**3, "T": 1024**4}[m.group(2).upper()]
-            swap_used = int(float(m.group(1)) * factor)
-    except Exception:
-        pass
-
-    rx, tx = _network_totals()
-    rx_bps = tx_bps = 0.0
-    if _NET_SAMPLE is not None:
-        old_at, old_rx, old_tx = _NET_SAMPLE
-        elapsed = now - old_at
-        if elapsed > 0:
-            rx_bps = max(0.0, (rx - old_rx) / elapsed)
-            tx_bps = max(0.0, (tx - old_tx) / elapsed)
-    _NET_SAMPLE = (now, rx, tx)
-
-    if now - float(_METRICS_CACHE.get("at") or 0) >= 10 or _METRICS_CACHE.get("value") is None:
-        _METRICS_CACHE = {"at": now, "value": _apple_silicon_metrics()}
-    apple = _METRICS_CACHE["value"]
-
-    return {
-        "cpu_percent": round(cpu_percent, 1) if cpu_percent is not None else None,
-        "gpu_percent": round(apple.get("gpu_percent"), 1) if apple.get("gpu_percent") is not None else None,
-        "temperature_c": (
-            round(max(
-                x for x in (
-                    apple.get("cpu_temperature_c"),
-                    apple.get("gpu_temperature_c"),
-                ) if x is not None
-            ), 1)
-            if any(x is not None for x in (
-                apple.get("cpu_temperature_c"),
-                apple.get("gpu_temperature_c"),
-            ))
-            else None
-        ),
-        "cpu_temperature_c": round(apple.get("cpu_temperature_c"), 1) if apple.get("cpu_temperature_c") is not None else None,
-        "gpu_temperature_c": round(apple.get("gpu_temperature_c"), 1) if apple.get("gpu_temperature_c") is not None else None,
-        "thermal_state": apple.get("thermal_state"),
-        "ram_total": ram_total,
-        "ram_used": ram_used,
-        "ram_percent": round(ram_used * 100 / ram_total, 1) if ram_used is not None and ram_total else None,
-        "memory_free_percent": round(memory_free_percent, 1) if memory_free_percent is not None else None,
-        "swap_used": swap_used,
-        "net_rx_bps": round(rx_bps, 1),
-        "net_tx_bps": round(tx_bps, 1),
-        "powermetrics_note": apple.get("note"),
-    }
-
-
 def price_bot_snapshot(log_lines: int = 300) -> dict:
     log_text = tail(PRICE_BOT_LOG, log_lines)
     if not PRICE_BOT_DB.is_file():
@@ -517,6 +295,9 @@ PWA_MANIFEST = json.dumps({
 
 class Handler(BaseHTTPRequestHandler):
     def _authorized(self) -> bool:
+        from orbit_isolation import isolated_host,valid
+        if isolated_host(self.headers):
+            return self.path.startswith('/orbit-bridge/zero/') and valid(self.headers)
         if not DASHBOARD_USER and not DASHBOARD_PASSWORD:
             return True
         raw = self.headers.get("Authorization", "")
@@ -532,11 +313,17 @@ class Handler(BaseHTTPRequestHandler):
     def _require_auth(self) -> bool:
         if self._authorized():
             return True
+        from orbit_isolation import isolated_host
+        if isolated_host(self.headers):
+            self.send_bytes(b'{"error":"Acceso Orbit no autorizado"}','application/json',403)
+            return False
         body = b"Authentication required"
         self.send_response(401)
         self.send_header("WWW-Authenticate", 'Basic realm="ToneDashboard", charset="UTF-8"')
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "same-origin")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -546,17 +333,34 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "same-origin")
+        if content_type.startswith('text/html'):
+            from orbit_isolation import origins
+            configured=origins()
+            frame= (' '+configured[1]) if configured else ''
+            self.send_header('Content-Security-Policy',"frame-src 'self'"+frame+"; object-src 'none'; base-uri 'self'; frame-ancestors 'self'")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
+        from orbit_isolation import handle_entry
+        if handle_entry(self):return
         if not self._require_auth():
             return
         from orbit_dashboard_proxy import serve as orbit_serve
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path in ('/api/organizer/reviews','/api/activity','/api/organizer/rules','/api/diagnostics','/api/deals/preferences'):
+            from operations import get
+            try:
+                data,code=get(parsed.path,parse_qs(parsed.query),snapshots.get('services',10,lambda:{name:service_state(label) for name,label in SERVICES.items()}),PRICE_BOT_DB)
+            except (ValueError,OverflowError):data,code={'error':'Parámetros no válidos'},400
+            except Exception:data,code={'error':'No se pudo completar la consulta'},503
+            self.send_bytes(json.dumps(data,ensure_ascii=False).encode(),'application/json; charset=utf-8',code)
+            return
         if parsed.path == '/api/amule':
             from amule_dashboard import handle
             result,code=handle('GET',parsed.path)
@@ -564,7 +368,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if parsed.path == '/api/orbit/status':
             from orbit_dashboard_control import get_status
-            self.send_bytes(json.dumps(get_status(),ensure_ascii=False).encode('utf-8'),'application/json; charset=utf-8')
+            from orbit_isolation import origins
+            self.send_bytes(json.dumps(dict(get_status(),isolated=bool(origins())),ensure_ascii=False).encode('utf-8'),'application/json; charset=utf-8')
             return
         if parsed.path == '/api/version':
             self.send_bytes(json.dumps({'name': 'Tone Dashboard', 'version': VERSION}).encode(), 'application/json')
@@ -610,18 +415,28 @@ class Handler(BaseHTTPRequestHandler):
             remembered = bool(DASHBOARD_USER and DASHBOARD_PASSWORD and valid(token(self.headers)))
             self.send_bytes(json.dumps({'remembered': remembered}).encode(), 'application/json; charset=utf-8')
             return
+        if parsed.path in ('/api/downloads','/api/history'):
+            try:
+                q=parse_qs(parsed.query)
+                page=(download_page if parsed.path=='/api/downloads' else history_page)(int(q.get('limit',['40'])[0]),q.get('before',[None])[0])
+                if 'active' in page:page['active']=download_progress(page['active']);page['history']=download_progress(page['history'])
+                self.send_bytes(json.dumps(page,ensure_ascii=False).encode(),'application/json; charset=utf-8')
+            except (ValueError,OverflowError):self.send_bytes(b'{"error":"Paginacion no valida"}','application/json',400)
+            return
         if parsed.path == "/api/dashboard":
+            section=parse_qs(parsed.query).get('section',['all'])[0]
+            page=download_page()
             data = {
-                "services": {name: service_state(label) for name, label in SERVICES.items()},
+                "services": snapshots.get("services", 10, lambda: {name: service_state(label) for name, label in SERVICES.items()}),
                 "summary": dashboard_summary(),
-                "statistics": dashboard_statistics(),
-                "downloads": download_progress(recent_downloads(20)),
+                "statistics": snapshots.get("statistics", 60, dashboard_statistics) if section in ("all","estadisticas") else {},
+                "downloads": download_progress(page["active"] + page["history"]),
                 "history": recent_history(40),
                 "disk": disk_info(GAME_DOWNLOAD_DIR),
                 "internal_disk": disk_info(Path("/")),
                 "emby_disk": emby_storage_snapshot(),
                 "emby_system": emby_system_snapshot(),
-                "system": mac_system_snapshot(),
+                "system": snapshots.get("system", 10, mac_system_snapshot) if section in ("all","equipos") else {},
             }
             self.send_bytes(json.dumps(data, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
             return
@@ -637,7 +452,25 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
-        if parsed.path in ('/api/amule/search','/api/amule/download'):
+        if parsed.path=='/api/orbit/isolation-ticket':
+            from orbit_isolation import entry
+            try:data,code=entry(),200
+            except ValueError:data,code={'error':'Origen aislado no disponible'},503
+            self.send_bytes(json.dumps(data).encode(),'application/json',code)
+            return
+        if parsed.path in ('/api/downloads/control','/api/organizer/review','/api/organizer/rules/remove','/api/deals/preferences'):
+            from operations import post
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                if not 0<length<=4096:raise ValueError('Solicitud demasiado grande')
+                body=json.loads(self.rfile.read(length))
+                if not isinstance(body,dict):raise ValueError('Solicitud no válida')
+                data,code=post(parsed.path,body,PRICE_BOT_DB)
+            except (ValueError,TypeError,UnicodeError) as exc:data,code={'error':'Solicitud JSON no válida' if isinstance(exc,(json.JSONDecodeError,TypeError,UnicodeError)) else str(exc)[:240]},400
+            except Exception:data,code={'error':'No se pudo completar la operación'},503
+            self.send_bytes(json.dumps(data,ensure_ascii=False).encode(),'application/json; charset=utf-8',code)
+            return
+        if parsed.path in ('/api/amule/search','/api/amule/download','/api/amule/control'):
             try:
                 length=int(self.headers.get('Content-Length','0'))
                 if not 0 < length <= 2048: raise ValueError()
@@ -824,14 +657,18 @@ def main():
         raise SystemExit("Para exponer el Dashboard fuera de localhost configura DASHBOARD_USER y DASHBOARD_PASSWORD en .env")
     init_db()
     TORRENT_DROP_DIR.mkdir(parents=True, exist_ok=True)
-    server = ThreadingHTTPServer((host, args.port), Handler)
+    server = BoundedHTTPServer((host, args.port), Handler)
     shown_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    from operations import maintenance_loop
+    maintenance_stop=threading.Event()
+    threading.Thread(target=maintenance_loop,args=(PRICE_BOT_DB,maintenance_stop),daemon=True).start()
     print(f"Dashboard: http://{shown_host}:{args.port} (bind {host})", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        maintenance_stop.set()
         server.server_close()
 
 

@@ -7,6 +7,7 @@ import sqlite3
 import threading
 import time
 from zoneinfo import ZoneInfo
+from . import preferences
 from .models import LABELS, FAMILIES, euro
 
 
@@ -43,6 +44,8 @@ class Store:
             self.db.execute('ALTER TABLE outbox ADD COLUMN product_ean TEXT')
         if 'product_family' not in {r[1] for r in self.db.execute('PRAGMA table_info(outbox)')}:
             self.db.execute('ALTER TABLE outbox ADD COLUMN product_family TEXT')
+        preferences.ensure(self.db)
+        self.db.executemany("INSERT OR IGNORE INTO notification_recipients VALUES (?)", [(str(chat),) for chat in self.chats])
         self.db.commit()
 
     def queue(self, body, chat=None):
@@ -74,7 +77,10 @@ class Store:
                     return
             self.db.execute('INSERT OR IGNORE INTO sources(name) VALUES (?)', (name,))
             state = self.db.execute('SELECT * FROM sources WHERE name=?', (name,)).fetchone()
-            def notify_once(body):
+            def notify_once(body,offer,old):
+                product='ean:'+product_ean if product_ean else ('switch2' if offer.model.startswith('switch2') else 'ps5')
+                recipients=[chat for chat in self.chats if preferences.eligible(self.db,product,chat,offer,old,now)]
+                if not recipients:return False
                 # Persistente entre reinicios: el mismo aviso exacto no vuelve a publicarse.
                 fingerprint = hashlib.sha256(body.encode('utf-8')).hexdigest()
                 cur = self.db.execute(
@@ -82,7 +88,7 @@ class Store:
                     (fingerprint, body, now))
                 if not cur.rowcount:
                     return False
-                for chat in self.chats:
+                for chat in recipients:
                     self.db.execute('INSERT INTO outbox(chat,body,product_ean,product_family) VALUES (?,?,?,?)', (chat, body, product_ean, family or (None if product_ean else ('switch2' if any(o.model.startswith('switch2') for o in offers) else 'ps5'))))
                 return True
 
@@ -134,7 +140,7 @@ class Store:
                             body += '\nPreventa/reserva; confirma la fecha de entrega.'
                         body += '\nEnvío: ' + (euro(offer.shipping) if offer.shipping is not None else 'por confirmar')
                         body += f'\n<a href="{escape(offer.url, quote=True)}">Ver oferta</a>'
-                        notify_once(body)
+                        notify_once(body,offer,old)
                 self.db.execute('INSERT OR REPLACE INTO offers VALUES (?,?,?,?,?,?,1)',
                                 (offer.key, name, json.dumps(asdict(offer), ensure_ascii=False),
                                  offer.price, offer.model, now))

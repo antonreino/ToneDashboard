@@ -214,7 +214,10 @@ def _http(handler,mode,host,port,path):
         ct=response.getheader('Content-Type','').lower()
         if 'text/html' in ct and body:
             text=body.decode('utf-8','replace')
-            body=_replace_root_refs(text,mode).encode('utf-8')
+            text=_replace_root_refs(text,mode)
+            from orbit_isolation import isolated_host
+            if isolated_host(handler.headers):text=re.sub(r'<script defer src="[^"]*/__devices.js"></script>','',text)
+            body=text.encode('utf-8')
         elif 'text/css' in ct and body:
             css=body.decode('utf-8','replace')
             # CSS url('/art/...') ignores HTML <base>.

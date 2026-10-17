@@ -16,7 +16,7 @@
 <body>
 <div class="app">
   <header class="phone-header shared-ui"><div><span class="phone-brand">TONE DASHBOARD</span><h1 id="phoneTitle" tabindex="-1">Inicio</h1></div><button type="button" class="phone-refresh" aria-label="Actualizar información" onclick="refreshAll()">↻</button></header>
-  <span id="updated" hidden></span>
+  <span id="updated" hidden></span><p id="connectionNotice" class="connection-notice" role="status" hidden></p>
 
 
   <div id="view-inicio" class="view active">
@@ -150,7 +150,7 @@
       </form>
       <div class="torrent-form__status" id="torrentFormStatus">Se guardará en la misma carpeta que los torrents recibidos por Telegram.</div>
       </details>
-      <div class="panel__body" id="downloads"></div>
+      <div class="panel__body" id="downloads"></div><button class="button" data-ops-page="downloads">Consultar descargas anteriores</button>
     </section>
 
     <section class="panel" id="downloadInfo">
@@ -189,11 +189,13 @@
       <button data-phone-go="estadisticas"><span class="phone-menu-icon">▥</span><span><b>Estadísticas</b><small>Transferencias y bibliotecas</small></span><span>›</span></button>
       <button data-phone-go="historial"><span class="phone-menu-icon">↺</span><span><b>Historial</b><small>Eventos y archivos procesados</small></span><span>›</span></button>
       <button data-phone-go="ajustes"><span class="phone-menu-icon">⚙</span><span><b>Preferencias del panel</b><small>Lectura de registros y actualización</small></span><span>›</span></button>
+      <button data-phone-go="organizer"><span class="phone-menu-icon">▤</span><span><b>Revisar archivos</b><small>Corregir clasificación y volver a procesar</small></span><span>›</span></button>
+      <button data-phone-go="diagnostico"><span class="phone-menu-icon">♡</span><span><b>Diagnóstico</b><small>Conexiones y copias verificadas</small></span><span>›</span></button>
       <button data-phone-go="logs"><span class="phone-menu-icon">≡</span><span><b>Logs</b><small>Diagnóstico de los servicios</small></span><span>›</span></button>
     </div>
   </div>
   <div id="view-equipos" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><div id="phoneServicesSlot"></div><details class="phone-info" open><summary>Equipos y almacenamiento</summary><div id="phoneHostsSlot"></div></details><details class="phone-info"><summary>Resumen de las últimas 24 horas</summary><div id="phoneMetricsSlot"></div></details></div>
-  <div id="view-historial" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><div id="phoneHistorySlot"></div></div>
+  <div id="view-historial" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><div id="phoneHistorySlot"></div><button class="button" data-ops-page="history">Consultar historial anterior</button><section class="panel"><div class="panel__head"><h2 class="section-title">Recorrido de archivos</h2></div><div id="fileActivity" class="panel__body pad"></div></section></div>
   <div id="view-ajustes" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><div class="phone-menu"><div id="phoneSettingsSlot">        <label class="select-wrap">Líneas de log
           <select id="lines">
             <option>100</option>
@@ -212,6 +214,10 @@
           GitHub
         </a></div></div><p class="phone-lead">En las aplicaciones, la conexión y sus credenciales se mantienen en Ajustes. En la web se utiliza el acceso protegido del navegador.</p></div>
 
+  <div id="view-organizer" class="view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><p class="phone-lead">Revisa el archivo antes de aprobarlo. No se reemplaza un destino existente. Las reglas recordadas usan fragmentos literales del nombre.</p><div id="organizerReviews"></div></div>
+  <div id="view-diagnostico" class="view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><button class="button" id="exportDiagnostic">Exportar diagnóstico sin secretos</button><div id="diagnosticResults"></div></div>
+  <dialog id="operationsDialog" class="operations-dialog"><form method="dialog"><button class="button" aria-label="Cerrar ventana">Cerrar</button></form><div id="operationsDialogBody"></div><p id="operationsDialogStatus" role="status"></p></dialog>
+  <p id="operationStatus" role="status" aria-live="polite"></p>
   <div id="view-amule" class="view">
     <div class="phone-segment shared-ui"><button data-phone-go="descargas">Descargas</button><button class="selected" data-phone-go="amule">Buscar en aMule</button></div>
     <section class="panel" id="amuleSearchPanel">

@@ -26,6 +26,22 @@ import Foundation
         precondition(!session.usesLegacyWebStore)
         session.username = "existing-user"
         precondition(session.usesLegacyWebStore)
+        precondition(DashboardOrigin.permitsFrame(URL(string:"https://orbit.test/entry")!,sourceURL:base,baseURL:base))
+        precondition(DashboardOrigin.permitsFrame(URL(string:"https://orbit.test/path")!,sourceURL:URL(string:"https://orbit.test/")!,baseURL:base))
+        precondition(!DashboardOrigin.permitsFrame(URL(string:"http://orbit.test/")!,sourceURL:base,baseURL:base))
+        precondition(!DashboardOrigin.permitsFrame(URL(string:"https://evil.test/")!,sourceURL:URL(string:"https://orbit.test/")!,baseURL:base))
+        precondition(DashboardOrigin.diagnosticBlob(URL(string:"blob:https://dashboard.test/uuid")!,sourceURL:base,baseURL:base))
+        precondition(!DashboardOrigin.diagnosticBlob(URL(string:"blob:https://evil.test/uuid")!,sourceURL:base,baseURL:base))
+        precondition(!DashboardOrigin.diagnosticBlob(URL(string:"blob:https://dashboard.test/uuid")!,sourceURL:URL(string:"https://orbit.test/")!,baseURL:base))
+        var savedKeys:[String]=[]
+        defaults.removeObject(forKey:"legacyCredentialAccount")
+        defaults.set("https://dashboard.test",forKey:"baseURL")
+        let migrated=DashboardSession(defaults:defaults,credentialLoader:{ $0=="existing-user" ? "legacy-secret" : "" },credentialSaver:{ _,key in savedKeys.append(key);return 0 })
+        precondition(migrated.password=="legacy-secret" && savedKeys==["dashboard.test:443|existing-user"])
+        defaults.set("https://other.test",forKey:"baseURL")
+        let isolated=DashboardSession(defaults:defaults,credentialLoader:{ $0=="existing-user" ? "legacy-secret" : "" },credentialSaver:{ _,_ in preconditionFailure("must not copy legacy credentials to another origin") })
+        precondition(isolated.password.isEmpty)
+        precondition(DashboardSession.accountKey(url:URL(string:"https://dashboard.test:444")!,user:"existing-user") != DashboardSession.accountKey(url:base,user:"existing-user"))
         print("Container checks passed: HTTPS, origin isolation, auth challenges, root UI and existing settings migration")
     }
 }

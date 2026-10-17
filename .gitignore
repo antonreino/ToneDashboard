@@ -51,3 +51,7 @@ __MACOSX/
 
 # Copias locales creadas por los scripts de migración
 .patch-backups/
+
+# Browser QA artifacts and dependencies
+node_modules/
+test-results/

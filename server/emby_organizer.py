@@ -19,8 +19,10 @@ from urllib.parse import urlparse
 import requests
 from dotenv import load_dotenv
 
+import task_store
+
 from state_db import (
-    add_history, init_db, mark_emby_storage_error, mark_emby_system_error,
+    set_runtime_state, utc_now, add_history, init_db, mark_emby_storage_error, mark_emby_system_error,
     save_emby_storage, save_emby_system,
 )
 
@@ -1070,7 +1072,10 @@ class MediaOrganizer:
             )
             return
 
+        task_store.relocate(path,destination)
         shutil.move(str(path), str(destination))
+        task_store.review(destination,reason)
+        task_store.activity(destination,"review",reason)
         logging.warning("Cuarentena: %s -> %s | Motivo: %s", path, destination, reason)
         add_history(
             "organizer", "quarantined", title=path.name, source_path=str(path),
@@ -1190,8 +1195,8 @@ class MediaOrganizer:
                 redact_secrets(str(exc)),
             )
 
-    def process_file(self, path: Path):
-        if self.should_ignore(path):
+    def process_file(self, path: Path, decision=None):
+        if decision is None and self.should_ignore(path):
             logging.debug("Ignorado: %s", path)
             return
 
@@ -1200,7 +1205,15 @@ class MediaOrganizer:
             return
 
         stable_signature = self.file_signature(path)
-        media = self.classify(path)
+        task_store.activity(path,'classifying')
+        rule=decision or task_store.rule_for(path)
+        if rule:
+            rule=dict(rule)
+            if rule['category']!='movies' and 'episode' not in rule:
+                season,episode=self.detect_episode(path.name)
+                if season is not None and episode is not None:rule.update(season=season,episode=episode)
+                else:rule=None
+        media=MediaInfo(source_path=path,extension=path.suffix,**rule) if rule else self.classify(path)
         if self.file_signature(path) != stable_signature:
             logging.info("Archivo modificado durante la clasificación; se pospone: %s", path)
             return
@@ -1227,16 +1240,19 @@ class MediaOrganizer:
             logging.info("Archivo modificado antes de la subida; se pospone: %s", path)
             return
         if destination_exists:
+            if decision is not None:raise OrganizerError("El archivo remoto ya existe; se conserva el archivo para revisión")
             self.quarantine(path, f"El archivo remoto ya existe: {remote_path}")
             return
 
         signature = self.file_signature(path)
         size_bytes = signature[2]
+        task_store.activity(path,"transferring",remote_path)
         self.uploader.upload_file(path, media.category, remote_path)
         if self.file_signature(path) != signature:
             raise OrganizerError("El archivo cambió durante la subida; se conserva la copia local")
         path.unlink()
         getattr(self, "_observations", {}).pop(path, None)
+        task_store.activity(path,"incorporated",remote_path)
         logging.info("Subido y eliminado localmente: %s", path)
         add_history(
             "organizer", "success", title=media.title, category=media.category,
@@ -1249,15 +1265,39 @@ class MediaOrganizer:
         self.cleanup_download_folder(path)
 
     def scan_once(self):
+        if not getattr(self,'_last_review_import',0) or time.monotonic()-self._last_review_import>300:
+            self._last_review_import=time.monotonic()
+            for candidate in QUARANTINE_LOCAL_DIR.rglob('*'):
+                if candidate.is_file() and not candidate.is_symlink() and candidate.suffix.lower() in VIDEO_EXTENSIONS:
+                    task_store.register_existing(candidate)
+        for row in task_store.approved_reviews():
+            try:
+                path=Path(row['path'])
+                if not path.resolve().is_relative_to(QUARANTINE_LOCAL_DIR.resolve()) or path.is_symlink():raise OrganizerError('El archivo de revisión está fuera de la cuarentena')
+                if task_store.signature(path)!=row['signature']:raise OrganizerError('El archivo ha cambiado desde la revisión')
+                # An explicit review bypasses inbox exclusion, never stability or upload checks.
+                if not self.is_stable(path):continue
+                self.process_file(path,task_store.validate_decision(json.loads(row['decision'])))
+                if not path.exists():task_store.finish_review(row['id'])
+            except Exception as exc:task_store.finish_review(row['id'],error_summary(exc))
         found_any = False
+        retries=getattr(self,"_file_retries",{});self._file_retries=retries
         for item in sorted(INBOX_DIR.rglob("*")):
             if item.is_dir():
                 continue
             found_any = True
             try:
+                previous=retries.get(item)
+                if previous and previous[0]==self.file_signature(item) and time.monotonic()<previous[1]:continue
                 self.process_file(item)
+                retries.pop(item,None)
             except Exception as exc:
                 logging.error("No se pudo procesar %s: %s", item, error_summary(exc))
+                task_store.activity(item,"failed",error_summary(exc))
+                try:
+                    attempts=min(6,(retries.get(item) or (None,0,0))[2]+1)
+                    retries[item]=(self.file_signature(item),time.monotonic()+min(900,30*2**attempts),attempts)
+                except OSError:retries.pop(item,None)
 
         if not found_any:
             logging.info("No se encontraron archivos dentro de %s", INBOX_DIR)
@@ -1271,6 +1311,7 @@ class MediaOrganizer:
                 self.refresh_emby_storage()
                 self.refresh_emby_system()
                 self.scan_once()
+                set_runtime_state("organizer_heartbeat",{"ok":True,"checked_at":utc_now()})
             except Exception as exc:
                 logging.exception("Error durante el escaneo")
                 add_history(

@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    // Preserve the service and account keys used by all previously installed apps.
+    // Keep the legacy service; new account keys include HTTPS host, port and username.
     private static let service = "ovh.tonecas.embydashboard"
     @discardableResult static func savePassword(_ password: String, account: String) -> OSStatus {
         let query: [String: Any] = [kSecClass as String:kSecClassGenericPassword, kSecAttrService as String:service, kSecAttrAccount as String:account]

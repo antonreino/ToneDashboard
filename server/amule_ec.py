@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import hashlib
 import socket
 import struct
+from web_assets import VERSION
 
 MAX_PACKET=8*1024*1024
 class AmuleError(Exception): pass
@@ -65,7 +66,7 @@ class ECClient:
     def __enter__(self):
         try:
             self.sock=socket.create_connection(('127.0.0.1',4712),timeout=self.timeout)
-            op,tags=self.request(2,[Tag(0x100,'ToneDashboard'),Tag(0x101,'1.0.0'),Tag(2,0x0204)])
+            op,tags=self.request(2,[Tag(0x100,'ToneDashboard'),Tag(0x101,VERSION),Tag(2,0x0204)])
             salt=next((t.value for t in tags if t.name==11),None)
             if op!=0x4f or not isinstance(salt,int):raise AmuleError('aMule no acepta la autenticación EC')
             salted=hashlib.md5(format(salt,'X').encode()).hexdigest()

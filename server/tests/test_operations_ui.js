@@ -1,0 +1,22 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const nodes={},events={},requests=[];
+const get=id=>nodes[id]||={textContent:'',hidden:false,innerHTML:'',contains:()=>false,addEventListener(type,fn){this[type]=fn},open:false,showModal(){this.open=true},close(){this.open=false}};
+const context={window:{},console,AbortController,Blob,URL,JSON,Date,Set,setTimeout,clearTimeout,confirm:()=>true,loadAmule:async()=>{},document:{activeElement:null,getElementById:get,querySelector:()=>({id:'view-organizer'}),addEventListener(type,fn){events[type]=fn}},fetch:async(path,options)=>{requests.push({path,options});return {ok:true,json:async()=>({ok:true,items:[]})}}};
+vm.createContext(context);
+const main=fs.readFileSync('web/dashboard.js','utf8');vm.runInContext(main.slice(0,main.indexOf('async function loadDashboard()')),context);
+vm.runInContext(fs.readFileSync('web/operations.js','utf8'),context);
+const ops=context.window.ToneOperations;
+assert.match(ops.downloadButtons({id:7,status:'active'}),/Pausar/);
+assert.match(ops.downloadButtons({id:7,status:'paused'}),/Reanudar/);
+assert.match(ops.downloadButtons({id:7,status:'failed'}),/Reintentar/);
+assert.equal(ops.downloadButtons({id:7,status:'completed'}),'');
+assert(!ops.downloadButtons({id:7,status:'active',command:{status:'pending'}}).includes('<button'));
+assert(!ops.amuleButtons({hash:'<unsafe>'}).includes('data-hash="<unsafe>'));
+(async()=>{
+ const button={dataset:{jobAction:'pause',jobId:'7'},disabled:false};
+ await events.click({target:{closest:()=>button}});
+ assert.equal(requests[0].path,'/api/downloads/control');assert.deepEqual(JSON.parse(requests[0].options.body),{id:7,action:'pause'});assert.equal(requests[0].options.headers['X-Dashboard-Action'],'write');assert.match(get('operationStatus').textContent,/Orden guardada/);
+ context.confirm=()=>false;button.dataset.jobAction='cancel';await events.click({target:{closest:()=>button}});assert.equal(requests.length,1);
+ context.fetch=async()=>({ok:false,json:async()=>({error:'Offline'})});button.dataset.jobAction='pause';await events.click({target:{closest:()=>button}});assert.equal(get('operationStatus').textContent,'Offline');assert.equal(button.disabled,false);
+ console.log('Operational UI: correct engine controls, pending state, safe hashes, authenticated writes, cancel confirmation and visible errors');
+})().catch(e=>{console.error(e);process.exitCode=1});

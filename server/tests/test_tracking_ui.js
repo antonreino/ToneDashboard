@@ -16,6 +16,7 @@ const context={URL,Intl,document:{getElementById:get},linesEl:get('lines'),esc:S
   if(options?.method==='POST'){const body=JSON.parse(options.body);requests.push([url,body,options.headers]);if(url.endsWith('/remove')){assert.equal(body.id,'ps5');data.products=data.products.filter(p=>p.id!==body.id);data.inactive_products=[ps5];data.active_offers=data.active_offers.filter(o=>o.family!=='ps5');}else if(url.endsWith('/restore')){data.products.push(ps5);data.inactive_products=[];}return {ok:true,json:async()=>({ok:true})};}
   return {ok:true,json:async()=>data};
 }};
+context.dashboardJSON=async url=>(await context.fetch(url)).json();
 vm.createContext(context);vm.runInContext(script,context);
 (async()=>{
   await context.loadDeals();let html=get('eanProductCards').innerHTML;

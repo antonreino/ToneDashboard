@@ -65,6 +65,21 @@ class AmuleDashboard:
             self.query=query.strip();self.network=network;self.search_id=uuid.uuid4().hex
             self.started=self.clock();self.results={};self.cached=None
             return {'ok':True,'search_id':self.search_id,'query':self.query}
+    def control(self,body):
+        digest,action=body.get('hash'),body.get('action')
+        if not isinstance(digest,str) or not re.fullmatch(r'[a-f0-9]{32}',digest) or action not in ('pause','resume','stop'):
+            raise RequestError('Archivo o acción no válida.')
+        with self.lock, self.client() as c:
+            _,queue=c.request(0x0d,[Tag(4,2)])
+            if digest not in {r['hash'] for r in files(queue)}:raise RequestError('El archivo ya no está en la cola.',409)
+            op,_=c.request({'pause':0x19,'resume':0x1a,'stop':0x1b}[action],[Tag(0x300,bytes.fromhex(digest))])
+            if op!=1:raise AmuleError('aMule no confirmó la operación')
+            _,queue=c.request(0x0d,[Tag(4,2)])
+            current=next((r for r in files(queue) if r['hash']==digest),None)
+            if current is None:raise AmuleError('El archivo no aparece en la cola actualizada')
+            self.cached=None
+            return {'ok':True,'action':action,'observed':current}
+
     def download(self,body):
         digest=body.get('hash');search_id=body.get('search_id')
         if not isinstance(digest,str) or not re.fullmatch(r'[a-f0-9]{32}',digest):raise RequestError('Resultado no válido.')
@@ -88,6 +103,7 @@ bridge=AmuleDashboard()
 def handle(method,path,body=None):
     try:
         if method=='GET' and path=='/api/amule':return bridge.snapshot(),200
+        if method=='POST' and path=='/api/amule/control':return bridge.control(body),200
         if method=='POST' and path=='/api/amule/search':return bridge.search(body),202
         if method=='POST' and path=='/api/amule/download':return bridge.download(body),202
         return {'error':'Ruta aMule no válida'},404

@@ -94,6 +94,15 @@ class BridgeTests(unittest.TestCase):
             bridge.snapshot.side_effect=OSError('private internal error')
             result,status=handle('GET','/api/amule')
             self.assertEqual(status,503);self.assertNotIn('private',result['error'])
+    def test_control_uses_exact_existing_hash_and_never_deletes_partials(self):
+        self.core.queue=[filetag()]
+        for action,opcode in [('pause',0x19),('resume',0x1a),('stop',0x1b)]:
+            self.assertTrue(self.b.control({'hash':HASH,'action':action})['ok'])
+            tag=next(tags[0] for op,tags in self.core.calls if op==opcode)
+            self.assertEqual(tag.value,bytes.fromhex(HASH))
+        self.assertFalse(any(op==0x1d for op,_ in self.core.calls))
+        with self.assertRaises(RequestError):self.b.control({'hash':'f'*32,'action':'pause'})
+        with self.assertRaises(RequestError):self.b.control({'hash':HASH,'action':'delete'})
     def test_disabled_configuration(self):
         with mock.patch.dict(os.environ,{'AMULE_ENABLED':'false'}),self.assertRaises(RequestError):AmuleDashboard().snapshot()
 

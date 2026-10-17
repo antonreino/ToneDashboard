@@ -3,7 +3,7 @@ const source=fs.readFileSync('web/dashboard.js','utf8');
 const chunk=source.slice(source.indexOf('// aMule: structured'),source.indexOf("document.querySelectorAll('.tab')"));
 const nodes={},calls=[],pending=[];
 function node(id){return nodes[id]||= {value:'',textContent:'',innerHTML:'',dataset:{},classList:{contains:()=>false},addEventListener(name,fn){this[name]=fn},querySelector(){return this.button||={disabled:false}}};}
-const context={console,phoneAmuleCount:null,updatePhoneDownloadCount(){},AbortController,Set,JSON,document:{hidden:false,getElementById:node},setInterval(){},setTimeout(){return 1},clearTimeout(){},fetch:async(path,opts)=>{calls.push({path,opts});return pending.shift()||{ok:true,json:async()=>({ok:true})}}};
+const context={window:{},console,phoneAmuleCount:null,updatePhoneDownloadCount(){},AbortController,Set,JSON,document:{hidden:false,getElementById:node},setInterval(){},setTimeout(){return 1},clearTimeout(){},fetch:async(path,opts)=>{calls.push({path,opts});return pending.shift()||{ok:true,json:async()=>({ok:true})}}};
 vm.createContext(context);vm.runInContext(source.slice(0,source.indexOf('async function loadDashboard()')),context);vm.runInContext(chunk,context);
 const hash='0123456789abcdef0123456789abcdef';
 const snapshot={ok:true,search_id:'session',query:'<unsafe>',total:1,results:[{hash,name:'<script>alert(1)</script>.mkv',size:1024,sources:10}],downloads:[],kad_nodes:20,download_speed:1,upload_speed:2};

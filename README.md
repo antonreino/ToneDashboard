@@ -1,4 +1,4 @@
-# Tone Dashboard · 1.0.0
+# Tone Dashboard · 1.1.0
 
 Un único proyecto para web, macOS/iOS, Organizer, descargas, Telegram, ofertas y Orbit.
 
@@ -31,7 +31,7 @@ El dashboard mantiene el puerto8765 y las rutas API. El tracker utiliza `workers
 
 ## Apps Apple
 
-Abrir `apple/ToneDashboardApps.xcodeproj`: versión1.0.0, compilación8. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
+Abrir `apple/ToneDashboardApps.xcodeproj`: versión1.1.0, compilación10. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
 
 Las apps cargan `/` del dashboard HTTPS. Las mejoras de interfaz se reciben al recargar; cambios del contenedor requieren nueva compilación. Autenticación y navegación quedan limitadas al origen configurado. No se entregan contraseñas a JavaScript ni hay un puente de ejecución de comandos.
 
@@ -66,3 +66,9 @@ Se muestran como máximo 500 resultados, ordenados por fuentes. Un archivo con c
 En pantallas de hasta 600 px, la interfaz utiliza cinco accesos inferiores: Inicio, Descargas, Chollos, Orbit y Más. Inicio resume servicios y actividad; Descargas reúne la cola de aMule y las descargas del panel, con historial separado. El buscador aMule mantiene sus filtros plegables. Más agrupa equipos, estadísticas, historial, preferencias de lectura y Logs como última opción. Los ajustes de conexión permanecen en el contenedor nativo.
 
 Las tarjetas muestran primero nombre, estado y progreso; los detalles se despliegan y conservan su apertura durante las actualizaciones. Chollos destaca la oferta más barata por producto y permite abrir las demás. La web y macOS utilizan las mismas cinco secciones con una barra lateral a partir de 601 px. Inicio presenta el resumen; las herramientas se encuentran en Más, con Logs al final. En escritorio las tablas muestran sus columnas y Chollos todas sus ofertas ordenadas. Los formularios y las colas son únicos para todos los tamaños: cambiar el ancho conserva valores, sección activa y estado, sin duplicar identificadores, credenciales ni lógica del servidor. El historial de descargas se puede consultar con el filtro Historial.
+
+## Novedades 1.1
+
+Controles persistentes de descargas y aMule; revisión de cuarentena y reglas recordadas; alertas por producto/destinatario; historial paginado y recorrido de archivos; diagnóstico exportable y copias SQLite diarias verificadas. Se optimizan las consultas por sección, las métricas compartidas y la lectura de logs. El llavero pasa a separar credenciales por servidor, puerto y usuario, conservando la cuenta instalada.
+
+Consulta [Operación y recuperación](docs/OPERACIONES.md) para conocer límites, restauración, pruebas y preparación del aislamiento opcional de Orbit. Este último permanece desactivado hasta configurar y probar su segundo dominio HTTPS.
