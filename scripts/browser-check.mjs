@@ -33,6 +33,15 @@ try{
     await page.getByText('Verificadas · 2026-10-17T00:00:00Z',{exact:true}).waitFor();
   }
   await page.locator('.phone-nav').getByRole('button',{name:'Chollos',exact:true}).click();
+  await page.setViewportSize({width:390,height:1000});
+  await page.locator('#view-chollos details:has(#dealHistory) > summary').click();
+  assert(await page.locator('#dealHistory').evaluate(el=>el.closest('.panel').getBoundingClientRect().left-el.closest('details').getBoundingClientRect().left)>=12);
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:'test-results/browser/390-deal-activity.png',fullPage:true});
+  await page.locator('.phone-nav').getByRole('button',{name:'Más',exact:true}).click();
+  await page.getByRole('button',{name:/Equipos y servicios/}).click();
+  assert(await page.locator('#homeHosts .host-panel').first().evaluate(el=>el.getBoundingClientRect().left-el.closest('details').getBoundingClientRect().left)>=12);
+  await page.locator('.phone-nav').getByRole('button',{name:'Chollos',exact:true}).click();
   await page.getByRole('button',{name:'Alertas',exact:true}).click();
   await page.getByRole('heading',{name:'Alertas de PlayStation 5'}).waitFor();
   await page.getByRole('button',{name:'Cerrar ventana'}).click();

@@ -638,3 +638,11 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 #organizerReviews .panel{margin-bottom:18px}
 #downloadPanel>[data-ops-page]{margin:16px}
 #fileActivity{overflow:auto}
+
+/* Inset nested panels on iPhone, matching the disclosure heading gutters. */
+@media(max-width:600px){
+  .phone-fold>.fold-content,.phone-info>div{padding:0 12px 12px;min-width:0}
+  .operations-form input,.operations-form select{font-size:16px}
+  .fold-content>.panel:last-child{margin-bottom:0}
+  .phone-info>div>.host-layout,.phone-info>div>.metrics{margin-bottom:0}
+}
