@@ -1,9 +1,9 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('web/dashboard.js','utf8'),html=fs.readFileSync('web/index.html','utf8');
 const names=[...html.matchAll(/class="tab(?: active)?" data-view="([^"]+)"/g)].map(m=>m[1]);
-assert.equal(names.at(-1),'logs');
+assert.equal(names.length,0); // One shared navigation, no duplicate desktop routes.
 const phoneTabs=[...html.matchAll(/data-phone-tab="([^"]+)"/g)].map(m=>m[1]);assert.deepEqual(phoneTabs,['inicio','descargas','chollos','orbitzero','mas']);
-const allNames=[...names,'descargas','mas','equipos','historial','ajustes'];
+const allNames=['inicio','descargas','mas','equipos','historial','ajustes','logs','chollos','amule','orbitzero','estadisticas'];
 const classes=active=>({active,contains(c){return c==='phone-view'?false:this.active},remove(){this.active=false},add(){this.active=true},toggle(c,on){this.active=on}});
 const views=allNames.map(name=>({id:'view-'+name,classList:classes(name==='inicio')}));
 const tabs=names.map(name=>({dataset:{view:name},classList:classes(name==='inicio'),addEventListener(_,fn){this.click=fn}}));
@@ -24,5 +24,5 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(phones.find(p=>p['aria-current']==='page').dataset.phoneTab,context.phoneGroup(view));
  }
  assert.equal(counts.logs,1);assert.equal(counts.deals,1);assert(counts.amule>=2);assert.equal(counts.orbit,1);assert(counts.clear>0);
- console.log('Navigation: desktop sections preserved; five phone tabs; More/subviews, aMule and Orbit routes; lazy loading and secret clearing');
+ context.phoneMedia.matches=false;context.navigateDashboard('descargas');await settle();assert(views.find(v=>v.id==='view-descargas').classList.active);assert(counts.amule>=3);console.log('Navigation: shared desktop/phone routes, aMule polling, More/subviews, lazy loading and Orbit secret clearing');
 })().catch(e=>{console.error(e);process.exitCode=1});

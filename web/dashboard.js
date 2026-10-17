@@ -473,7 +473,7 @@ document.getElementById('amuleResults').addEventListener('click',async e=>{
   }catch(err){status.textContent=err.message;}
   finally{amulePending.delete(hash);button.disabled=false;}
 });
-setInterval(()=>{if(!document.hidden&&(document.getElementById('view-amule').classList.contains('active')||(phoneMedia.matches&&document.getElementById('view-descargas').classList.contains('active'))))loadAmule();},4000);
+setInterval(()=>{if(!document.hidden&&(document.getElementById('view-amule').classList.contains('active')||document.getElementById('view-descargas').classList.contains('active')))loadAmule();},4000);
 
 document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>navigateDashboard(tab.dataset.view)));
 const linesEl=document.getElementById('lines');
@@ -487,7 +487,7 @@ async function refreshAll(){
     const tasks=[loadDashboard()];
     if(document.getElementById('view-logs').classList.contains('active'))tasks.push(loadLogs());
     if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
-    if(document.getElementById('view-amule').classList.contains('active')||(phoneMedia.matches&&['inicio','descargas'].some(v=>document.getElementById('view-'+v).classList.contains('active'))))tasks.push(loadAmule());
+    if(document.getElementById('view-amule').classList.contains('active')||['inicio','descargas'].some(v=>document.getElementById('view-'+v).classList.contains('active')))tasks.push(loadAmule());
     await Promise.all(tasks);
   }catch(e){
     document.getElementById('updated').textContent='Error de actualización';
@@ -523,20 +523,16 @@ function navigateDashboard(view,{focus=false}={}){
   const title=document.getElementById('phoneTitle');title.textContent=phoneTitles[view]||'Tone Dashboard';
   if(view!=='orbitzero')clearOrbitCode();
   if(view==='orbitzero')orbitEnsureLoaded();else refreshAll();
-  if(phoneMedia.matches){window.scrollTo({top:0,behavior:'instant'});if(focus)title.focus({preventScroll:true});}
+  window.scrollTo({top:0,behavior:'instant'});if(focus)title.focus({preventScroll:true});
 }
 function applyPhoneLayout(){
-  if(phoneMedia.matches){
-    if(!phoneMoves.length){
-      for(const [id,slot] of [['services','phoneServicesSlot'],['homeHosts','phoneHostsSlot'],['homeMetrics','phoneMetricsSlot'],['amuleQueuePanel','phoneAmuleQueueSlot'],['downloadPanel','phoneDownloadSlot'],['downloadInfo','phoneDownloadInfoSlot'],['historyPanel','phoneHistorySlot'],['lines','phoneSettingsSlot']]){
-        let node=document.getElementById(id);if(id==='lines')node=node.closest('label');
-        const anchor=document.createComment('desktop '+id);node.before(anchor);phoneMoves.push({node,anchor});document.getElementById(slot).append(node);
-      }
+  // Move each existing control once. Resizing never recreates forms or loses state.
+  if(!phoneMoves.length){
+    for(const [id,slot] of [['services','phoneServicesSlot'],['homeHosts','phoneHostsSlot'],['homeMetrics','phoneMetricsSlot'],['amuleQueuePanel','phoneAmuleQueueSlot'],['downloadPanel','phoneDownloadSlot'],['downloadInfo','phoneDownloadInfoSlot'],['historyPanel','phoneHistorySlot'],['lines','phoneSettingsSlot']]){
+      let node=document.getElementById(id);if(id==='lines')node=node.closest('label');
+      phoneMoves.push({node});document.getElementById(slot).append(node);
     }
-  }else{
-    while(phoneMoves.length){const {node,anchor}=phoneMoves.pop();anchor.replaceWith(node);}
-    const active=document.querySelector('.view.active');
-    if(active?.classList.contains('phone-view'))navigateDashboard('inicio');
+    const github=document.querySelector('.github-link');if(github)document.getElementById('phoneSettingsSlot').append(github);
   }
   document.querySelectorAll('[data-phone-fold]').forEach(d=>d.open=!phoneMedia.matches);
 }

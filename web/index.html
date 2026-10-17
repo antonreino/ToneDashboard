@@ -15,57 +15,12 @@
 </head>
 <body>
 <div class="app">
-  <header class="phone-header phone-only"><div><span class="phone-brand">TONE DASHBOARD</span><h1 id="phoneTitle" tabindex="-1">Inicio</h1></div><button type="button" class="phone-refresh" aria-label="Actualizar información" onclick="refreshAll()">↻</button></header>
-  <header class="hero">
-    <div class="hero__main">
-      <div class="eyebrow">Tone Dashboard</div>
-      <h1>Control total, limpio y moderno</h1>
-      <p>Estado de servicios, descargas, historial y logs en tiempo real, optimizado para Mac, iPad y iPhone.</p>
-    </div>
-    <div class="hero__side">
-      <div class="status-badge">
-        <div>
-          <strong>Estado del panel</strong><br>
-          <span>Actualización automática cada 12 segundos</span>
-        </div>
-        <span id="updated">Cargando…</span>
-      </div>
-      <div class="controls">
-        <a class="github-link"
-           href="https://github.com/antonreino/ToneDashboard"
-           target="_blank"
-           rel="noopener noreferrer"
-           title="Abrir repositorio en GitHub"
-           aria-label="Abrir repositorio Tone Dashboard en GitHub">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 .7a11.3 11.3 0 0 0-3.57 22c.57.1.78-.24.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.03 0 0 .96-.31 3.12 1.17A10.85 10.85 0 0 1 12 5.91c.97 0 1.94.13 2.85.38 2.16-1.48 3.11-1.17 3.11-1.17.63 1.57.24 2.74.12 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.05.78 2.12v3.17c0 .31.2.66.79.55A11.3 11.3 0 0 0 12 .7Z"/>
-          </svg>
-          GitHub
-        </a>
-        <label class="select-wrap">Líneas de log
-          <select id="lines">
-            <option>100</option>
-            <option selected>300</option>
-            <option>1000</option>
-          </select>
-        </label>
-        <button class="button" onclick="refreshAll()">Actualizar ahora</button>
-      </div>
-    </div>
-  </header>
+  <header class="phone-header shared-ui"><div><span class="phone-brand">TONE DASHBOARD</span><h1 id="phoneTitle" tabindex="-1">Inicio</h1></div><button type="button" class="phone-refresh" aria-label="Actualizar información" onclick="refreshAll()">↻</button></header>
+  <span id="updated" hidden></span>
 
-
-  <nav class="tabs" aria-label="Secciones del dashboard">
-    <button class="tab active" data-view="inicio">Inicio</button>
-    <button class="tab" data-view="estadisticas">Estadísticas</button>
-    <button class="tab" data-view="orbitzero">Orbit Zero</button>
-    <button class="tab" data-view="chollos">Chollos</button>
-    <button class="tab" data-view="amule">aMule</button>
-    <button class="tab" data-view="logs">Logs</button>
-  </nav>
 
   <div id="view-inicio" class="view active">
-  <section class="phone-home phone-only" aria-label="Resumen">
+  <section class="phone-home shared-ui" aria-label="Resumen">
     <div class="phone-health"><span class="phone-live-dot"></span><p id="phoneHealth">Comprobando servicios…</p><span id="phoneUpdated">Conectando</span></div>
     <h2>Todo a mano.</h2><p class="phone-lead">Tu actividad, sin perderte entre los detalles.</p>
     <div class="phone-summary-grid">
@@ -182,7 +137,7 @@
       <div class="panel__head">
         <h2 class="section-title">📥 Cola y descargas recientes <small>Estado y progreso en vivo</small></h2>
       </div>
-      <div class="phone-segment phone-only" aria-label="Filtrar descargas"><button class="selected" data-download-filter="active">En curso</button><button data-download-filter="all">Historial</button></div>
+      <div class="phone-segment shared-ui" aria-label="Filtrar descargas"><button class="selected" data-download-filter="active">En curso</button><button data-download-filter="all">Historial</button></div>
       <details class="phone-fold" data-phone-fold open><summary>Añadir una descarga <span>URL o archivo torrent</span></summary>
       <form class="download-form" id="downloadForm">
         <input id="downloadUrl" type="url" autocomplete="off" placeholder="Pega aquí la URL directa del juego…" required>
@@ -223,9 +178,9 @@
   </div>
 
   <div id="view-descargas" class="view phone-view">
-    <div class="phone-segment phone-only"><button class="selected" data-phone-go="descargas">Descargas</button><button data-phone-go="amule">Buscar en aMule</button></div>
+    <div class="phone-segment shared-ui"><button class="selected" data-phone-go="descargas">Descargas</button><button data-phone-go="amule">Buscar en aMule</button></div>
     <div id="phoneAmuleQueueSlot"></div><div id="phoneDownloadSlot"></div>
-    <details class="phone-info phone-only"><summary>Cómo se gestionan las descargas</summary><p class="phone-lead" style="padding:0 16px">Organizer revisa los archivos terminados de aMule para incorporarlos a Emby. Las descargas por URL mantienen su destino habitual.</p><div id="phoneDownloadInfoSlot"></div></details>
+    <details class="phone-info shared-ui"><summary>Cómo se gestionan las descargas</summary><p class="phone-lead" style="padding:0 16px">Organizer revisa los archivos terminados de aMule para incorporarlos a Emby. Las descargas por URL mantienen su destino habitual.</p><div id="phoneDownloadInfoSlot"></div></details>
   </div>
   <div id="view-mas" class="view phone-view">
     <p class="phone-lead">Información y herramientas, cuando las necesites.</p>
@@ -237,12 +192,28 @@
       <button data-phone-go="logs"><span class="phone-menu-icon">≡</span><span><b>Logs</b><small>Diagnóstico de los servicios</small></span><span>›</span></button>
     </div>
   </div>
-  <div id="view-equipos" class="view phone-view"><button class="phone-back phone-only" data-phone-go="mas">‹ Más</button><div id="phoneServicesSlot"></div><details class="phone-info" open><summary>Equipos y almacenamiento</summary><div id="phoneHostsSlot"></div></details><details class="phone-info"><summary>Resumen de las últimas 24 horas</summary><div id="phoneMetricsSlot"></div></details></div>
-  <div id="view-historial" class="view phone-view"><button class="phone-back phone-only" data-phone-go="mas">‹ Más</button><div id="phoneHistorySlot"></div></div>
-  <div id="view-ajustes" class="view phone-view"><button class="phone-back phone-only" data-phone-go="mas">‹ Más</button><div class="phone-menu"><div id="phoneSettingsSlot"></div></div><p class="phone-lead">La conexión y sus credenciales se mantienen en Ajustes de la aplicación.</p></div>
+  <div id="view-equipos" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><div id="phoneServicesSlot"></div><details class="phone-info" open><summary>Equipos y almacenamiento</summary><div id="phoneHostsSlot"></div></details><details class="phone-info"><summary>Resumen de las últimas 24 horas</summary><div id="phoneMetricsSlot"></div></details></div>
+  <div id="view-historial" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><div id="phoneHistorySlot"></div></div>
+  <div id="view-ajustes" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><div class="phone-menu"><div id="phoneSettingsSlot">        <label class="select-wrap">Líneas de log
+          <select id="lines">
+            <option>100</option>
+            <option selected>300</option>
+            <option>1000</option>
+          </select>
+        </label>        <a class="github-link"
+           href="https://github.com/antonreino/ToneDashboard"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Abrir repositorio en GitHub"
+           aria-label="Abrir repositorio Tone Dashboard en GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 .7a11.3 11.3 0 0 0-3.57 22c.57.1.78-.24.78-.55v-2.16c-3.18.69-3.85-1.35-3.85-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.54-.29-5.21-1.27-5.21-5.65 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.03 0 0 .96-.31 3.12 1.17A10.85 10.85 0 0 1 12 5.91c.97 0 1.94.13 2.85.38 2.16-1.48 3.11-1.17 3.11-1.17.63 1.57.24 2.74.12 3.03.74.8 1.18 1.82 1.18 3.07 0 4.39-2.68 5.35-5.23 5.64.41.36.78 1.05.78 2.12v3.17c0 .31.2.66.79.55A11.3 11.3 0 0 0 12 .7Z"/>
+          </svg>
+          GitHub
+        </a></div></div><p class="phone-lead">En las aplicaciones, la conexión y sus credenciales se mantienen en Ajustes. En la web se utiliza el acceso protegido del navegador.</p></div>
 
   <div id="view-amule" class="view">
-    <div class="phone-segment phone-only"><button data-phone-go="descargas">Descargas</button><button class="selected" data-phone-go="amule">Buscar en aMule</button></div>
+    <div class="phone-segment shared-ui"><button data-phone-go="descargas">Descargas</button><button class="selected" data-phone-go="amule">Buscar en aMule</button></div>
     <section class="panel" id="amuleSearchPanel">
       <div class="panel__head"><h2 class="section-title">aMule <small>Buscar y descargar en el Mac mini</small></h2></div>
       <form id="amuleSearchForm" class="amule-search">
@@ -413,7 +384,7 @@
 
 </div>
 
-<nav class="phone-nav phone-only" aria-label="Navegación principal"><button type="button" data-phone-go="inicio" data-phone-tab="inicio" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z"/></svg><span>Inicio</span></button><button type="button" data-phone-go="descargas" data-phone-tab="descargas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Descargas</span></button><button type="button" data-phone-go="chollos" data-phone-tab="chollos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h8l10 10-8 8L3 11Zm4 4h.01"/></svg><span>Chollos</span></button><button type="button" data-phone-go="orbitzero" data-phone-tab="orbitzero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M7 17 17 7M17 3h4v4"/></svg><span>Orbit</span></button><button type="button" data-phone-go="mas" data-phone-tab="mas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Más</span></button></nav>
+<nav class="phone-nav shared-ui" aria-label="Navegación principal"><button type="button" data-phone-go="inicio" data-phone-tab="inicio" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3Z"/></svg><span>Inicio</span></button><button type="button" data-phone-go="descargas" data-phone-tab="descargas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Descargas</span></button><button type="button" data-phone-go="chollos" data-phone-tab="chollos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h8l10 10-8 8L3 11Zm4 4h.01"/></svg><span>Chollos</span></button><button type="button" data-phone-go="orbitzero" data-phone-tab="orbitzero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M7 17 17 7M17 3h4v4"/></svg><span>Orbit</span></button><button type="button" data-phone-go="mas" data-phone-tab="mas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Más</span></button></nav>
 <!-- DASHBOARD_SCRIPT -->
 </body>
 </html>
