@@ -13,7 +13,29 @@ from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 ROOT = Path.home()/'.local/share/emby_organizer/anime-calendar'
-LOCK = threading.RLock()
+class StoreLock:
+    """Serialize Dashboard and scheduled CLI transactions, including nested calls."""
+    def __init__(self):
+        self.thread=threading.RLock();self.local=threading.local()
+    def __enter__(self):
+        import fcntl
+        self.thread.acquire()
+        try:
+            if not getattr(self.local,'depth',0):
+                ROOT.mkdir(mode=0o700,parents=True,exist_ok=True)
+                self.local.fd=os.open(ROOT/'schedule.lock',os.O_CREAT|os.O_RDWR,0o600)
+                fcntl.flock(self.local.fd,fcntl.LOCK_EX)
+            self.local.depth=getattr(self.local,'depth',0)+1
+        except BaseException:
+            if getattr(self.local,'fd',None) is not None:os.close(self.local.fd);self.local.fd=None
+            self.thread.release();raise
+        return self
+    def __exit__(self,*args):
+        self.local.depth-=1
+        if not self.local.depth:os.close(self.local.fd);self.local.fd=None
+        self.thread.release()
+
+LOCK = StoreLock()
 CATALOG = Path(__file__).with_name('anime_calendar_seed.json')
 
 
@@ -71,20 +93,60 @@ def set_status(series_id,status,confirmed=False):
     return {'ok':True}
 
 
+def read_data():
+    path=ROOT/'schedule.json'
+    return validate(json.loads((path if path.exists() else CATALOG).read_text()))
+
+
+def cache_poster(series_id,poster):
+    if not re.fullmatch('[a-z0-9-]{1,50}',series_id):raise ValueError('Anime no válido')
+    folder=ROOT/'covers';folder.mkdir(parents=True,exist_ok=True,mode=0o700)
+    tmp=folder/(secrets.token_hex(12)+'.tmp')
+    fd=os.open(tmp,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+    try:
+        with os.fdopen(fd,'wb') as f:f.write(poster)
+        os.replace(tmp,folder/(series_id+'.jpg'))
+    finally:tmp.unlink(missing_ok=True)
+
+
+def apply_metadata(data,series,metadata):
+    cache_poster(series['id'],metadata['_poster_bytes'])
+    series.update({k:v for k,v in metadata.items() if not k.startswith('_')})
+    series['cover']='/api/anime-calendar/covers/'+series['id']+'.jpg'
+    series['metadata_checked_at']=datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat()
+    if series.get('season_note'):series['season_note']=series['season_note'].replace('en España','en Japón').replace('Día en España','Día en Japón')
+    event=metadata.get('_next_event')
+    if event and event['date']>=datetime.now(ZoneInfo('Asia/Tokyo')).date().isoformat():
+        key=(series['id'],event['season'],event['episode'],'jp-original')
+        # Existing curated events win; the catalogue never overwrites official dates.
+        if not any((e['series'],e.get('season',1),e['episode'],e['version'])==key for e in data['events']):data['events'].append({**event,'series':series['id']})
+        if series.get('status')!='finished':series['status']='active'
+        series['season_note']='Próximo episodio japonés con fecha publicada. Seguimos también el doblaje castellano.'
+    elif series.get('season_note','').startswith('Añadido por ti.'):
+        series['season_note']='Próxima fecha japonesa por confirmar. Seguimos buscando noticias de continuación.'
+
+
 def manage_series(action,title=None,series_id=None):
-    """Unfollow preserves history and notification IDs; adding the same title restores it."""
+    """Resolve the poster immediately; never publish a new, unresolved card."""
+    metadata=None
+    if action=='add':
+        if not isinstance(title,str):raise ValueError('Introduce el título del anime')
+        title=' '.join(unicodedata.normalize('NFKC',title).split())
+        if not 1<=len(title)<=150 or any(unicodedata.category(c).startswith('C') for c in title):raise ValueError('Título no válido (máximo 150 caracteres)')
+        normalize=lambda value:unicodedata.normalize('NFKC',value).casefold()
+        with LOCK:
+            existing=next((s for s in read_data()['series'] if normalize(s['title'])==normalize(title)),None)
+            if existing and existing.get('tracking',True):raise ValueError('Este anime ya está en seguimiento')
+        from anime_metadata import lookup
+        if not existing or not (ROOT/'covers'/(existing['id']+'.jpg')).exists():metadata=lookup(title)
     with LOCK:
-        path=ROOT/'schedule.json'
-        data=validate(json.loads((path if path.exists() else CATALOG).read_text()))
+        data=read_data()
         if action=='remove':
             series=next((s for s in data['series'] if s['id']==series_id),None)
             if not series:raise ValueError('Anime no encontrado')
             series['tracking']=False
         elif action=='add':
-            if not isinstance(title,str):raise ValueError('Introduce el título del anime')
-            title=' '.join(unicodedata.normalize('NFKC',title).split())
-            if not 1<=len(title)<=150 or any(unicodedata.category(c).startswith('C') for c in title):raise ValueError('Título no válido (máximo 150 caracteres)')
-            normalize=lambda value:unicodedata.normalize('NFKC',value).casefold()
+            if metadata and any(s.get('tvmaze_id')==metadata['tvmaze_id'] and s.get('tracking',True) for s in data['series']):raise ValueError('Este anime ya está en seguimiento con otro nombre')
             series=next((s for s in data['series'] if normalize(s['title'])==normalize(title)),None)
             if series:
                 if series.get('tracking',True):raise ValueError('Este anime ya está en seguimiento')
@@ -92,12 +154,29 @@ def manage_series(action,title=None,series_id=None):
             else:
                 if len(data['series'])>=500:raise ValueError('Límite de 500 animes alcanzado')
                 series={'id':'custom-'+secrets.token_hex(10),'title':title,'status':'archived','tracking':True,'added_on':datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat(),
-                        'season_note':'Añadido por ti. Pendiente de identificar portada y próximos estrenos en la revisión automática.',
+                        'season_note':'Próxima fecha japonesa por confirmar. Seguimos buscando noticias de continuación.',
                         'dub_status':'Castellano: pendiente de confirmación'}
                 data['series'].append(series)
+            if metadata:apply_metadata(data,series,metadata)
         else:raise ValueError('Acción no válida')
-        private_write(path,validate(data))
+        private_write(ROOT/'schedule.json',validate(data))
         return {'ok':True,'id':series['id']}
+
+
+def refresh_metadata():
+    from anime_metadata import lookup
+    with LOCK:targets=[(s['id'],s['title']) for s in read_data()['series'] if s.get('tracking',True) and s['status']!='finished']
+    updated=[];failed=[]
+    for ident,title in targets:
+        try:
+            metadata=lookup(title)
+            with LOCK:
+                data=read_data();series=next((s for s in data['series'] if s['id']==ident),None)
+                if not series or not series.get('tracking',True):continue
+                apply_metadata(data,series,metadata);private_write(ROOT/'schedule.json',validate(data))
+            updated.append(ident)
+        except (ValueError,OSError,KeyError) as exc:failed.append({'id':ident,'error':str(exc)})
+    return {'updated':len(updated),'failed':failed}
 
 
 def private_write(path,data):
@@ -199,9 +278,10 @@ def notify_available(sender=None):
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--import-file',type=Path);parser.add_argument('--notify',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--import-file',type=Path);parser.add_argument('--notify',action='store_true');parser.add_argument('--refresh-metadata',action='store_true');args=parser.parse_args()
     if args.import_file:
         data=validate(json.loads(args.import_file.read_text()))
         with LOCK:private_write(ROOT/'schedule.json',data)
         print('Calendario validado y guardado; enlace privado conservado')
+    if args.refresh_metadata:print(json.dumps(refresh_metadata(),ensure_ascii=False))
     if args.notify:print(json.dumps(notify_available()))

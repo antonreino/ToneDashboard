@@ -95,7 +95,7 @@ window.ToneOperations=(()=>{
  addToggle.addEventListener('click',()=>showAdd(addForm.hidden));
  document.getElementById('animeAddCancel').addEventListener('click',()=>showAdd(false));
  const manage=async body=>{const r=await fetch('/api/anime-calendar/series',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'No se pudo guardar el anime');return d;};
- addForm.addEventListener('submit',async e=>{e.preventDefault();const button=addForm.querySelector('[type=submit]');button.disabled=true;addStatus.textContent='Guardando…';try{await manage({action:'add',title:addTitle.value});addForm.reset();addStatus.textContent='';showAdd(false);document.getElementById('animeCalendarLoad').click();}catch(err){addStatus.textContent=err.message;}finally{button.disabled=false;}});
+ addForm.addEventListener('submit',async e=>{e.preventDefault();const button=addForm.querySelector('[type=submit]');button.disabled=true;addStatus.textContent='Buscando anime y descargando portada…';try{await manage({action:'add',title:addTitle.value});addForm.reset();addStatus.textContent='';showAdd(false);document.getElementById('animeCalendarLoad').click();}catch(err){addStatus.textContent=err.message;}finally{button.disabled=false;}});
  document.getElementById('animeCalendarOpen').addEventListener('click',()=>{document.getElementById('animeCalendarPanel').open=true;document.getElementById('animeCalendarLoad').click();});
  document.getElementById('animeCalendarLoad').addEventListener('click',async()=>{
   try{
@@ -105,22 +105,22 @@ window.ToneOperations=(()=>{
     const card=document.createElement('article');card.className='anime-card';
     const header=document.createElement('div');header.className='anime-card__header';
     const poster=document.createElement('div');poster.className='anime-card__poster';
-    if(s.cover?.startsWith('https://')){const img=document.createElement('img');img.src=s.cover;img.alt='Portada de '+s.title;img.loading='lazy';img.referrerPolicy='no-referrer';poster.append(img);}else{const placeholder=document.createElement('span');placeholder.className='anime-card__placeholder';placeholder.textContent='Portada pendiente';poster.append(placeholder);}
+    if(s.cover?.startsWith('https://')||/^\/api\/anime-calendar\/covers\/[a-z0-9-]+\.jpg$/.test(s.cover||'')){const img=document.createElement('img');img.src=s.cover;img.alt='Portada de '+s.title;img.loading='lazy';img.referrerPolicy='no-referrer';img.addEventListener('error',()=>{img.hidden=true;const notice=document.createElement('span');notice.className='anime-card__placeholder';notice.textContent='No se pudo cargar la portada';poster.append(notice);},{once:true});poster.append(img);}else{const placeholder=document.createElement('span');placeholder.className='anime-card__placeholder';placeholder.textContent='Portada pendiente';poster.append(placeholder);}
     const heading=document.createElement('div');heading.className='anime-card__heading';
     const state=document.createElement('span');state.className='anime-card__badge'+(s.status==='archived'?' is-waiting':'');state.textContent=s.status==='archived'?'Esperando temporada':'En emisión';
     const title=document.createElement('h3');title.textContent=s.title;
     const note=document.createElement('p');note.className='anime-card__note';note.textContent=s.season_note||(s.status==='archived'?'Seguimos buscando noticias y fecha de la próxima temporada.':'Estreno japonés y doblaje castellano por separado.');
     heading.append(state,title,note);header.append(poster,heading);card.append(header);
-    const content=document.createElement('div');content.className='anime-card__body';
+    const content=document.createElement('div');content.className='anime-card__body';const eventList=document.createElement('div');eventList.className='anime-card__events';content.append(eventList);
     const events=d.events.filter(e=>e.series===s.id);
     for(const e of events){
      const line=document.createElement('div');line.className='anime-card__event';
      const type=document.createElement('span');type.className='anime-card__label';type.textContent=e.version==='dub-es'?'DOBLAJE CASTELLANO':e.version==='jp-original'?'ESTRENO EN JAPÓN · JST':'SUBTITULADO · ESPAÑA';
      const day=document.createElement('strong');day.textContent=new Date(e.date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
      const episode=document.createElement('span');episode.textContent='Temporada '+e.season+' · Episodio '+e.episode;
-     line.append(type,day,episode);content.append(line);
+     line.append(type,day,episode);eventList.append(line);
     }
-    if(!events.length){const line=document.createElement('div');line.className='anime-card__event';const label=document.createElement('span');label.className='anime-card__label';label.textContent='PRÓXIMO ESTRENO';const text=document.createElement('strong');text.textContent='Fecha por confirmar';line.append(label,text);content.append(line);}
+    if(!events.length){const line=document.createElement('div');line.className='anime-card__event';const label=document.createElement('span');label.className='anime-card__label';label.textContent='PRÓXIMO ESTRENO';const text=document.createElement('strong');text.textContent='Fecha por confirmar';line.append(label,text);eventList.append(line);}
     const dub=document.createElement('p');dub.className='anime-card__dub';dub.textContent=s.dub_status||'Castellano: pendiente de confirmación';content.append(dub);card.append(content);
     const actions=document.createElement('div');actions.className='anime-card__actions';
     for(const [label,next] of [[s.status==='archived'?'Marcar en emisión':'Esperar próxima temporada',s.status==='archived'?'active':'archived'],['Historia finalizada','finished']]){

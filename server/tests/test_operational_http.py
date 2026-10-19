@@ -72,3 +72,13 @@ class OperationalHTTPTests(unittest.TestCase):
             manage.assert_not_called()
             self.assertEqual(self.request('POST',path,b'{"action":"add","title":"Frieren"}')[0],200)
             manage.assert_called_once_with('add','Frieren',None)
+
+    def test_calendar_cached_poster_is_authenticated_and_path_bounded(self):
+        import anime_calendar,tempfile
+        with tempfile.TemporaryDirectory() as folder,patch.object(anime_calendar,'ROOT',Path(folder)):
+            anime_calendar.cache_poster('poster-test',b'\xff\xd8\xfftest')
+            path='/api/anime-calendar/covers/poster-test.jpg'
+            self.assertEqual(self.request('GET',path,Authorization='')[0],401)
+            code,headers,body=self.request('GET',path)
+            self.assertEqual(code,200);self.assertEqual(headers['Content-Type'],'image/jpeg');self.assertTrue(body.startswith(b'\xff\xd8'))
+            self.assertEqual(self.request('GET','/api/anime-calendar/covers/../subscription.json')[0],404)

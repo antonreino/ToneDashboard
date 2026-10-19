@@ -10,6 +10,8 @@ class CalendarTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name);p=patch.object(c,'ROOT',self.root);p.start();self.addCleanup(p.stop)
+        lookup=patch('anime_metadata.lookup',side_effect=lambda title:{'tvmaze_id':sum(map(ord,title)),'metadata_source':'https://www.tvmaze.com/shows/999/test','_poster_bytes':b'\xff\xd8\xfftest'})
+        lookup.start();self.addCleanup(lookup.stop)
         self.data={'checked_at':'2026-10-19','series':[{'id':'aoashi','title':'Ao Ashi','status':'active'}],'events':[{'series':'aoashi','season':2,'episode':4,'version':'sub-es','region':'ES','date':'2099-10-25','source':'https://example.org/schedule'}]}
     def test_token_private_stable_revocable(self):
         first=c.subscription();self.assertEqual(first,c.subscription())
@@ -139,3 +141,32 @@ class JapanReleaseTests(unittest.TestCase):
             self.data['events'][0]['date']='2026-10-19'
             c.private_write(self.root/'schedule.json',self.data)
             self.assertEqual([e['version'] for e in c.snapshot()['events']],['dub-es'])
+
+class ImmediatePosterTests(unittest.TestCase):
+    setUp=CalendarTests.setUp
+    def test_add_caches_before_card_is_published_and_rejects_alias_duplicate(self):
+        ident=c.manage_series('add','A series')['id'];data=c.snapshot();series=next(s for s in data['series'] if s['id']==ident)
+        self.assertEqual(series['cover'],'/api/anime-calendar/covers/'+ident+'.jpg')
+        self.assertTrue((self.root/'covers'/(ident+'.jpg')).read_bytes().startswith(b'\xff\xd8'))
+        with patch('anime_metadata.lookup',return_value={'tvmaze_id':series['tvmaze_id'],'_poster_bytes':b'\xff\xd8\xfftest'}):
+            with self.assertRaisesRegex(ValueError,'otro nombre'):c.manage_series('add','Alias of the same series')
+    def test_failed_lookup_never_adds_unresolved_card(self):
+        with patch('anime_metadata.lookup',side_effect=ValueError('No hay coincidencia')):
+            with self.assertRaises(ValueError):c.manage_series('add','Unknown title')
+        self.assertFalse((self.root/'schedule.json').exists())
+    def test_refresh_rereads_and_preserves_manual_removal(self):
+        c.private_write(self.root/'schedule.json',self.data)
+        def lookup(title):
+            c.manage_series('remove',series_id='aoashi')
+            return {'tvmaze_id':1,'_poster_bytes':b'\xff\xd8\xfftest'}
+        with patch('anime_metadata.lookup',side_effect=lookup):result=c.refresh_metadata()
+        self.assertEqual(result['updated'],0);self.assertEqual(c.snapshot()['series'],[])
+
+    def test_catalog_process_waits_for_dashboard_transaction(self):
+        import subprocess,sys
+        with c.LOCK:
+            child=subprocess.Popen([sys.executable,'-c',"import fcntl,sys; f=open(sys.argv[1],'r+'); fcntl.flock(f,fcntl.LOCK_EX); print('locked',flush=True)",str(self.root/'schedule.lock')],stdout=subprocess.PIPE)
+            self.addCleanup(lambda:child.terminate() if child.poll() is None else None)
+            with self.assertRaises(subprocess.TimeoutExpired):child.communicate(timeout=.1)
+        output,_=child.communicate(timeout=5)
+        self.assertEqual(output.strip(),b'locked')

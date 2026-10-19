@@ -369,6 +369,14 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:data,code={'error':'No se pudo completar la consulta'},503
             self.send_bytes(json.dumps(data,ensure_ascii=False).encode(),'application/json; charset=utf-8',code)
             return
+        if parsed.path.startswith('/api/anime-calendar/covers/'):
+            import anime_calendar
+            name=parsed.path.removeprefix('/api/anime-calendar/covers/')
+            if not re.fullmatch(r'[a-z0-9-]{1,50}\.jpg',name):self.send_error(404);return
+            path=anime_calendar.ROOT/'covers'/name
+            try:self.send_bytes(path.read_bytes(),'image/jpeg')
+            except FileNotFoundError:self.send_error(404)
+            return
         if parsed.path == '/api/anime-calendar':
             import anime_calendar
             self.send_bytes(json.dumps(anime_calendar.snapshot(),ensure_ascii=False).encode(),'application/json; charset=utf-8')
