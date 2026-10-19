@@ -112,19 +112,20 @@
       "series": "black-clover",
       "season": 2,
       "episode": 4,
-      "version": "sub-es",
-      "region": "ES",
+      "version": "jp-original",
+      "region": "JP",
       "date": "2026-10-24",
-      "source": "https://elcomercio.pe/mag/fama/que-ver/black-clover-temporada-2-guia-de-episodios-fecha-y-hora-de-estreno-de-cada-capitulo-del-anime-de-crunchyroll-video-nnda-nnlt-noticia/"
+      "source": "https://bclover.jp/onair/"
     },
     {
       "series": "aoashi",
       "season": 2,
       "episode": 4,
-      "version": "sub-es",
-      "region": "ES",
+      "version": "jp-original",
+      "region": "JP",
       "date": "2026-10-25",
-      "source": "https://freakelitex.com/temporada-2-episodio-4-aoashi-horario-fecha-y-donde-ver-online-el-anime/"
+      "source": "https://aoashi-pr.com/onair/"
     }
-  ]
+  ],
+  "release_basis": "JP"
 }

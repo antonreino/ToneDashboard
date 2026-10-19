@@ -31,12 +31,12 @@ def validate(data):
         if not isinstance(series.get('title'),str) or not 1<=len(series['title'])<=150:raise ValueError('Título no válido')
     keys=set()
     for event in data['events']:
-        if event.get('series') not in ids or event.get('version') not in ('sub-es','dub-es'):raise ValueError('Versión no válida')
+        if event.get('series') not in ids or event.get('version') not in ('sub-es','dub-es','jp-original'):raise ValueError('Versión no válida')
         if type(event.get('episode')) is not int or not 1<=event['episode']<=99999:raise ValueError('Episodio no válido')
         day=date.fromisoformat(event['date'])
         source=event.get('source','')
         parsed=urlsplit(source)
-        if event.get('region')!='ES' or parsed.scheme!='https' or not parsed.hostname or parsed.username or parsed.password or any(ord(c)<32 for c in source):raise ValueError('Fuente/región no válida')
+        if event.get('region')!=('JP' if event['version']=='jp-original' else 'ES') or parsed.scheme!='https' or not parsed.hostname or parsed.username or parsed.password or any(ord(c)<32 for c in source):raise ValueError('Fuente/región no válida')
         if 'available' in event and type(event['available']) is not bool:raise ValueError('Disponibilidad no válida')
         key=(event['series'],event.get('season',1),event['episode'],event['version'])
         if type(event.get('season',1)) is not int or not 0<=event.get('season',1)<=999 or key in keys:raise ValueError('Evento duplicado/no válido')
@@ -48,10 +48,14 @@ def snapshot():
     with LOCK:
         path=ROOT/'schedule.json'
         data=validate(json.loads((path if path.exists() else CATALOG).read_text()))
-    today=datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat()
     active={s['id'] for s in data['series'] if s['status']=='active' and s.get('tracking',True)}
     visible=[s for s in data['series'] if s['status']!='finished' and s.get('tracking',True)]
-    return {**data,'series':visible,'events':sorted([e for e in data['events'] if e['series'] in active and e['date']>=today],key=lambda e:(e['date'],e['series'],e['version']))}
+    def visible_event(e):
+        if data.get('release_basis')=='JP' and e['version']=='sub-es':return False
+        today=datetime.now(ZoneInfo('Asia/Tokyo' if e['version']=='jp-original' else 'Europe/Madrid')).date().isoformat()
+        return e['series'] in active and e['date']>=today
+    return {**data,'series':visible,'events':sorted([e for e in data['events'] if visible_event(e)],key=lambda e:(e['date'],e['series'],e['version']))}
+
 
 
 def set_status(series_id,status,confirmed=False):
@@ -130,14 +134,14 @@ def calendar(data=None):
     data=snapshot() if data is None else data
     titles={s['id']:s['title'] for s in data['series']}
     stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-    lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tone Dashboard//Anime ES//ES','CALSCALE:GREGORIAN','X-WR-CALNAME:Tone · Anime España','REFRESH-INTERVAL;VALUE=DURATION:PT6H','X-PUBLISHED-TTL:PT6H']
+    lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tone Dashboard//Anime ES//ES','CALSCALE:GREGORIAN','X-WR-CALNAME:Tone · Anime Japón y castellano','REFRESH-INTERVAL;VALUE=DURATION:PT6H','X-PUBLISHED-TTL:PT6H']
     for e in data['events']:
         day=date.fromisoformat(e['date']).strftime('%Y%m%d')
-        version='Subtitulado España' if e['version']=='sub-es' else 'Doblaje castellano'
+        version={'sub-es':'Subtitulado España','dub-es':'Doblaje castellano','jp-original':'Estreno en Japón'}[e['version']]
         uid=f"{e['series']}-s{e.get('season',1)}-e{e['episode']}-{e['version']}@tone-dashboard"
         lines+=['BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+day,
                 'SUMMARY:'+escape(f"{titles[e['series']]} · T{e.get('season',1)} E{e['episode']} · {version}"),
-                'DESCRIPTION:'+escape('Disponible en España. Día de estreno; hora no confirmada. Fuente: '+e['source']),
+                'DESCRIPTION:'+escape(('Fecha de estreno en Japón (JST); no garantiza publicación subtitulada en España.' if e['version']=='jp-original' else 'Fecha de estreno en España.')+' Hora no confirmada. Fuente: '+e['source']),
                 'URL:'+e['source'],'TRANSP:TRANSPARENT','END:VEVENT']
     lines+=['END:VCALENDAR']
     # Fold by UTF-8 octets, without splitting characters (RFC 5545).
@@ -177,13 +181,15 @@ def notify_available(sender=None):
                 except requests.RequestException:raise RuntimeError('Envío incierto; no se repetirá automáticamente') from None
                 finally:session.close()
         for e in data['events']:
-            if e['series'] not in titles or e.get('available') is not True or e['date']>datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat():continue
+            if data.get('release_basis')=='JP' and e['version']=='sub-es':continue
+            today=datetime.now(ZoneInfo('Asia/Tokyo' if e['version']=='jp-original' else 'Europe/Madrid')).date().isoformat()
+            if e['series'] not in titles or e.get('available') is not True or e['date']>today:continue
             if e['date']<added.get(e['series'],'0001-01-01'):continue
             key=f"{e['series']}-s{e.get('season',1)}-e{e['episode']}-{e['version']}"
             if ledger.get(key) in ('sent','sending','uncertain'):continue
             ledger[key]='sending';private_write(ledger_path,ledger)
-            version='Doblaje castellano' if e['version']=='dub-es' else 'Subtitulado en España'
-            try:sender(f"🎬 {titles[e['series']]} · T{e.get('season',1)} E{e['episode']}\n{version} disponible.\n{e['source']}")
+            version={'sub-es':'Subtitulado en España disponible','dub-es':'Doblaje castellano disponible','jp-original':'Estrenado en Japón (JST)'}[e['version']]
+            try:sender(f"🎬 {titles[e['series']]} · T{e.get('season',1)} E{e['episode']}\n{version}.\n{e['source']}")
             except ValueError:
                 ledger[key]='failed';private_write(ledger_path,ledger);raise ValueError('Telegram no ha confirmado el aviso') from None
             except Exception:

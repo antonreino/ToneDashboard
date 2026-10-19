@@ -65,7 +65,7 @@ try{
     await page.waitForFunction(()=>document.getElementById('orbitPairResult').textContent==='');
     await page.unroute('**/api/orbit/pair-code');
   }
-  await page.route('**/api/anime-calendar',route=>route.fulfill({json:{checked_at:'2026-10-19',series:[{id:'aoashi',title:'Ao Ashi',status:'active',cover:'https://cover.test/aoashi.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'},{id:'black-clover',title:'Black Clover',status:'archived',cover:'https://cover.test/black.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'}],events:[{series:'aoashi',season:2,episode:4,date:'2026-10-25',version:'sub-es'}]}}));
+  await page.route('**/api/anime-calendar',route=>route.fulfill({json:{checked_at:'2026-10-19',series:[{id:'aoashi',title:'Ao Ashi',status:'active',cover:'https://cover.test/aoashi.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'},{id:'black-clover',title:'Black Clover',status:'archived',cover:'https://cover.test/black.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'}],events:[{series:'aoashi',season:2,episode:4,date:'2026-10-25',version:'jp-original'}]}}));
   await page.route('https://cover.test/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="190"><rect width="300" height="190" fill="navy"/></svg>'}));
   for(const width of [390,1440]){
     await page.setViewportSize({width,height:1000});
@@ -73,7 +73,7 @@ try{
     await page.locator('#animeCalendarOpen').click();
     await page.locator('.anime-card h3').getByText('Ao Ashi',{exact:true}).waitFor();
     assert.equal(await page.locator('.anime-card img').first().getAttribute('alt'),'Portada de Ao Ashi');
-    assert(await page.locator('.anime-card').first().textContent().then(t=>t.includes('25 de octubre')&&t.includes('SUBTITULADO · ESPAÑA')));
+    assert(await page.locator('.anime-card').first().textContent().then(t=>t.includes('25 de octubre')&&t.includes('ESTRENO EN JAPÓN · JST')));
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.locator('.anime-card img').evaluateAll(images=>Promise.all(images.map(img=>img.decode())));
     const layout=await page.locator('.anime-card').evaluateAll(cards=>cards.map(card=>{

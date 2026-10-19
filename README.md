@@ -1,4 +1,4 @@
-# Tone Dashboard · 1.1.4
+# Tone Dashboard · 1.1.5
 
 Un único proyecto para web, macOS/iOS, Organizer, descargas, Telegram, ofertas y Orbit.
 
@@ -31,7 +31,7 @@ El dashboard mantiene el puerto8765 y las rutas API. El tracker utiliza `workers
 
 ## Apps Apple
 
-Abrir `apple/ToneDashboardApps.xcodeproj`: versión 1.1.4. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
+Abrir `apple/ToneDashboardApps.xcodeproj`: versión 1.1.5. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
 
 Las apps cargan `/` del dashboard HTTPS. Las mejoras de interfaz se reciben al recargar; cambios del contenedor requieren nueva compilación. Autenticación y navegación quedan limitadas al origen configurado. No se entregan contraseñas a JavaScript ni hay un puente de ejecución de comandos.
 
@@ -75,4 +75,4 @@ Consulta [Operación y recuperación](docs/OPERACIONES.md) para conocer límites
 
 ## Numeración de versiones
 
-La próxima versión publicada será **1.1.4**, seguida de 1.1.5, …, 1.1.9 y **1.2.0**. Cada versión publicada incrementa el último dígito; después de 9, ese dígito vuelve a 0 y se incrementa el componente central. La versión principal permanece en 1 hasta que el propietario autorice expresamente cambiarla. La versión pública es común a web, macOS e iOS y se presenta sin sufijos ni números entre paréntesis. El contador interno de Apple no forma parte del nombre público.
+La próxima versión publicada será **1.1.5**, seguida de 1.1.6, …, 1.1.9 y **1.2.0**. Cada versión publicada incrementa el último dígito; después de 9, ese dígito vuelve a 0 y se incrementa el componente central. La versión principal permanece en 1 hasta que el propietario autorice expresamente cambiarla. La versión pública es común a web, macOS e iOS y se presenta sin sufijos ni números entre paréntesis. El contador interno de Apple no forma parte del nombre público.

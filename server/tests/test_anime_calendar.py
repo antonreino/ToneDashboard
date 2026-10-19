@@ -99,3 +99,43 @@ class ManageSeriesTests(unittest.TestCase):
         data['events']=[{**self.data['events'][0],'series':added,'date':'2000-01-01','available':True}]
         c.private_write(self.root/'schedule.json',data)
         self.assertEqual(c.notify_available(lambda _:self.fail('Historical notice'))['sent'],0)
+
+class JapanReleaseTests(unittest.TestCase):
+    setUp=CalendarTests.setUp
+    def test_japan_region_and_feed_do_not_claim_spanish_availability(self):
+        self.data['events'][0].update(version='jp-original',region='JP')
+        c.validate(self.data);body=c.calendar(self.data).decode().replace('\r\n ','')
+        self.assertIn('Estreno en Japón',body);self.assertIn('JST',body)
+        self.assertNotIn('Disponible en España',body)
+        self.data['events'][0]['region']='ES'
+        with self.assertRaises(ValueError):c.validate(self.data)
+    def test_japan_preference_hides_legacy_spanish_sub_events_without_deleting(self):
+        self.data['release_basis']='JP'
+        jp={**self.data['events'][0],'version':'jp-original','region':'JP'}
+        dub={**self.data['events'][0],'version':'dub-es'}
+        self.data['events'] += [jp,dub]
+        c.private_write(self.root/'schedule.json',self.data)
+        self.assertEqual({e['version'] for e in c.snapshot()['events']},{'jp-original','dub-es'})
+        self.assertEqual(len(json.loads((self.root/'schedule.json').read_text())['events']),3)
+    def test_japan_notices_distinct_from_castilian_and_ignore_legacy_subs(self):
+        self.data['release_basis']='JP';self.data['events'][0].update(date='2026-10-01',available=True)
+        self.data['events'] += [{**self.data['events'][0],'version':'jp-original','region':'JP'},{**self.data['events'][0],'version':'dub-es'}]
+        c.private_write(self.root/'schedule.json',self.data);sent=[]
+        self.assertEqual(c.notify_available(sent.append)['sent'],2)
+        self.assertIn('Estrenado en Japón (JST)',sent[0]);self.assertIn('castellano',sent[1])
+        self.assertEqual(c.notify_available(sent.append)['sent'],0)
+    def test_japanese_day_boundary_does_not_use_madrid_day(self):
+        from datetime import datetime, timezone
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls,tz=None):return datetime(2026,10,19,16,tzinfo=timezone.utc).astimezone(tz)
+        self.data['release_basis']='JP'
+        self.data['events'][0].update(date='2026-10-20',version='jp-original',region='JP',available=True)
+        self.data['events'].append({**self.data['events'][0],'version':'dub-es','region':'ES'})
+        c.private_write(self.root/'schedule.json',self.data)
+        with patch.object(c,'datetime',FixedDateTime):
+            sent=[];self.assertEqual(c.notify_available(sent.append)['sent'],1)
+            self.assertIn('Japón',sent[0])
+            self.data['events'][0]['date']='2026-10-19'
+            c.private_write(self.root/'schedule.json',self.data)
+            self.assertEqual([e['version'] for e in c.snapshot()['events']],['dub-es'])

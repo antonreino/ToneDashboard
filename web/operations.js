@@ -109,13 +109,13 @@ window.ToneOperations=(()=>{
     const heading=document.createElement('div');heading.className='anime-card__heading';
     const state=document.createElement('span');state.className='anime-card__badge'+(s.status==='archived'?' is-waiting':'');state.textContent=s.status==='archived'?'Esperando temporada':'En emisión';
     const title=document.createElement('h3');title.textContent=s.title;
-    const note=document.createElement('p');note.className='anime-card__note';note.textContent=s.season_note||(s.status==='archived'?'Seguimos buscando noticias y fecha de la próxima temporada.':'Subtítulos y castellano con fechas independientes.');
+    const note=document.createElement('p');note.className='anime-card__note';note.textContent=s.season_note||(s.status==='archived'?'Seguimos buscando noticias y fecha de la próxima temporada.':'Estreno japonés y doblaje castellano por separado.');
     heading.append(state,title,note);header.append(poster,heading);card.append(header);
     const content=document.createElement('div');content.className='anime-card__body';
     const events=d.events.filter(e=>e.series===s.id);
     for(const e of events){
      const line=document.createElement('div');line.className='anime-card__event';
-     const type=document.createElement('span');type.className='anime-card__label';type.textContent=e.version==='dub-es'?'DOBLAJE CASTELLANO':'SUBTITULADO · ESPAÑA';
+     const type=document.createElement('span');type.className='anime-card__label';type.textContent=e.version==='dub-es'?'DOBLAJE CASTELLANO':e.version==='jp-original'?'ESTRENO EN JAPÓN · JST':'SUBTITULADO · ESPAÑA';
      const day=document.createElement('strong');day.textContent=new Date(e.date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
      const episode=document.createElement('span');episode.textContent='Temporada '+e.season+' · Episodio '+e.episode;
      line.append(type,day,episode);content.append(line);
