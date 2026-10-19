@@ -798,6 +798,18 @@ class MediaOrganizer:
                 raise OrganizerError(f"No se pudo comprobar la biblioteca remota ({category}): {error_summary(exc)}") from exc
             matches = [name for name in directories if self.normalize_name(name) == normalized_target]
             if len(matches) > 1:
+                try:
+                    overrides = json.loads(os.getenv("ORGANIZER_SERIES_FOLDER_OVERRIDES", "{}"))
+                    if not isinstance(overrides, dict):
+                        raise ValueError("Se esperaba un objeto")
+                    selected = overrides.get(category, {}).get(normalized_target)
+                except (ValueError, AttributeError, TypeError) as exc:
+                    raise OrganizerError("Configuración de carpetas preferidas no válida") from exc
+                if selected is not None:
+                    if not isinstance(selected, str) or selected not in matches:
+                        raise OrganizerError("La carpeta preferida no existe entre las coincidencias remotas")
+                    logging.info("Carpeta remota preferida: categoría=%s | título=%s | carpeta=%s", category, parsed_title, selected)
+                    return category, selected
                 raise OrganizerError("Hay varias carpetas remotas con el mismo título normalizado")
             if matches:
                 return category, matches[0]

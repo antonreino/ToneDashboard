@@ -257,3 +257,13 @@ class OrganizerRegressions(unittest.TestCase):
             movie = self.org.classify(m.INBOX_DIR / 'Dune.2021.2160p.mkv')
             self.assertEqual(movie.category, 'movies')
             self.assertIsNone(movie.episode)
+
+    def test_explicit_remote_folder_override_resolves_case_collision(self):
+        self.org.uploader.list_remote_dirs.return_value=['Sueños de Libertad','Sueños de libertad']
+        with patch.dict(os.environ,{'ORGANIZER_SERIES_FOLDER_OVERRIDES':'{"series":{"suenosdelibertad":"Sueños de Libertad"}}'}):
+            self.assertEqual(self.org.resolve_existing_series('Sueños de libertad','series'),('series','Sueños de Libertad'))
+    def test_remote_folder_override_never_guesses_or_allows_other_path(self):
+        self.org.uploader.list_remote_dirs.return_value=['Sueños de Libertad','Sueños de libertad']
+        for config in ['{}','[]','{"series":3}','{"series":{"suenosdelibertad":"../other"}}']:
+            with patch.dict(os.environ,{'ORGANIZER_SERIES_FOLDER_OVERRIDES':config}),self.assertRaises(m.OrganizerError):
+                self.org.resolve_existing_series('Sueños de libertad','series')

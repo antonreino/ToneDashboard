@@ -210,7 +210,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tone Dashboard";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.7;
+				MARKETING_VERSION = 1.1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.macos;
 				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = macosx;
@@ -230,7 +230,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tone Dashboard";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.7;
+				MARKETING_VERSION = 1.1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.ios;
 				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = iphoneos;
@@ -252,7 +252,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tone Dashboard";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.7;
+				MARKETING_VERSION = 1.1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.ios;
 				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = iphoneos;
@@ -275,7 +275,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tone Dashboard";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.7;
+				MARKETING_VERSION = 1.1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = ovh.tonecas.embydashboard.macos;
 				PRODUCT_NAME = ToneDashboardApps;
 				SDKROOT = macosx;
