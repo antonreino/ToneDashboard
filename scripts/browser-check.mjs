@@ -65,16 +65,23 @@ try{
     await page.waitForFunction(()=>document.getElementById('orbitPairResult').textContent==='');
     await page.unroute('**/api/orbit/pair-code');
   }
-  await page.route('**/api/anime-calendar',route=>route.fulfill({json:{checked_at:'2026-10-19',series:[{id:'aoashi',title:'Ao Ashi',status:'active',cover:'https://cover.test/aoashi.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'}],events:[{series:'aoashi',season:2,episode:4,date:'2026-10-25',version:'sub-es'}]}}));
+  await page.route('**/api/anime-calendar',route=>route.fulfill({json:{checked_at:'2026-10-19',series:[{id:'aoashi',title:'Ao Ashi',status:'active',cover:'https://cover.test/aoashi.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'},{id:'black-clover',title:'Black Clover',status:'archived',cover:'https://cover.test/black.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'}],events:[{series:'aoashi',season:2,episode:4,date:'2026-10-25',version:'sub-es'}]}}));
   await page.route('https://cover.test/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="190"><rect width="300" height="190" fill="navy"/></svg>'}));
   for(const width of [390,1440]){
     await page.setViewportSize({width,height:1000});
     await page.locator('.phone-nav').getByRole('button',{name:'Más',exact:true}).click();
     await page.locator('#animeCalendarOpen').click();
     await page.locator('.anime-card h3').getByText('Ao Ashi',{exact:true}).waitFor();
-    assert.equal(await page.locator('.anime-card img').getAttribute('alt'),'Portada de Ao Ashi');
-    assert(await page.locator('.anime-card').textContent().then(t=>t.includes('25 de octubre')&&t.includes('Subtitulado España')));
+    assert.equal(await page.locator('.anime-card img').first().getAttribute('alt'),'Portada de Ao Ashi');
+    assert(await page.locator('.anime-card').first().textContent().then(t=>t.includes('25 de octubre')&&t.includes('SUBTITULADO · ESPAÑA')));
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    const layout=await page.locator('.anime-card').evaluateAll(cards=>cards.map(card=>{
+      const poster=card.querySelector('.anime-card__poster').getBoundingClientRect();
+      const buttons=[...card.querySelectorAll('.anime-card__actions button')].map(b=>b.getBoundingClientRect());
+      return {ratio:poster.width/poster.height,gap:buttons[1].top-buttons[0].bottom,fit:getComputedStyle(card.querySelector('img')).objectFit};
+    }));
+    assert.equal(layout.length,2);for(const card of layout){assert(Math.abs(card.ratio-5/7)<.01);assert(card.gap>=11);assert.equal(card.fit,'contain');}
+    await page.getByText('Esperando temporada',{exact:true}).waitFor();
     await page.screenshot({path:`test-results/browser/${width}-anime-calendar.png`,fullPage:true});
   }
   assert.deepEqual(errors,[]);

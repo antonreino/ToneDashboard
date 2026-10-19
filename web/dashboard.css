@@ -647,6 +647,39 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .phone-info>div>.host-layout,.phone-info>div>.metrics{margin-bottom:0}
 }
 
-#animeCalendarEvents{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;margin-top:18px}.anime-card{border:1px solid var(--border, #26364a);border-radius:18px;overflow:hidden;min-width:0;background:rgba(255,255,255,.025)}.anime-card>img{width:100%;height:190px;object-fit:cover;display:block}.anime-card>div{padding:18px}.anime-card h3{margin:0 0 12px}.anime-card p{line-height:1.55;overflow-wrap:anywhere}.anime-card .button{margin:6px 6px 0 0;max-width:100%;white-space:normal}
-
-#animeCalendarPanel{padding:18px}#animeCalendarPanel>.button{margin-bottom:10px}#animeCalendarPanel>p{line-height:1.55}#animeCalendarPanel>h2{margin-top:0}
+/* Anime: consistent portrait frames, readable release blocks and separated actions. */
+#animeCalendarPanel{padding:clamp(18px,3vw,30px)}
+#animeCalendarPanel>h2{margin:0 0 8px}
+#animeCalendarPanel>p{line-height:1.6;max-width:68ch}
+.anime-calendar-toolbar{display:flex;flex-wrap:wrap;gap:12px;margin:22px 0 16px}
+.anime-calendar-toolbar .button{margin:0;min-height:46px;white-space:normal}
+#animeCalendarStatus{color:var(--muted,#a7b7cc);font-size:.9rem}
+#animeCalendarEvents{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:24px;margin:24px 0}
+.anime-card{display:flex;flex-direction:column;border:1px solid #2a394e;border-radius:20px;overflow:hidden;min-width:0;background:linear-gradient(145deg,#152236,#101a29)}
+.anime-card__header{display:grid;grid-template-columns:112px minmax(0,1fr);gap:20px;padding:22px;align-items:start}
+.anime-card__poster{aspect-ratio:5/7;width:100%;overflow:hidden;border-radius:10px;background:#09111d;border:1px solid #344258}
+.anime-card__poster img{width:100%;height:100%;object-fit:contain;display:block}
+.anime-card__heading{min-width:0}
+.anime-card h3{margin:12px 0 10px;font-size:1.3rem;line-height:1.3;overflow-wrap:anywhere}
+.anime-card__badge{display:inline-block;padding:6px 10px;border-radius:8px;background:#123c37;color:#99e9ce;font-size:.74rem;font-weight:700;line-height:1.4}
+.anime-card__badge.is-waiting{background:#34304c;color:#d4c6ff}
+.anime-card__note{margin:0;color:#b1bfd1;font-size:.88rem;line-height:1.55}
+.anime-card__body{padding:0 22px 20px;flex:1}
+.anime-card__event{display:grid;gap:8px;padding:16px;background:#0c1523;border:1px solid #28364b;border-radius:12px;margin-bottom:12px}
+.anime-card__label{font-size:.68rem;letter-spacing:.08em;color:#aebde0;font-weight:750;line-height:1.5}
+.anime-card__event strong{font-size:1rem;line-height:1.45}
+.anime-card__event>span:last-child{color:#aebed2;font-size:.87rem}
+.anime-card__dub{color:#aebed2;font-size:.87rem;line-height:1.6;margin:14px 0 0}
+.anime-card__actions{display:grid;gap:12px;padding:20px 22px;border-top:1px solid #2a394e;background:#0d1725}
+.anime-card__actions .button{margin:0!important;width:100%;min-height:44px;white-space:normal;line-height:1.45;padding:12px 14px;box-shadow:none}
+.anime-card__actions .anime-card__archive{background:#253750;color:#e2ebff;border:1px solid #3a506e}
+.anime-card__actions .anime-card__finish{background:transparent;color:#b6c3d5;border:1px solid #334257;font-weight:500}
+#animeCalendarPanel>details{padding-top:18px;border-top:1px solid #29394f;color:#bac8dd;line-height:1.6}
+@media(max-width:480px){
+ .anime-calendar-toolbar{display:grid;gap:12px}
+ #animeCalendarEvents{gap:20px}
+ .anime-card__header{grid-template-columns:92px minmax(0,1fr);gap:16px;padding:18px}
+ .anime-card h3{font-size:1.15rem}
+ .anime-card__body{padding:0 18px 18px}
+ .anime-card__actions{padding:18px}
+}
