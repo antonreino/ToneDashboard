@@ -683,3 +683,12 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
  .anime-card__body{padding:0 18px 18px}
  .anime-card__actions{padding:18px}
 }
+
+.anime-add-form:not([hidden]){display:grid;gap:12px;padding:20px;margin:20px 0;border:1px solid #3a506e;border-radius:14px;background:#0c1523}
+.anime-add-form label{font-weight:700}
+.anime-add-form input{width:100%;box-sizing:border-box;min-height:46px;font-size:16px}
+.anime-add-form p{margin:0;color:#b1bfd1;line-height:1.55}
+.anime-add-form>div{display:flex;flex-wrap:wrap;gap:12px}
+.anime-add-form .button{margin:0;min-height:44px}
+.anime-card__actions .anime-card__remove{margin-top:4px!important;background:transparent;border:1px solid #774653;color:#ffc4ce}
+.anime-card__placeholder{position:absolute;inset:0;display:grid;place-content:center;padding:10px;text-align:center;color:#aebed2;font-size:.8rem}

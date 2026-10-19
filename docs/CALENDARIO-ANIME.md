@@ -1,4 +1,4 @@
-# Calendario de anime España · 1.1.3
+# Calendario de anime España · 1.1.4
 
 Interfaz común web/macOS/iOS: Más → Calendario de anime. Tarjetas con portada, próximas fechas e idioma. Sub-es significa disponibilidad en España subtitulada, dub-es audio castellano; nunca inferir castellano de «español» genérico o español latino.
 
@@ -19,3 +19,5 @@ La finalización del manga no prueba que haya terminado su adaptación animada. 
 Validación 19/10/2026: 175 pruebas de servidor y 74 de tracker correctas; comprobaciones JS y navegador con portadas y fechas a 390/1440 px correctas. Endpoint real de calendario HTTP 200 con dos series y dos eventos; suscripción sin autenticación del Dashboard verificada tanto por loopback como por HTTPS público (text/calendar, HTTP 200). Pruebas de envío usan transporte simulado: no se mandaron avisos ficticios por Telegram.
 
 Ampliación 19/10/2026: Mushoku Tensei, Solo Leveling, Clevatess, Wistoria, Witch Hat Atelier, Jujutsu Kaisen, Isekai Cheat Magician, Kaiju No. 8 y La bruja del silencio (Secrets of the Silent Witch). Las nueve esperan próxima fecha; ninguna está marcada como finalizada. Notas y fuentes en cada ficha. Anuncios de Japón/año no generan un evento español sin día confirmado. Las continuaciones cinematográficas también se investigan, sin inventar temporada/episodio para ellas. Ambos monitores deben leer todas las series del JSON, incluidos doblajes pendientes de archivadas. Portadas oficiales salvo Mushoku Tensei (JustWatch); solo referencia remota, sin credenciales.
+
+Gestión manual: «Añadir anime» pide solo título; queda vigilado como archived, con portada y fecha pendientes hasta contrastar identidad y estrenos. Las tareas revisan también nuevos custom-* y completan metadatos sin inventarlos. «Quitar del seguimiento» establece tracking=false: oculta tarjeta y eventos y desactiva avisos, conservando historial y ledger. No cambiar a finished ni reactivar tracking=false automáticamente. Añadir de nuevo el mismo título (normalización Unicode, espacios y mayúsculas) restaura el ID anterior, sin repetir avisos enviados. Los añadidos manuales no cambian checked_at de las fuentes. Los POST exigen autenticación y protección de origen.

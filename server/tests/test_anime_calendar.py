@@ -70,3 +70,32 @@ class NotificationTests(unittest.TestCase):
         c.set_status('aoashi','archived');self.assertEqual(len(c.snapshot()['series']),1)
         with self.assertRaises(ValueError):c.set_status('aoashi','finished')
         c.set_status('aoashi','finished',True);self.assertEqual(c.snapshot()['series'],[])
+
+class ManageSeriesTests(unittest.TestCase):
+    setUp=CalendarTests.setUp
+    def test_add_duplicate_unfollow_restore_preserves_history_and_stops_notices(self):
+        self.data['events'][0].update(date='2026-10-01',available=True)
+        c.private_write(self.root/'schedule.json',self.data)
+        token=c.subscription()
+        c.manage_series('remove',series_id='aoashi')
+        self.assertEqual(c.snapshot()['series'],[])
+        self.assertEqual(c.notify_available(lambda _:self.fail('Unfollowed notice'))['sent'],0)
+        self.assertEqual(len(json.loads((self.root/'schedule.json').read_text())['events']),1)
+        restored=c.manage_series('add','  Ao Ashi  ')
+        self.assertEqual(restored['id'],'aoashi');self.assertEqual(c.subscription(),token)
+        with self.assertRaises(ValueError):c.manage_series('add','Ａｏ Ａｓｈｉ')
+        new=c.manage_series('add','Frieren')
+        self.assertEqual(c.snapshot()['series'][-1]['id'],new['id'])
+        self.assertEqual(c.snapshot()['series'][-1]['status'],'archived')
+    def test_invalid_inputs_do_not_write(self):
+        for title in ['',[],None,'x'*151,'a\x00b']:
+            with self.assertRaises(ValueError):c.manage_series('add',title)
+        with self.assertRaises(ValueError):c.manage_series('remove',series_id='missing')
+        self.assertFalse((self.root/'schedule.json').exists())
+
+    def test_new_tracking_does_not_send_back_catalog(self):
+        added=c.manage_series('add','New anime')['id']
+        data=json.loads((self.root/'schedule.json').read_text())
+        data['events']=[{**self.data['events'][0],'series':added,'date':'2000-01-01','available':True}]
+        c.private_write(self.root/'schedule.json',data)
+        self.assertEqual(c.notify_available(lambda _:self.fail('Historical notice'))['sent'],0)

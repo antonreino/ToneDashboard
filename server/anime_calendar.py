@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import secrets
 import threading
+import unicodedata
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
@@ -24,6 +25,7 @@ def validate(data):
         if not re.fullmatch('[a-z0-9-]{1,50}',series.get('id','')) or series['id'] in ids:
             raise ValueError('Serie no válida')
         ids.add(series['id'])
+        if 'tracking' in series and type(series['tracking']) is not bool:raise ValueError('Seguimiento no válido')
         if series.get('status')=='finished' and series.get('conclusion_confirmed') is not True:raise ValueError('Final definitivo no confirmado')
         if series.get('status') not in ('active','archived','finished'):raise ValueError('Estado no válido')
         if not isinstance(series.get('title'),str) or not 1<=len(series['title'])<=150:raise ValueError('Título no válido')
@@ -47,8 +49,8 @@ def snapshot():
         path=ROOT/'schedule.json'
         data=validate(json.loads((path if path.exists() else CATALOG).read_text()))
     today=datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat()
-    active={s['id'] for s in data['series'] if s['status']=='active'}
-    visible=[s for s in data['series'] if s['status']!='finished']
+    active={s['id'] for s in data['series'] if s['status']=='active' and s.get('tracking',True)}
+    visible=[s for s in data['series'] if s['status']!='finished' and s.get('tracking',True)]
     return {**data,'series':visible,'events':sorted([e for e in data['events'] if e['series'] in active and e['date']>=today],key=lambda e:(e['date'],e['series'],e['version']))}
 
 
@@ -63,6 +65,35 @@ def set_status(series_id,status,confirmed=False):
         series.update(status=status,conclusion_confirmed=bool(confirmed))
         private_write(path,validate(data))
     return {'ok':True}
+
+
+def manage_series(action,title=None,series_id=None):
+    """Unfollow preserves history and notification IDs; adding the same title restores it."""
+    with LOCK:
+        path=ROOT/'schedule.json'
+        data=validate(json.loads((path if path.exists() else CATALOG).read_text()))
+        if action=='remove':
+            series=next((s for s in data['series'] if s['id']==series_id),None)
+            if not series:raise ValueError('Anime no encontrado')
+            series['tracking']=False
+        elif action=='add':
+            if not isinstance(title,str):raise ValueError('Introduce el título del anime')
+            title=' '.join(unicodedata.normalize('NFKC',title).split())
+            if not 1<=len(title)<=150 or any(unicodedata.category(c).startswith('C') for c in title):raise ValueError('Título no válido (máximo 150 caracteres)')
+            normalize=lambda value:unicodedata.normalize('NFKC',value).casefold()
+            series=next((s for s in data['series'] if normalize(s['title'])==normalize(title)),None)
+            if series:
+                if series.get('tracking',True):raise ValueError('Este anime ya está en seguimiento')
+                series['tracking']=True
+            else:
+                if len(data['series'])>=500:raise ValueError('Límite de 500 animes alcanzado')
+                series={'id':'custom-'+secrets.token_hex(10),'title':title,'status':'archived','tracking':True,'added_on':datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat(),
+                        'season_note':'Añadido por ti. Pendiente de identificar portada y próximos estrenos en la revisión automática.',
+                        'dub_status':'Castellano: pendiente de confirmación'}
+                data['series'].append(series)
+        else:raise ValueError('Acción no válida')
+        private_write(path,validate(data))
+        return {'ok':True,'id':series['id']}
 
 
 def private_write(path,data):
@@ -129,7 +160,8 @@ def notify_available(sender=None):
         data=validate(json.loads((ROOT/'schedule.json' if (ROOT/'schedule.json').exists() else CATALOG).read_text()))
         ledger_path=ROOT/'notifications.json'
         ledger=json.loads(ledger_path.read_text()) if ledger_path.exists() else {}
-        titles={s['id']:s['title'] for s in data['series'] if s['status']!='finished'}
+        titles={s['id']:s['title'] for s in data['series'] if s['status']!='finished' and s.get('tracking',True)}
+        added={s['id']:s.get('added_on','0001-01-01') for s in data['series']}
         sent=0
         if sender is None:
             from dotenv import dotenv_values
@@ -146,6 +178,7 @@ def notify_available(sender=None):
                 finally:session.close()
         for e in data['events']:
             if e['series'] not in titles or e.get('available') is not True or e['date']>datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat():continue
+            if e['date']<added.get(e['series'],'0001-01-01'):continue
             key=f"{e['series']}-s{e.get('season',1)}-e{e['episode']}-{e['version']}"
             if ledger.get(key) in ('sent','sending','uncertain'):continue
             ledger[key]='sending';private_write(ledger_path,ledger)

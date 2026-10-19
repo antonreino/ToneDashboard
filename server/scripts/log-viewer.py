@@ -464,6 +464,17 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/anime-calendar/series':
+            import anime_calendar
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                if not 0<length<=2048:raise ValueError('Solicitud no válida')
+                body=json.loads(self.rfile.read(length))
+                if not isinstance(body,dict):raise ValueError('Solicitud no válida')
+                data=anime_calendar.manage_series(body.get('action'),body.get('title'),body.get('id'));code=200
+            except (ValueError,TypeError,AttributeError) as exc:data,code={'error':str(exc) if isinstance(exc,ValueError) else 'Solicitud no válida'},400
+            self.send_bytes(json.dumps(data).encode(),'application/json',code)
+            return
         if parsed.path == '/api/anime-calendar/status':
             import anime_calendar
             try:

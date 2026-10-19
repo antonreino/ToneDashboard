@@ -85,6 +85,30 @@ try{
     await page.getByText('Esperando temporada',{exact:true}).waitFor();
     await page.screenshot({path:`test-results/browser/${width}-anime-calendar.png`,fullPage:true});
   }
+
+  await page.setViewportSize({width:390,height:1000});
+  let manual=[];
+  await page.unroute('**/api/anime-calendar');
+  await page.route('**/api/anime-calendar',route=>route.fulfill({json:{checked_at:'2026-10-19',series:manual,events:[]}}));
+  await page.route('**/api/anime-calendar/series',async route=>{
+    assert.equal(route.request().headers()['x-dashboard-action'],'write');
+    const body=route.request().postDataJSON();
+    if(body.action==='add')manual=[{id:'custom-test',title:body.title,status:'archived'}];else manual=[];
+    await route.fulfill({json:{ok:true,id:'custom-test'}});
+  });
+  await page.locator('#animeCalendarAdd').click();
+  await page.locator('#animeAddTitle').fill('Frieren <img src=x>');
+  await page.locator('#animeAddForm button[type=submit]').click();
+  await page.getByRole('heading',{name:'Frieren <img src=x>',exact:true}).waitFor();
+  assert.equal(await page.locator('.anime-card img').count(),0);
+  await page.getByText('Portada pendiente',{exact:true}).waitFor();
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  page.once('dialog',dialog=>dialog.dismiss());
+  await page.getByRole('button',{name:'Quitar Frieren <img src=x> del seguimiento',exact:true}).click();
+  assert.equal(manual.length,1);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.getByRole('button',{name:'Quitar Frieren <img src=x> del seguimiento',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('.anime-card').length===0);
   assert.deepEqual(errors,[]);
   console.log('Browser checks: responsive layouts, operations, forms, unique controls, preferences, offline warning; no JavaScript exceptions.');
 }finally{if(browser)await browser.close();server.kill();}

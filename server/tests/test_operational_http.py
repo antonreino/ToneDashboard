@@ -60,3 +60,15 @@ class OperationalHTTPTests(unittest.TestCase):
             self.assertEqual(self.request('GET','/calendar/anime/wrong.ics',Authorization='')[0],404)
             self.request('POST','/api/anime-calendar/subscribe?rotate=1')
             self.assertEqual(self.request('GET',path,Authorization='')[0],404)
+
+    def test_calendar_management_requires_auth_origin_and_valid_body(self):
+        with patch('anime_calendar.manage_series',return_value={'ok':True,'id':'test'}) as manage:
+            path='/api/anime-calendar/series'
+            self.assertEqual(self.request('POST',path,Authorization='')[0],401)
+            self.assertEqual(self.request('POST',path,Origin='https://evil.test')[0],403)
+            for body in [b'[]',b'not-json']:
+                self.assertEqual(self.request('POST',path,body)[0],400)
+            self.assertEqual(self.request('POST',path,**{'Content-Length':'2049'})[0],400)
+            manage.assert_not_called()
+            self.assertEqual(self.request('POST',path,b'{"action":"add","title":"Frieren"}')[0],200)
+            manage.assert_called_once_with('add','Frieren',None)

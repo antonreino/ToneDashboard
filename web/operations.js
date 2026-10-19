@@ -90,6 +90,12 @@ window.ToneOperations=(()=>{
 // Calendar links carry a separate, revocable read-only token; no dashboard credentials.
 (()=>{
  const status=document.getElementById('animeCalendarStatus');
+ const addForm=document.getElementById('animeAddForm'),addToggle=document.getElementById('animeCalendarAdd'),addTitle=document.getElementById('animeAddTitle'),addStatus=document.getElementById('animeAddStatus');
+ const showAdd=show=>{addForm.hidden=!show;addToggle.setAttribute('aria-expanded',String(show));if(show)addTitle.focus();};
+ addToggle.addEventListener('click',()=>showAdd(addForm.hidden));
+ document.getElementById('animeAddCancel').addEventListener('click',()=>showAdd(false));
+ const manage=async body=>{const r=await fetch('/api/anime-calendar/series',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'No se pudo guardar el anime');return d;};
+ addForm.addEventListener('submit',async e=>{e.preventDefault();const button=addForm.querySelector('[type=submit]');button.disabled=true;addStatus.textContent='Guardando…';try{await manage({action:'add',title:addTitle.value});addForm.reset();addStatus.textContent='';showAdd(false);document.getElementById('animeCalendarLoad').click();}catch(err){addStatus.textContent=err.message;}finally{button.disabled=false;}});
  document.getElementById('animeCalendarOpen').addEventListener('click',()=>{document.getElementById('animeCalendarPanel').open=true;document.getElementById('animeCalendarLoad').click();});
  document.getElementById('animeCalendarLoad').addEventListener('click',async()=>{
   try{
@@ -99,7 +105,7 @@ window.ToneOperations=(()=>{
     const card=document.createElement('article');card.className='anime-card';
     const header=document.createElement('div');header.className='anime-card__header';
     const poster=document.createElement('div');poster.className='anime-card__poster';
-    if(s.cover?.startsWith('https://')){const img=document.createElement('img');img.src=s.cover;img.alt='Portada de '+s.title;img.loading='lazy';img.referrerPolicy='no-referrer';poster.append(img);}
+    if(s.cover?.startsWith('https://')){const img=document.createElement('img');img.src=s.cover;img.alt='Portada de '+s.title;img.loading='lazy';img.referrerPolicy='no-referrer';poster.append(img);}else{const placeholder=document.createElement('span');placeholder.className='anime-card__placeholder';placeholder.textContent='Portada pendiente';poster.append(placeholder);}
     const heading=document.createElement('div');heading.className='anime-card__heading';
     const state=document.createElement('span');state.className='anime-card__badge'+(s.status==='archived'?' is-waiting':'');state.textContent=s.status==='archived'?'Esperando temporada':'En emisión';
     const title=document.createElement('h3');title.textContent=s.title;
@@ -121,7 +127,9 @@ window.ToneOperations=(()=>{
      const button=document.createElement('button');button.className='button '+(next==='finished'?'anime-card__finish':'anime-card__archive');button.textContent=label;
      button.addEventListener('click',async()=>{if(next==='finished'&&!confirm('¿Confirmas que la historia terminó definitivamente? Si solo terminó la temporada, usa Esperar próxima temporada: seguiremos buscando su continuación.'))return;button.disabled=true;try{const response=await fetch('/api/anime-calendar/status',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify({id:s.id,status:next,confirmed:next==='finished'})});if(!response.ok)throw Error('No se pudo guardar el estado');document.getElementById('animeCalendarLoad').click();}catch(e){status.textContent=e.message;}finally{button.disabled=false;}});actions.append(button);
     }
-    card.append(actions);container.append(card);
+    const remove=document.createElement('button');remove.className='button anime-card__remove';remove.textContent='Quitar del seguimiento';remove.setAttribute('aria-label','Quitar '+s.title+' del seguimiento');
+    remove.addEventListener('click',async()=>{if(!confirm('¿Quitar '+s.title+' del seguimiento? Dejarás de recibir sus avisos y desaparecerá del calendario. Podrás añadirlo de nuevo.'))return;remove.disabled=true;try{await manage({action:'remove',id:s.id});document.getElementById('animeCalendarLoad').click();}catch(err){status.textContent=err.message;}finally{remove.disabled=false;}});
+    actions.append(remove);card.append(actions);container.append(card);
    }
    status.textContent='Revisado: '+d.checked_at+(d.events.length?'':' · Sin fechas futuras confirmadas.');
   }catch(e){status.textContent=e.message;}
