@@ -19,6 +19,7 @@ class DeviceTests(unittest.TestCase):
         p = patch.object(devices, 'DB_PATH', self.path); p.start(); self.addCleanup(p.stop)
         p = patch.dict(os.environ, {'DASHBOARD_USER': 'test', 'DASHBOARD_PASSWORD': 'test-password',
                                    'ORBIT_PAIR_CODE_PASSWORD': 'pair-password-test'}); p.start(); self.addCleanup(p.stop)
+        p = patch.object(orbit_pairing, 'ensure_console', return_value={'console_woken': False}); p.start(); self.addCleanup(p.stop)
         devices._sessions.clear(); devices._retry.clear(); orbit_pairing._failures.clear()
         self.headers = {'X-Dashboard-Action': 'write', 'X-Orbit-Action': 'remember-device',
                         'X-Orbit-Pair-Password': 'pair-password-test'}

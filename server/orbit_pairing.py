@@ -10,6 +10,7 @@ import threading
 import time
 
 from request_security import allowed_mutation
+from ps5_wake import ensure_from_dashboard as ensure_console
 
 READER = Path.home() / 'Applications/ToneOrbitCodeReader.app/Contents/MacOS/ToneOrbitCodeReader'
 _lock = threading.Lock()
@@ -60,6 +61,9 @@ def reveal_code(headers, client_address):
         _failures.pop(key, None)
         if not READER.is_file():
             return {'error': 'Instala el lector local con scripts/install-orbit-code-reader.sh.'}, 503
+        console = ensure_console()
+        if console.get('error'):
+            return console, 503
         try:
             result = invoke_reader()
             data = json.loads(result.stdout)
@@ -69,7 +73,7 @@ def reveal_code(headers, client_address):
             return {'error': 'Respuesta inválida del lector local.'}, 502
         code = data.get('code')
         if result.returncode == 0 and isinstance(code, str) and re.fullmatch(r'[0-9]{6}', code):
-            return {'code': code, 'display_seconds': 60}, 200
+            return {'code': code, 'display_seconds': 60, **console}, 200
         errors = {
             'permission': 'Activa ToneOrbitCodeReader en Ajustes del Sistema → Privacidad y seguridad → Accesibilidad.',
             'not_running': 'Abre Orbit Zero en el Mac.',

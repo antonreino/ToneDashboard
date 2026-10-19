@@ -356,14 +356,14 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){clearOrbit
 document.getElementById('orbitPairForm').addEventListener('submit',async e=>{
  e.preventDefault();clearTimeout(orbitCodeTimer);orbitCodeRequest?.abort();
  const secret=document.getElementById('orbitPairPassword');const password=secret.value;secret.value='';
- const output=document.getElementById('orbitPairResult');output.textContent='Consultando el Mac…';
+ const output=document.getElementById('orbitPairResult');output.textContent='Conectando con la PS5; si está en reposo intentaremos encenderla…';
  const request=new AbortController();orbitCodeRequest=request;
  try{
   const response=await fetch('/api/orbit/pair-code',{method:'POST',cache:'no-store',signal:request.signal,
    headers:{'Content-Type':'application/json','X-Dashboard-Action':'write','X-Orbit-Action':'reveal-code','X-Orbit-Pair-Password':password},body:'{}'});
   const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo consultar Orbit');
   if(request.signal.aborted)return;
-  output.textContent='Código vigente: '+data.code+'\nSe ocultará en 60 segundos.';
+  output.textContent=(data.console_woken?'PS5 encendida desde reposo.\n':'')+'Código vigente: '+data.code+'\nSe ocultará en 60 segundos.';
   orbitCodeTimer=setTimeout(()=>{clearOrbitCode();document.getElementById('orbitPairDialog').close();},60000);
  }catch(error){if(!request.signal.aborted)output.textContent=error.message;}
 });

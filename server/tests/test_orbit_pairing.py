@@ -9,6 +9,8 @@ import orbit_pairing as pairing
 
 class PairCodeTests(unittest.TestCase):
     def setUp(self):
+        p = mock.patch.object(pairing, 'ensure_console', return_value={'console_woken': False})
+        self.console = p.start(); self.addCleanup(p.stop)
         pairing._failures.clear()
         self.env = mock.patch.dict(os.environ, {'ORBIT_PAIR_CODE_PASSWORD': 'testing-password-only'})
         self.env.start(); self.addCleanup(self.env.stop)
@@ -63,6 +65,19 @@ class PairCodeTests(unittest.TestCase):
             reader.is_file.return_value = True
             result, status = self.reveal()
             self.assertEqual(status, 502); self.assertNotIn('sensitive', str(result))
+
+    def test_wrong_password_never_wakes_console(self):
+        self.headers['X-Orbit-Pair-Password'] = 'wrong'
+        self.reveal()
+        self.console.assert_not_called()
+
+    def test_unavailable_console_never_reads_or_returns_code(self):
+        self.console.return_value = {'error': 'La PS5 no responde'}
+        with mock.patch.object(pairing, 'READER') as reader, mock.patch.object(pairing, 'invoke_reader') as run:
+            reader.is_file.return_value = True
+            result, status = self.reveal()
+            self.assertEqual(status, 503); run.assert_not_called()
+            self.assertNotIn('code', result)
 
 class ReaderLaunchTests(unittest.TestCase):
     def test_launches_app_and_uses_private_fifo(self):
