@@ -26,7 +26,7 @@ def files(tags):
 class AmuleDashboard:
     def __init__(self,client_factory=None,clock=time.monotonic):
         self.lock=threading.Lock();self.clock=clock;self.factory=client_factory
-        self.search_id='';self.query='';self.network='kad';self.started=0
+        self.search_id='';self.query='';self.network='global';self.started=0
         self.results={};self.cached=None;self.cached_at=0
     def client(self):
         if self.factory:return self.factory()
@@ -53,7 +53,7 @@ class AmuleDashboard:
             if self.cached is not None and self.clock()-self.cached_at<2:return self.cached
             with self.client() as c:return self._read(c)
     def search(self,body):
-        query=body.get('query');network=body.get('network','kad');kind=body.get('type','')
+        query=body.get('query');network=body.get('network','global');kind=body.get('type','')
         if not isinstance(query,str) or not 2<=len(query.strip())<=160 or any(ord(x)<32 or ord(x)==127 for x in query):
             raise RequestError('Escribe una búsqueda de entre 2 y 160 caracteres.')
         if network not in ('kad','local','global') or kind not in ('','Video','Audio','Doc','Iso','Arc','Pro','Image'):
@@ -108,4 +108,7 @@ def handle(method,path,body=None):
         if method=='POST' and path=='/api/amule/download':return bridge.download(body),202
         return {'error':'Ruta aMule no válida'},404
     except RequestError as exc:return {'error':str(exc)},exc.status
-    except (AmuleError,OSError,ValueError):return {'error':'No se pudo comunicar con aMule. Comprueba que esté abierto y conectado.'},503
+    except (AmuleError,OSError,ValueError):
+        from amule_recovery import status
+        recovering=status().get('state')=='starting'
+        return {'error':'aMule se está iniciando. Reintentaremos la conexión.' if recovering else 'No se pudo comunicar con aMule. Reintentaremos la conexión automáticamente.','recovering':recovering},503

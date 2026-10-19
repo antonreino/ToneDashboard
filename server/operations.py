@@ -44,11 +44,18 @@ def backup_all(price_db):
 
 
 def maintenance_loop(price_db,stop):
+    next_backup=0
     while not stop.is_set():
-        try:backup_all(price_db)
-        except Exception:
-            state_db.set_runtime_state('backup_status',{'ok':False,'checked_at':state_db.utc_now(),'error':'No se pudo completar la copia verificada'})
-        stop.wait(24*3600)
+        now=time.monotonic()
+        if now>=next_backup:
+            try:backup_all(price_db)
+            except Exception:
+                state_db.set_runtime_state('backup_status',{'ok':False,'checked_at':state_db.utc_now(),'error':'No se pudo completar la copia verificada'})
+            next_backup=now+24*3600
+        from amule_recovery import ensure_running
+        recovery=ensure_running()
+        state_db.set_runtime_state('amule_recovery',{**recovery,'checked_at':state_db.utc_now()})
+        stop.wait(30)
 
 
 def get(path,query,services,price_db):

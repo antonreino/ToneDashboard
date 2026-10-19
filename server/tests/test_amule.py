@@ -138,3 +138,10 @@ class HTTPTests(unittest.TestCase):
                 self.assertEqual(request('POST','/api/amule/download',b'{"hash":"test"}')[0],200)
                 self.assertEqual(route.call_count,3)
         finally:server.shutdown();server.server_close();thread.join()
+
+class DefaultNetworkTests(unittest.TestCase):
+    def test_omitted_network_uses_all_servers(self):
+        core=Core();bridge=AmuleDashboard(lambda:core)
+        bridge.search({'query':'Example'})
+        tag=next(tags[0] for op,tags in core.calls if op==0x26)
+        self.assertEqual(tag.value,1);self.assertEqual(bridge.network,'global')

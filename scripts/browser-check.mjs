@@ -120,6 +120,28 @@ try{
   page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Quitar Frieren <img src=x> del seguimiento',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.anime-card').length===0);
+
+  const amuleFailure='No se pudo comunicar con aMule. Reintentaremos la conexión automáticamente.';
+  await page.route('**/api/amule',route=>route.fulfill({status:503,json:{error:amuleFailure}}));
+  await page.route('**/api/amule/search',route=>{
+    assert.equal(route.request().postDataJSON().network,'global');
+    return route.fulfill({status:503,json:{error:amuleFailure}});
+  });
+  for(const width of [390,1440]){
+    await page.setViewportSize({width,height:1000});
+    await page.locator('.phone-nav').getByRole('button',{name:'Descargas',exact:true}).click();
+    await page.locator('#view-descargas [data-phone-go="amule"]').click();
+    await page.locator('#amuleStatus').filter({hasText:amuleFailure}).waitFor();
+    assert.equal(await page.locator('#amuleNetwork').inputValue(),'global');
+    assert.equal(await page.locator('#amuleNetwork option').count(),1);
+    await page.locator('#amuleQuery').fill('test title');
+    await page.locator('#amuleSearchForm button[type=submit]').click();
+    await page.waitForFunction(()=>document.getElementById('amuleSearchForm').querySelector('button[type=submit]').disabled===false);
+    assert.equal(await page.getByText(amuleFailure,{exact:true}).count(),1);
+    assert.equal(await page.locator('#amuleActionStatus').textContent(),'');
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.screenshot({path:`test-results/browser/${width}-amule-error.png`,fullPage:true});
+  }
   assert.deepEqual(errors,[]);
   console.log('Browser checks: responsive layouts, operations, forms, unique controls, preferences, offline warning; no JavaScript exceptions.');
 }finally{if(browser)await browser.close();server.kill();}

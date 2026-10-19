@@ -413,9 +413,13 @@ document.getElementById('orbitControlForm').addEventListener('submit',async e=>{
 });
 
 // aMule: structured local EC data through the authenticated server.
-let amuleEpoch=0,amuleLoading=false,amuleSearchId='',amuleSearchBusy=false;
+let amuleEpoch=0,amuleLoading=false,amuleSearchId='',amuleSearchBusy=false,amuleConnectionError='';
+document.getElementById('amuleNetwork').value='global';
+function amuleActionMessage(message){document.getElementById('amuleActionStatus').textContent=message===document.getElementById('amuleStatus').textContent?'':message;}
 const amulePending=new Set();
 function renderAmule(d){
+  if(document.getElementById('amuleActionStatus').textContent===amuleConnectionError)document.getElementById('amuleActionStatus').textContent='';
+  amuleConnectionError='';
   amuleSearchId=d.search_id||'';
   phoneAmuleCount=(d.downloads||[]).length;updatePhoneDownloadCount();
   document.getElementById('amuleStatus').textContent=`aMule disponible · Bajada ${size(d.download_speed)}/s · Subida ${size(d.upload_speed)}/s · Kad: ${d.kad_nodes||0} nodos`;
@@ -441,7 +445,9 @@ async function loadAmule(){
   }catch(e){
     if(epoch===amuleEpoch){
       amuleSearchId='';phoneAmuleCount=null;updatePhoneDownloadCount();
-      document.getElementById('amuleStatus').textContent=e.name==='AbortError'?'aMule no respondió a tiempo. Reintentaremos la conexión.':e.message;
+      amuleConnectionError=e.name==='AbortError'?'aMule no respondió a tiempo. Reintentaremos la conexión.':e.message;
+      document.getElementById('amuleStatus').textContent=amuleConnectionError;
+      if(document.getElementById('amuleActionStatus').textContent===amuleConnectionError)document.getElementById('amuleActionStatus').textContent='';
       document.getElementById('amuleResults').innerHTML='<div class="empty">Resultados no disponibles mientras se restablece la conexión.</div>';
       document.getElementById('amuleDownloads').innerHTML='<div class="empty">No se pudo consultar la cola de aMule. Comprueba que esté abierto en el Mac.</div>';
     }
@@ -464,9 +470,9 @@ document.getElementById('amuleSearchForm').addEventListener('submit',async e=>{
   const button=e.currentTarget.querySelector('button[type="submit"]');button.disabled=true;
   document.getElementById('amuleResults').innerHTML='<div class="empty">Iniciando búsqueda…</div>';
   try{
-    await amulePost('/api/amule/search',{query,network:document.getElementById('amuleNetwork').value,type:document.getElementById('amuleType').value});
+    await amulePost('/api/amule/search',{query,network:'global',type:document.getElementById('amuleType').value});
     status.textContent='Búsqueda iniciada. Los resultados aparecerán automáticamente.';await loadAmule();
-  }catch(err){status.textContent=err.message;}
+  }catch(err){amuleActionMessage(err.message);}
   finally{amuleSearchBusy=false;button.disabled=false;}
 });
 document.getElementById('amuleResults').addEventListener('click',async e=>{
@@ -478,7 +484,7 @@ document.getElementById('amuleResults').addEventListener('click',async e=>{
     const d=await amulePost('/api/amule/download',{hash,search_id:amuleSearchId});
     status.textContent=d.already_queued?'El archivo ya está en la cola de aMule.':'Descarga añadida a aMule en el Mac mini.';
     await loadAmule();
-  }catch(err){status.textContent=err.message;}
+  }catch(err){amuleActionMessage(err.message);}
   finally{amulePending.delete(hash);button.disabled=false;}
 });
 setInterval(()=>{if(!document.hidden&&(document.getElementById('view-amule').classList.contains('active')||document.getElementById('view-descargas').classList.contains('active')))loadAmule();},4000);
