@@ -588,6 +588,7 @@ class MediaOrganizer:
         return now - previous[1] >= STABLE_SECONDS
 
     def clean_title(self, raw_name: str) -> str:
+        raw_name = unicodedata.normalize("NFC", raw_name)
         name = re.sub(r"(?i)(?:www\.|newpct\d*).*?$", "", raw_name)
         name = re.sub(r"^\[[^\]]+\]\s*", "", name)
         metadata = re.search(r"(?i)\b(?:4k|uhd|hdr10|hdr|dolby[ ._-]+vision|h[ .]?26[45]|2160p|1080p|720p|480p|x26[45]|hevc|bluray|bdrip|webrip|web[ ._-]?dl|hdrip|dvdrip|hdtv)\b", name)
@@ -602,7 +603,7 @@ class MediaOrganizer:
         name = re.sub(r"^\[[^\]]+\]\s*", "", name)
         name = HASH_BLOCK_PATTERN.sub("", name)
         name = re.sub(r"(?i)\[Cap[ ._-]?\d{1,4}\]", "", name)
-        name = re.sub(r"(?i)\bCap[íi]?tulo[ ._-]?\d{1,4}\b", "", name)
+        name = re.sub(r"(?i)\bCap[íi]?tulo[ ._-]?\d{1,4}\b.*$", "", name)
         name = re.sub(r"(?i)\bCap[ ._-]?\d{1,4}\b", "", name)
         name = QUALITY_TOKENS.sub("", name)
         name = re.sub(r"(?i)www\..*$", "", name)
@@ -669,6 +670,13 @@ class MediaOrganizer:
         Si force_absolute=True, NO interpreta 290 como S02E90.
         Esto es importante para anime con numeración absoluta.
         """
+        name = unicodedata.normalize("NFC", name)
+        # Natural-language labels use absolute numbering (daily soaps, etc.).
+        # Keep compact release notation Cap.103 / Capitulo.103 compatible.
+        absolute = re.search(r"(?i)\bCap[íi]?tulo\s+(?P<episode>\d{1,4})(?!\d)", name)
+        if absolute:
+            number = int(absolute.group("episode"))
+            return (1, number) if number > 0 else (None, None)
         for pattern in SPANISH_EPISODE_PATTERNS:
             match = pattern.search(name)
             if match:

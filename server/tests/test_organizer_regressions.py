@@ -46,6 +46,24 @@ class OrganizerRegressions(unittest.TestCase):
                 media = self.org.classify(self.root / relative)
                 self.assertEqual(self.uploader.build_remote_path(media), expected)
 
+    def test_daily_serial_absolute_number_and_unicode_dates(self):
+        import unicodedata
+        for episode in (9, 103, 675, 1000):
+            for normalization in ('NFC', 'NFD'):
+                name = unicodedata.normalize(normalization, f'Sueños de libertad - Capítulo {episode} (23-10-26).mkv')
+                media = self.org.classify(self.root / name)
+                self.assertEqual((media.category, media.title, media.season, media.episode),
+                                 ('series', 'Sueños de libertad', 1, episode))
+                self.assertEqual(self.uploader.build_remote_path(media),
+                                 f'/series/Sueños de libertad/Season 1/S01E{episode:02d}.mkv')
+        self.org.classify_with_tmdb.assert_not_called()
+
+    def test_absolute_serial_parent_and_explicit_season(self):
+        media = self.org.classify(self.root / 'Sueños de libertad - Capítulo 675 (23-10-26)' / 'video.mkv')
+        self.assertEqual((media.title, media.season, media.episode), ('Sueños de libertad', 1, 675))
+        media = self.org.classify(self.root / 'Sueños de libertad S02E675.mkv')
+        self.assertEqual((media.season, media.episode), (2, 675))
+
     def test_cross_season_is_not_partially_uploaded(self):
         self.assertEqual(self.org.classify(self.root / 'Show.S01E10-S02E01.mkv').category, 'unknown')
 
