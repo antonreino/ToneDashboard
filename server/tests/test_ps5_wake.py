@@ -34,6 +34,13 @@ class WakeTests(unittest.TestCase):
     def test_packet(self):
         self.assertIn(b'user-credential:255\n', w.wake_packet(255))
         self.assertTrue(w.wake_packet(255).endswith(b'\0'))
+    def test_first_wake_is_allowed_with_recent_monotonic_epoch(self):
+        # Linux runners may expose an epoch only seconds old; zero is not an attempt.
+        with patch.object(w.time, 'monotonic', return_value=10), patch.object(w, '_run', return_value={'state':'ready','wake_sent':True}) as wake:
+            self.assertTrue(w.run(True)['wake_sent'])
+            wake.assert_called_once_with(True, 60)
+            self.assertEqual(w._last_attempt, 10)
+
     def test_wake_once(self):
         with patch.object(w, 'discover', side_effect=['standby','ready']), patch.object(w,'load_key',return_value=255), patch.object(w.socket,'socket') as socket, patch.object(w.time,'sleep'):
             result = w.run(True)

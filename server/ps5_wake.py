@@ -111,7 +111,7 @@ def _run(wake=False, wait=60):
 def run(wake=False, wait=60):
     global _last_attempt
     with _wake_lock:
-        if wake and time.monotonic() - _last_attempt < 90:
+        if wake and _last_attempt and time.monotonic() - _last_attempt < 90:
             return {'state': discover(), 'wake_sent': False, 'pending': 'Espera antes de repetir el encendido'}
         result = _run(wake, wait)
         if result.get('wake_sent'):
