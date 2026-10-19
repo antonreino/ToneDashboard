@@ -44,3 +44,19 @@ class OperationalHTTPTests(unittest.TestCase):
     def test_diagnostics_deny_unauthenticated_export(self):
         with patch('operations.get',return_value=({'ok':True},200)) as get:
             self.assertEqual(self.request('GET','/api/diagnostics',Authorization='')[0],401);get.assert_not_called()
+
+    def test_calendar_feed_is_scoped_and_subscription_requires_auth(self):
+        import anime_calendar
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder, patch.object(anime_calendar,'ROOT',Path(folder)):
+            self.assertEqual(self.request('POST','/api/anime-calendar/subscribe',Authorization='')[0],401)
+            self.assertEqual(self.request('POST','/api/anime-calendar/subscribe',Origin='https://evil.test')[0],403)
+            self.assertEqual(self.request('GET','/api/anime-calendar',Authorization='')[0],401)
+            status,_,body=self.request('POST','/api/anime-calendar/subscribe')
+            self.assertEqual(status,200);path=json.loads(body)['path']
+            status,headers,body=self.request('GET',path,Authorization='')
+            self.assertEqual(status,200);self.assertIn('text/calendar',headers['Content-Type'])
+            self.assertIn(b'BEGIN:VCALENDAR',body);self.assertNotIn(b'only-test',body)
+            self.assertEqual(self.request('GET','/calendar/anime/wrong.ics',Authorization='')[0],404)
+            self.request('POST','/api/anime-calendar/subscribe?rotate=1')
+            self.assertEqual(self.request('GET',path,Authorization='')[0],404)

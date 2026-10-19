@@ -24,6 +24,8 @@ FILES = [
     'request_security.py',
     'orbit_pairing.py',
     'ps5_wake.py',
+    'anime_calendar.py',
+    'anime_calendar_seed.json',
     'native/PS5Wake.swift',
     'scripts/install-ps5-wake-helper.sh',
     'orbit_devices.py',

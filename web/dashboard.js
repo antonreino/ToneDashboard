@@ -523,8 +523,8 @@ function updatePhoneDownloadCount(){
   document.getElementById('phoneDownloadCount').textContent=String(phoneDirectCount+(phoneAmuleCount||0));
   document.getElementById('phoneDownloadHint').textContent=phoneAmuleCount==null?'Cola de enlaces':'Enlaces y aMule';
 }
-const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',diagnostico:'Diagnóstico'};
-function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes','organizer','diagnostico'].includes(view)?'mas':view;}
+const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',calendario:'Calendario de anime',diagnostico:'Diagnóstico'};
+function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes','organizer','calendario','diagnostico'].includes(view)?'mas':view;}
 function navigateDashboard(view,{focus=false}={}){
   const target=document.getElementById('view-'+view);if(!target)return;
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v===target));

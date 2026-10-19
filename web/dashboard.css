@@ -646,3 +646,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .fold-content>.panel:last-child{margin-bottom:0}
   .phone-info>div>.host-layout,.phone-info>div>.metrics{margin-bottom:0}
 }
+
+#animeCalendarEvents{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;margin-top:18px}.anime-card{border:1px solid var(--border, #26364a);border-radius:18px;overflow:hidden;min-width:0;background:rgba(255,255,255,.025)}.anime-card>img{width:100%;height:190px;object-fit:cover;display:block}.anime-card>div{padding:18px}.anime-card h3{margin:0 0 12px}.anime-card p{line-height:1.55;overflow-wrap:anywhere}.anime-card .button{margin:6px 6px 0 0;max-width:100%;white-space:normal}
+
+#animeCalendarPanel{padding:18px}#animeCalendarPanel>.button{margin-bottom:10px}#animeCalendarPanel>p{line-height:1.55}#animeCalendarPanel>h2{margin-top:0}

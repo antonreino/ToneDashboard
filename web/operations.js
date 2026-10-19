@@ -86,3 +86,34 @@ window.ToneOperations=(()=>{
   });
   return Object.freeze({refresh,downloadButtons,amuleButtons});
 })();
+
+// Calendar links carry a separate, revocable read-only token; no dashboard credentials.
+(()=>{
+ const status=document.getElementById('animeCalendarStatus');
+ document.getElementById('animeCalendarOpen').addEventListener('click',()=>{document.getElementById('animeCalendarPanel').open=true;document.getElementById('animeCalendarLoad').click();});
+ document.getElementById('animeCalendarLoad').addEventListener('click',async()=>{
+  try{
+   const r=await fetch('/api/anime-calendar',{cache:'no-store'});if(!r.ok)throw Error('No se pudo consultar el calendario');const d=await r.json();
+   const container=document.getElementById('animeCalendarEvents');container.replaceChildren();
+   for(const s of d.series){
+    const card=document.createElement('article');card.className='anime-card';
+    if(s.cover?.startsWith('https://')){const img=document.createElement('img');img.src=s.cover;img.alt='Portada de '+s.title;img.loading='lazy';img.referrerPolicy='no-referrer';card.append(img);}
+    const content=document.createElement('div'),title=document.createElement('h3');title.textContent=s.title;content.append(title);
+    const state=document.createElement('p');state.className='muted';state.textContent=s.status==='archived'?'Archivado · esperando próxima temporada':'En seguimiento';content.append(state);
+    const events=d.events.filter(e=>e.series===s.id);
+    for(const e of events){const line=document.createElement('p');const day=new Date(e.date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});line.textContent=day+' · T'+e.season+' E'+e.episode+' · '+(e.version==='dub-es'?'Doblaje castellano':'Subtitulado España');content.append(line);}
+    if(!events.length){const line=document.createElement('p');line.textContent='Próximo estreno: pendiente de confirmación';content.append(line);}
+    const dub=document.createElement('p');dub.className='muted';dub.textContent=s.dub_status||'Doblaje castellano: pendiente';content.append(dub);
+    for(const [label,next] of [[s.status==='archived'?'Volver a seguir':'Archivar',s.status==='archived'?'active':'archived'],['Eliminar: historia finalizada','finished']]){
+     const button=document.createElement('button');button.className='button';button.textContent=label;
+     button.addEventListener('click',async()=>{if(next==='finished'&&!confirm('¿Confirmas que la historia terminó definitivamente? Si solo terminó la temporada, usa Archivar.'))return;button.disabled=true;try{const response=await fetch('/api/anime-calendar/status',{method:'POST',headers:{'Content-Type':'application/json','X-Dashboard-Action':'write'},body:JSON.stringify({id:s.id,status:next,confirmed:next==='finished'})});if(!response.ok)throw Error('No se pudo guardar el estado');document.getElementById('animeCalendarLoad').click();}catch(e){status.textContent=e.message;}finally{button.disabled=false;}});content.append(button);
+    }
+    card.append(content);container.append(card);
+   }
+   status.textContent='Revisado: '+d.checked_at+(d.events.length?'':' · Sin fechas futuras confirmadas.');
+  }catch(e){status.textContent=e.message;}
+ });
+ document.getElementById('animeCalendarSubscribe').addEventListener('click',async()=>{
+  try{const r=await fetch('/api/anime-calendar/subscribe',{method:'POST',headers:{'X-Dashboard-Action':'write'},cache:'no-store'});if(!r.ok)throw Error('No se pudo crear la suscripción');const d=await r.json();const url=new URL(d.path,location.origin);const field=document.getElementById('animeCalendarURL');field.value=url.href;field.hidden=false;field.focus();field.select();status.textContent='Copia este enlace privado y añádelo como suscripción. Quien lo tenga podrá leer solo este calendario.';}catch(e){status.textContent=e.message;}
+ });
+})();

@@ -347,6 +347,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         from orbit_isolation import handle_entry
         if handle_entry(self):return
+        if urlparse(self.path).path.startswith('/calendar/anime/'):
+            import anime_calendar
+            token=urlparse(self.path).path.removeprefix('/calendar/anime/').removesuffix('.ics')
+            if not anime_calendar.authorized(token):
+                self.send_bytes(b'Not found','text/plain',404)
+            else:
+                self.send_bytes(anime_calendar.calendar(),'text/calendar; charset=utf-8')
+            return
         if not self._require_auth():
             return
         from orbit_dashboard_proxy import serve as orbit_serve
@@ -360,6 +368,10 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError,OverflowError):data,code={'error':'Parámetros no válidos'},400
             except Exception:data,code={'error':'No se pudo completar la consulta'},503
             self.send_bytes(json.dumps(data,ensure_ascii=False).encode(),'application/json; charset=utf-8',code)
+            return
+        if parsed.path == '/api/anime-calendar':
+            import anime_calendar
+            self.send_bytes(json.dumps(anime_calendar.snapshot(),ensure_ascii=False).encode(),'application/json; charset=utf-8')
             return
         if parsed.path == '/api/amule':
             from amule_dashboard import handle
@@ -452,6 +464,20 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/anime-calendar/status':
+            import anime_calendar
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                if not 0<length<=1024:raise ValueError('Solicitud no válida')
+                body=json.loads(self.rfile.read(length))
+                data=anime_calendar.set_status(body.get('id'),body.get('status'),body.get('confirmed',False));code=200
+            except (ValueError,TypeError,AttributeError):data,code={'error':'Estado no válido o final sin confirmar'},400
+            self.send_bytes(json.dumps(data).encode(),'application/json',code)
+            return
+        if parsed.path == '/api/anime-calendar/subscribe':
+            import anime_calendar
+            self.send_bytes(json.dumps({'path':anime_calendar.subscription(rotate=parse_qs(parsed.query).get('rotate')==['1'])}).encode(),'application/json')
+            return
         if parsed.path=='/api/orbit/isolation-ticket':
             from orbit_isolation import entry
             try:data,code=entry(),200
