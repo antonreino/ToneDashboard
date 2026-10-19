@@ -75,6 +75,7 @@ try{
     assert.equal(await page.locator('.anime-card img').first().getAttribute('alt'),'Portada de Ao Ashi');
     assert(await page.locator('.anime-card').first().textContent().then(t=>t.includes('25 de octubre')&&t.includes('SUBTITULADO · ESPAÑA')));
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.locator('.anime-card img').evaluateAll(images=>Promise.all(images.map(img=>img.decode())));
     const layout=await page.locator('.anime-card').evaluateAll(cards=>cards.map(card=>{
       const poster=card.querySelector('.anime-card__poster').getBoundingClientRect();
       const buttons=[...card.querySelectorAll('.anime-card__actions button')].map(b=>b.getBoundingClientRect());

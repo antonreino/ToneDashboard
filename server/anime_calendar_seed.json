@@ -15,6 +15,96 @@
       "status": "active",
       "dub_status": "Sin fecha confirmada de nuevos episodios en castellano",
       "cover": "https://www.bclover.jp/assets/img/top/visual/visual2.jpg"
+    },
+    {
+      "id": "mushoku-tensei",
+      "title": "Mushoku Tensei",
+      "status": "archived",
+      "cover": "https://images.justwatch.com/poster/259438215/s332/mushoku-tensei-isekai-ittara-honki-dasu-2021.jpg",
+      "season_note": "T3, segunda parte anunciada para 2027. Día en España por confirmar.",
+      "status_source": "https://mushokutensei.jp/",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "solo-leveling",
+      "title": "Solo Leveling",
+      "status": "archived",
+      "cover": "https://sololeveling-anime.net/assets/img/s3/s3_visual.jpg",
+      "season_note": "Continuación anunciada como película. Sin fecha confirmada en España.",
+      "status_source": "https://www.crunchyroll.com/es-es/news/announcements/2026/7/3/solo-leveling-beyond-the-system-anime-pelicula-aniplex-crunchyroll",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "clevatess",
+      "title": "Clevatess",
+      "status": "archived",
+      "cover": "https://clevatess.com/_image/keyvisual2.webp",
+      "season_note": "Seguimiento de continuación tras la T2. Próxima fecha en España por confirmar.",
+      "status_source": "https://clevatess.com/",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "wistoria",
+      "title": "Wistoria: Wand and Sword",
+      "status": "archived",
+      "cover": "https://wistoria-anime.com/jrepgmrf/wp-content/themes/wistoria-anime/assets/img/top/visual3-s.webp",
+      "season_note": "T3 anunciada. Sin fecha confirmada en España.",
+      "status_source": "https://www.crunchyroll.com/es/news/latest/2026/6/28/wistoria-wand-and-sword-temporada-3-anuncio",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "witch-hat-atelier",
+      "title": "Witch Hat Atelier",
+      "status": "archived",
+      "cover": "https://tongari-anime.com/main/assets/img/top/kv_3.jpg",
+      "season_note": "T2 anunciada. Sin fecha confirmada en España.",
+      "status_source": "https://www.crunchyroll.com/pt-br/news/latest/2026/6/29/anime-witch-hat-atelier-temporada-2-anuncio",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "jujutsu-kaisen",
+      "title": "Jujutsu Kaisen",
+      "status": "archived",
+      "cover": "https://jujutsukaisen.jp/images/top_r/mv_s3-3.jpg",
+      "season_note": "T4 anunciada: continuación de Culling Game. Fecha en España por confirmar.",
+      "status_source": "https://www.crunchyroll.com/news/latest/2026/3/26/jujutsu-kaisen-season-4-culling-game-part-2-announced",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "isekai-cheat-magician",
+      "title": "Isekai Cheat Magician",
+      "status": "archived",
+      "cover": "https://isekai-cheat-magician.com/img/top/mainvisual_sp.jpg",
+      "season_note": "Sin nueva temporada confirmada en esta revisión. Se mantiene bajo seguimiento.",
+      "status_source": "https://isekai-cheat-magician.com/",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "kaiju-no-8",
+      "title": "Kaiju No. 8",
+      "status": "archived",
+      "cover": "https://kaiju-no8.net/assets/img/top/kv7.jpg",
+      "season_note": "Continuación final en producción. No equivale a historia ya terminada; fecha en España pendiente.",
+      "status_source": "https://kaiju-no8.net/",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "id": "silent-witch",
+      "title": "La bruja del silencio",
+      "status": "archived",
+      "cover": "https://silentwitch.net/assets2/img/visual_04/main_04_sp.jpg",
+      "season_note": "Secrets of the Silent Witch. Sin nueva fecha confirmada; seguimos buscando continuación.",
+      "status_source": "https://silentwitch.net/",
+      "dub_status": "Próximos estrenos en castellano: fecha por confirmar",
+      "reviewed_at": "2026-10-19"
     }
   ],
   "events": [
