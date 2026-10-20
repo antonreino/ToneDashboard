@@ -72,6 +72,12 @@ def snapshot():
         data=validate(json.loads((path if path.exists() else CATALOG).read_text()))
     active={s['id'] for s in data['series'] if s['status']=='active' and s.get('tracking',True)}
     visible=[s for s in data['series'] if s['status']!='finished' and s.get('tracking',True)]
+    def series_order(series):
+        # Spanish ordering: ignore accents/case, retaining ñ after n and before o.
+        title=unicodedata.normalize('NFKD',series['title'].casefold()).replace('n\u0303','n~')
+        title=''.join(c for c in title if not unicodedata.combining(c))
+        return (series['status']!='active',title,series['id'])
+    visible.sort(key=series_order)
     def visible_event(e):
         if data.get('release_basis')=='JP' and e['version']=='sub-es':return False
         today=datetime.now(ZoneInfo('Asia/Tokyo' if e['version']=='jp-original' else 'Europe/Madrid')).date().isoformat()

@@ -170,3 +170,23 @@ class ImmediatePosterTests(unittest.TestCase):
             with self.assertRaises(subprocess.TimeoutExpired):child.communicate(timeout=.1)
         output,_=child.communicate(timeout=5)
         self.assertEqual(output.strip(),b'locked')
+
+
+class CalendarOrderingTests(unittest.TestCase):
+    setUp=CalendarTests.setUp
+    def test_active_first_then_alphabetical_without_changing_stored_history(self):
+        self.data['series']=[
+            {'id':'zeta','title':'Zeta','status':'archived'},
+            {'id':'active-z','title':'Zorro','status':'active'},
+            {'id':'nino','title':'Niño','status':'archived'},
+            {'id':'hidden','title':'AAA hidden','status':'active','tracking':False},
+            {'id':'alpha','title':'Álgebra','status':'archived'},
+            {'id':'active-a','title':'ámbito','status':'active'},
+            {'id':'ninja','title':'Ninja','status':'archived'},
+            {'id':'ocean','title':'Océano','status':'archived'}]
+        self.data['events']=[]
+        c.private_write(self.root/'schedule.json',self.data)
+        self.assertEqual([s['id'] for s in c.snapshot()['series']],['active-a','active-z','alpha','ninja','nino','ocean','zeta'])
+        self.assertEqual(json.loads((self.root/'schedule.json').read_text()),self.data)
+        c.set_status('zeta','active')
+        self.assertEqual([s['id'] for s in c.snapshot()['series']][:3],['active-a','zeta','active-z'])
