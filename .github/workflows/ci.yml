@@ -28,6 +28,11 @@ jobs:
           /tmp/container-tests
           swiftc -parse-as-library apple/tests/OrbitCookiePersistenceTests.swift -o /tmp/cookie-tests
           /tmp/cookie-tests
+      - name: Validate native usage widget
+        run: |
+          swiftc -swift-version 5 -parse-as-library apple/UsageWidget/UsageModel.swift apple/UsageWidget/ModelTests.swift -o /tmp/usage-model-tests
+          /tmp/usage-model-tests
+          bash apple/UsageWidget/build.sh /tmp/ToneUsageWidget.app
       - run: xcodebuild -project apple/ToneDashboardApps.xcodeproj -scheme 'ToneDashboardApps macOS' -configuration Release -destination 'platform=macOS' -derivedDataPath /tmp/tone-macos-build CODE_SIGNING_ALLOWED=NO build
       - run: |
           codesign --force --sign - --options runtime '/tmp/tone-macos-build/Build/Products/Release/ToneDashboardApps.app'
