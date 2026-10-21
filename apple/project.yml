@@ -5,7 +5,7 @@ settings:
   base:
     SWIFT_VERSION: 5.0
     MARKETING_VERSION: "1.2.0"
-    CURRENT_PROJECT_VERSION: "11"
+    CURRENT_PROJECT_VERSION: "12"
 targets:
   ToneDashboardApps iOS:
     type: application
@@ -28,6 +28,7 @@ targets:
     sources: [ToneDashboardApps]
     settings:
       base:
+        ENABLE_DEBUG_DYLIB: NO
         PRODUCT_BUNDLE_IDENTIFIER: ovh.tonecas.embydashboard.macos
         PRODUCT_NAME: ToneDashboardApps
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
