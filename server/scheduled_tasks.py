@@ -288,6 +288,27 @@ def _known_logs(kind: str, audit_root: Path) -> list[dict[str, Any]]:
     return result
 
 
+def _outcome(task_id: str, status: str, logs: list[dict[str, Any]]) -> dict[str, str]:
+    if not logs:
+        return {"title": "Todavía sin ejecución registrada", "reason": "La tarea está programada, pero aún no hay un informe de ejecución.", "next_step": "Esperar a la próxima ejecución programada."}
+    message = logs[0].get("message", "")
+    if status == "ok":
+        return {"title": "Comprobación completada", "reason": _text(message, 500), "next_step": "Sin intervención indicada en este registro."}
+    if status == "error":
+        return {"title": "Error registrado", "reason": _text(message, 1200), "next_step": "Resolver el fallo y revisar el informe antes de repetir cambios."}
+    if task_id == "anime-espa-a-estrenos-y-avisos":
+        return {"title": "Fuentes pendientes de confirmar", "reason": _text(message, 650), "next_step": "Reintentar las fuentes no disponibles. No anunciar estrenos sin confirmar su publicación."}
+    if task_id == "mantener-payloads-de-ps5":
+        def line(label):
+            match = re.search(r"(?im)^" + label + r":\s*(.+)$", message)
+            return _text(match.group(1), 900) if match else ""
+        return {"title": "Mantenimiento con pasos pendientes", "reason": line("Resultado") or _text(message, 500), "console": line("Estado") or line("Consola"), "next_step": line("Pendiente") or "Consultar el registro: no consta una instalación completada ni una prueba de arranque superada."}
+    if task_id == "mantenimiento-semanal-proxmox-y-emby":
+        match = re.search(r"(?im)^Resultado:\s*(.+)$", message)
+        return {"title": "Revisión histórica con pendientes", "reason": _text(match.group(1) if match else message, 900), "next_step": "Consultar el seguimiento posterior y los pendientes del informe. Este resultado no indica el estado actual de los servicios."}
+    return {"title": "Error registrado" if status == "error" else "Comprobación pendiente", "reason": _text(message, 900), "next_step": "Consultar el registro y resolver la causa antes de dar la tarea por completada."}
+
+
 def _task(task_id: str, name: str, description: str, executor: str, enabled: bool, schedule: str, logs: list[dict[str, Any]], requirements: list[str], source: str, follow_up: Any = None) -> dict[str, Any]:
     logs = sorted(logs, key=lambda log: log.get("at") or "", reverse=True)[:MAX_LOGS]
     status = logs[0]["status"] if logs else "unknown"
@@ -298,6 +319,7 @@ def _task(task_id: str, name: str, description: str, executor: str, enabled: boo
         "logs": logs, "requirements": [_text(item, 200) for item in requirements[:5] if isinstance(item, str)],
         "source": source, "history_available": bool(logs),
         "follow_up": _follow_up(follow_up),
+        "outcome": _outcome(task_id, status, logs),
     }
 
 
@@ -382,6 +404,11 @@ def snapshot(*, automations_root: Path | None = None, audit_root: Path | None = 
                 requirements = ["Mac y Codex disponibles"]
             tasks.append(_task(task_id, data.get("name"), description, "Codex", data.get("status") == "ACTIVE", _schedule(data.get("rrule")), logs, requirements, "Automatización Codex y auditorías registradas", metadata.get("follow_up")))
     tasks.extend(_internal(database if database is not None else DATABASE, audit_root))
+    import task_runner
+    for task in tasks:
+        task["can_run"] = task["enabled"] and task["id"] in task_runner.ALLOWED
+        task["run_blocked_reason"] = "Pendiente autorizar el perfil limitado de ejecución de Codex." if task["id"] in _PROFILES and not task_runner.CODEX_MANUAL_ENABLED else ""
+        task["execution"] = task_runner.state(task["id"]) if task["id"] in task_runner.ALLOWED else None
     tasks.sort(key=lambda task: (task["executor"], task["name"].casefold()))
     return {
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "timezone": TIMEZONE,

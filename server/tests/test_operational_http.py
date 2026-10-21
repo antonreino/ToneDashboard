@@ -59,6 +59,17 @@ class OperationalHTTPTests(unittest.TestCase):
             # A GET never accepts a shell command or a task action.
             self.assertEqual(self.request('POST', '/api/scheduled-tasks', b'{"action":"run"}')[0], 404)
 
+    def test_manual_tasks_need_auth_origin_valid_body_and_allowlist(self):
+        with patch('task_runner.start',return_value=({'ok':True,'state':'running'},202)) as start:
+            path='/api/scheduled-tasks/run'
+            self.assertEqual(self.request('POST',path,Authorization='')[0],401)
+            self.assertEqual(self.request('POST',path,Origin='https://evil.test')[0],403)
+            for body in [b'[]',b'null',b'{"id":1}',b'{"id":"x","command":"bad"}',b'not-json']:
+                self.assertEqual(self.request('POST',path,body)[0],400)
+            start.assert_not_called()
+            self.assertEqual(self.request('POST',path,b'{"id":"dashboard-backups"}')[0],202)
+            start.assert_called_once()
+
     def test_calendar_feed_is_scoped_and_subscription_requires_auth(self):
         import anime_calendar
         import tempfile

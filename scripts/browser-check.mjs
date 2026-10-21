@@ -150,7 +150,9 @@ try{
     await page.locator('#view-inicio [data-phone-go="tareas"]').click();
     await page.locator('.scheduled-card h3').getByText('Anime: Japón y avisos',{exact:true}).waitFor();
     assert.equal(await page.locator('.scheduled-card').count(),3);
-    assert.equal(await page.locator('.scheduled-result small').getByText('Último resultado',{exact:true}).count(),3);
+    assert.equal(await page.locator('.task-run').count(),3);
+    assert.equal(await page.locator('.scheduled-outcome').count(),3);
+    assert.equal(await page.locator('.scheduled-result small').getByText('Resultado guardado',{exact:true}).count(),3);
     assert.equal(await page.locator('.scheduled-follow-up').getByText(/Una incidencia antigua/).count(),1);
     assert.equal(await page.locator('.phone-nav [aria-current=page]:visible').count(),1);
     const boxes=await page.locator('.scheduled-card').evaluateAll(cards=>cards.map(card=>({top:card.getBoundingClientRect().top,meta:card.querySelector('.scheduled-meta').getBoundingClientRect().top,description:card.querySelector('.scheduled-description').getBoundingClientRect().top})));
@@ -166,6 +168,19 @@ try{
     assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'light');
     await page.screenshot({path:`test-results/browser/${width}-scheduled-tasks.png`,fullPage:true});
   }
+  let manualRequests=0;
+  await page.route('**/api/scheduled-tasks/run',route=>{
+    manualRequests++;
+    assert.deepEqual(route.request().postDataJSON(),{id:'anime'});
+    return route.fulfill({status:202,json:{ok:true,message:'Ejecución de prueba iniciada.'}});
+  });
+  page.once('dialog',dialog=>dialog.dismiss());
+  await page.locator('.task-run').first().click();
+  assert.equal(manualRequests,0);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('.task-run').first().click();
+  await page.getByText('Ejecución de prueba iniciada.',{exact:true}).waitFor();
+  assert.equal(manualRequests,1);
   await page.route('**/api/scheduled-tasks',route=>route.fulfill({status:503,json:{error:'Sin conexión al catálogo'}}));
   await page.locator('#scheduledRefresh').click();
   await page.getByText(/Se conserva la última lectura/).waitFor();

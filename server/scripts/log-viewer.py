@@ -482,6 +482,21 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/scheduled-tasks/run':
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if not 0 < length <= 256: raise ValueError('Solicitud no válida')
+                body = json.loads(self.rfile.read(length))
+                if not isinstance(body, dict) or set(body) != {'id'} or not isinstance(body['id'], str): raise ValueError('Solicitud no válida')
+                from task_runner import start
+                data, code = start(body['id'], PRICE_BOT_DB)
+                snapshots.values.pop('scheduled_tasks', None)
+            except (ValueError, TypeError, UnicodeError) as exc:
+                data, code = {'error': str(exc)[:240] if isinstance(exc, ValueError) else 'Solicitud no válida'}, 400
+            except Exception:
+                data, code = {'error':'No se pudo iniciar la tarea; consulta el estado antes de repetir.'}, 503
+            self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8', code)
+            return
         if parsed.path == '/api/anime-calendar/series':
             import anime_calendar
             try:

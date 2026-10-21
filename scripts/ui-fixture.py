@@ -19,6 +19,9 @@ SCHEDULED={'checked_at':'2026-10-21T12:00:00Z','summary':{'total':3,'active':3,'
     {'id':'ps5','name':'Mantener payloads de PS5','description':'Comprueba versiones oficiales y prepara actualizaciones compatibles. Aplaza cambios cuando no puede certificar actividad segura.','executor':'Codex','enabled':True,'schedule':'Cada día a las 10:00','status':'partial','last_run':'2026-10-21T08:01:36Z','logs':[{'at':'2026-10-21T08:01:36Z','status':'partial','message':'Actualizaciones preparadas. Instalación aplazada.'}],'requirements':['Consola accesible','Sin juegos o transferencias activos']},
     {'follow_up':{'at':'2026-10-21T13:00:00Z','message':'Una incidencia antigua se resolvió después del último informe; no modifica aquel resultado.'},'id':'future','name':'Comprobación futura','description':'Una tarea añadida después de publicar esta pantalla aparece automáticamente.','executor':'Codex','enabled':True,'schedule':'Cada lunes a las 08:00','status':'unknown','last_run':None,'logs':[],'requirements':['Mac disponible']}
 ],'warnings':[]}
+for task in SCHEDULED['tasks']:
+    task['can_run']=True
+    task['outcome']={'title':'Pasos pendientes' if task['status']=='partial' else 'Resultado de la revisión','reason':'Gestor accesible; actualizaciones preparadas.','console':'Despertada correctamente.','next_step':'Verificar transferencias antes de instalar.'}
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path=urlsplit(self.path).path

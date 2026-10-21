@@ -530,3 +530,14 @@ td .button { min-height: 40px; margin: 2px 0; padding: 9px 12px; font-size: 12px
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }
+
+.scheduled-outcome { margin: 0 0 14px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); overflow-wrap: anywhere; font-size: 12px; line-height: 1.65; }
+.scheduled-outcome > strong { color: var(--accent); }
+.scheduled-outcome p { margin: 9px 0 0; }
+
+.task-run { margin-top: 14px; }
+.task-execution { border-top: 1px solid var(--border); padding-top: 12px; }
+
+.scheduled-outcome { display: flex; flex-direction: column; padding-bottom: 14px; }
+.scheduled-outcome .task-run { margin-top: auto; align-self: flex-start; }
+.scheduled-outcome p:last-of-type { margin-bottom: 14px; }

@@ -1,6 +1,6 @@
 # Tareas programadas
 
-La sección común web, macOS e iOS muestra el catálogo de automatizaciones de Codex y las tareas periódicas del propio Dashboard. El catálogo es de **solo lectura**: no habilita, ejecuta, modifica ni elimina tareas.
+La sección común web, macOS e iOS muestra el catálogo de automatizaciones de Codex y las tareas periódicas del propio Dashboard. El catálogo explica los resultados históricos. «Recargar informes» solo consulta los registros. «Ejecutar ahora» inicia una de las seis tareas autorizadas tras confirmación; no permite editar órdenes, horarios ni instrucciones desde el cliente.
 
 ## Qué se muestra
 
@@ -92,3 +92,18 @@ Validación: `PYTHONPATH=server .venv/bin/python -m unittest discover -s server/
 ## Seguimiento posterior a una ejecución
 
 `metadata.json` admite `follow_up: {"at":"2026-10-21T13:00:47Z","message":"La incidencia documentada fue resuelta posteriormente; se conserva el resultado original."}`. La interfaz lo muestra separado del último resultado. Nunca altera la fecha, estado o log de aquella ejecución. El texto también se acota y sanea; no constituye una nueva comprobación del servicio.
+
+
+## Resultado claro y ejecución manual
+
+Cada tarjeta muestra un resumen visible, motivo, estado de consola cuando consta, siguiente paso y seguimiento posterior. «Parcial» describe la última ejecución guardada: no demuestra que el servicio esté caído. El seguimiento no borra incidencias históricas.
+
+POST `/api/scheduled-tasks/run` acepta exclusivamente `{id}` (hasta 256 bytes), con autenticación y protección de origen existentes. IDs permitidos: las cuatro automatizaciones mantenidas y las comprobaciones de copias y aMule. Las futuras automatizaciones aparecen en el catálogo, pero no reciben capacidad de ejecución automáticamente.
+
+El ejecutor carga las instrucciones de la configuración local de confianza, nunca del navegador. Codex recibe el prompt por stdin y devuelve un JSON validado; el cliente no recibe prompts, rutas, órdenes, credenciales ni salida cruda. Las copias y aMule usan las funciones existentes. Se conserva el horario periódico: una ejecución manual no lo cambia. El lanzamiento de Codex requiere el perfil limitado autorizado; no se usa acceso completo ni omisión de aprobaciones.
+
+Solo una tarea manual puede ejecutarse a la vez, con bloqueo de proceso y fichero heredado por Codex. Un segundo clic devuelve conflicto; hay una pausa mínima entre lanzamientos. Estado manual y resultado histórico aparecen separados. El proceso depende del Mac encendido, de la sesión de Codex y de sus límites de uso. Un exit code cero sin informe válido no se considera mantenimiento completado. Tras una interrupción se pide comprobar el informe antes de repetir. El bloqueo manual no sustituye las comprobaciones de actividad de la consola ni constituye exclusión automática de las ejecuciones periódicas de Codex.
+
+Los resultados manuales se guardan como informes fechados en el catálogo existente; no se añade un servicio permanente. La prueba de navegador simula la ejecución, sin realizar mantenimiento real.
+
+Validación de la ejecución manual: copias verificadas probadas contra el servicio real (HTTP 202 y resultado correcto). Perfil limitado autorizado por el propietario; prueba real del ejecutor Codex completada con JSON correcto, sin usar herramientas ni realizar mantenimiento. Las cuatro revisiones Codex están habilitadas. Esta prueba acredita el lanzamiento y la respuesta del ejecutor, no una nueva actualización de PS5 o Proxmox.

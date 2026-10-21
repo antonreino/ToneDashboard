@@ -39,6 +39,25 @@ class ScheduledTasksTests(unittest.TestCase):
     def codex(self):
         return [task for task in self.snapshot()["tasks"] if task["executor"] == "Codex"]
 
+    def test_outcome_explains_pending_console_and_preserves_history(self):
+        logs = [tasks._event("2026-10-21T08:00:00Z", "partial", "Resultado: PARCIAL. Preparados, sin instalar.\nEstado: Despertada; gestor accesible.\nPendiente: Certificar transferencias y probar arranque.")]
+        task = tasks._task("mantener-payloads-de-ps5", "PS5", "", "Codex", True, "Diario", logs, [], "", {"at": "2026-10-21T10:00:00Z", "message": "Revisión posterior"})
+        self.assertEqual(task["status"], "partial")
+        self.assertIn("Despertada", task["outcome"]["console"])
+        self.assertIn("transferencias", task["outcome"]["next_step"])
+        self.assertIsNotNone(task["follow_up"])
+
+    def test_missing_logs_never_claim_completed_maintenance(self):
+        outcome = tasks._outcome("future-task", "unknown", [])
+        self.assertIn("sin ejecución", outcome["title"])
+        self.assertNotIn("completada", outcome["title"])
+
+    def test_outcome_redacts_private_report_data(self):
+        logs = [tasks._event("2026-10-21T08:00:00Z", "partial", "Resultado: pendiente\nPendiente: revisar http://192.168.1.50/private y /Users/tone/private")]
+        outcome = tasks._outcome("mantener-payloads-de-ps5", "partial", logs)
+        self.assertNotIn("192.168", str(outcome))
+        self.assertNotIn("/Users/tone", str(outcome))
+
     def test_dynamic_discovery_does_not_publish_prompts_or_raw_schedule(self):
         self.automation()
         result = self.snapshot()
