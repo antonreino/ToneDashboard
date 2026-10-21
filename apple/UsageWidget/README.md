@@ -1,6 +1,6 @@
 # Tone Usage · panel flotante de macOS
 
-Utilidad nativa complementaria; no cambia el Dashboard ni añade un LaunchAgent. Panel crema movible, inicialmente arriba a la derecha, visible sobre otras ventanas y con un menú en la barra de macOS para reposicionarlo, actualizar o salir.
+Utilidad nativa complementaria; no cambia el Dashboard ni añade un LaunchAgent. Panel crema movible, inicialmente arriba a la derecha del monitor principal (el primero de NSScreen.screens, con la barra de menú), visible sobre otras ventanas y con un menú en la barra de macOS para reposicionarlo, actualizar o salir.
 
 - Codex: dos tarjetas, **Diario** primero (con la duración real de la ventana, actualmente 5 horas; no se inventa un límite de 24 horas) y **Semanal** después. Porcentajes **restantes**, renovación y última lectura. No se estima un número de mensajes. Los datos no disponibles se muestran como desconocidos, nunca como 100 %.
 - ChatGPT (mensajes de chat ordinarios): sin contador automático verificable para la cuenta probada. Se indica expresamente y se ofrece abrir ChatGPT. No confundir esta ausencia con cuota agotada ni usar los porcentajes de Codex para representarla.
@@ -21,3 +21,12 @@ Instalación del usuario: `~/Applications/ToneUsageWidget.app`. Compilación nat
 ## Verificación
 
 Compilar UsageModel.swift + ModelTests.swift y ejecutar. Compilar UsageModel.swift + UsageWidget.swift con `-D WIDGET_PROBE` para dos consultas reales sin abrir el panel ni crear conversaciones. Las pruebas de reinicio usan modelos y respuestas simuladas: no consumen ningún bono real. La prueba de lectura debe tener dos lecturas válidas separadas aproximadamente tres segundos y no registrar identificadores de cuenta ni tokens.
+
+
+## Escritorio y salvapantallas
+
+El panel no se oculta al desactivarse su aplicación (`hidesOnDeactivate=false`). Se conserva el salvapantallas, el fondo y la configuración de seguridad existentes. Se comprueba el motor de salvapantallas y, como alternativa, únicamente propietario/capa de ventanas visibles; no se capturan imágenes ni contenidos.
+
+Al detectar el salvapantallas se eleva la ventana por encima de su capa, sin sustituir el fondo. En ese modo no hay controles interactivos: se ocultan acciones y se ignora el ratón. Al salir vuelve a la capa flotante normal. Ante cambio de sesión se oculta. Esto no implementa un widget de login ni garantiza visibilidad en la pantalla de autenticación protegida de macOS.
+
+La instalación del 21/10 se comprobó visible en el monitor principal de 3440×1440, esquina superior derecha (ventana 324×560). La comprobación visual sobre el salvapantallas real se solicita al propietario; no se considera superada solo por haber compilado.

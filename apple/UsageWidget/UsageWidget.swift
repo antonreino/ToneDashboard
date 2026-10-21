@@ -6,6 +6,7 @@ final class UsageStore: ObservableObject {
     @Published var snapshot: UsageSnapshot?
     @Published var lastRead: Date?
     @Published var message = "Consultando límites…"
+    @Published var saverMode = false
     @Published var connected = false
     @Published var resetBusy = false
     @Published var resetUncertain = false
@@ -195,8 +196,10 @@ struct UsageView: View {
                 Image(systemName: "chart.bar.xaxis").foregroundStyle(green)
                 Text("TU USO").font(.system(size: 11, weight: .bold, design: .rounded)).tracking(2)
                 Spacer()
-                Button(action: refresh) { Image(systemName: "arrow.clockwise") }.help("Actualizar límites")
-                Button(action: quit) { Image(systemName: "xmark") }.help("Cerrar widget")
+                if !store.saverMode {
+                    Button(action: refresh) { Image(systemName: "arrow.clockwise") }.help("Actualizar límites")
+                    Button(action: quit) { Image(systemName: "xmark") }.help("Cerrar widget")
+                }
             }.buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 12) {
                 HStack { Text("Codex").font(.system(size: 20, weight: .semibold)); Spacer(); Text(store.snapshot?.plan?.capitalized ?? "Cuenta").font(.system(size: 11)).foregroundStyle(muted) }
@@ -210,16 +213,20 @@ struct UsageView: View {
                     Text(store.snapshot?.resetCount.map(String.init) ?? "—").font(.system(size: 16, weight: .semibold, design: .rounded))
                 }
                 if !store.resetNotice.isEmpty { Text(store.resetNotice).font(.system(size: 10)).foregroundStyle(muted).fixedSize(horizontal: false, vertical: true) }
+                if !store.saverMode {
                 Button(store.resetBusy ? "Procesando…" : store.resetUncertain ? "Comprobar reinicio pendiente" : "Usar un reinicio") { confirmReset() }
                     .font(.system(size: 11, weight: .semibold)).buttonStyle(.borderedProminent).tint(green)
                     .disabled(store.resetBusy || !store.connected || (!store.resetUncertain && (store.snapshot?.resetCount ?? 0) < 1))
+                }
             }
             Divider().overlay(Color.black.opacity(0.06))
             VStack(alignment: .leading, spacing: 7) {
                 HStack { Text("ChatGPT · mensajes").font(.system(size: 13, weight: .semibold)); Spacer(); Text("Sin lectura").font(.system(size: 10)).foregroundStyle(muted) }
                 Text("No hay un contador automático verificado para esta cuenta. No se estima a partir de Codex.")
                     .font(.system(size: 11)).foregroundStyle(muted).fixedSize(horizontal: false, vertical: true)
-                Button("Abrir ChatGPT ↗") { NSWorkspace.shared.open(URL(string: "https://chatgpt.com/")!) }.buttonStyle(.plain).font(.system(size: 11, weight: .medium)).foregroundStyle(green)
+                if !store.saverMode {
+                    Button("Abrir ChatGPT ↗") { NSWorkspace.shared.open(URL(string: "https://chatgpt.com/")!) }.buttonStyle(.plain).font(.system(size: 11, weight: .medium)).foregroundStyle(green)
+                }
             }
             HStack(alignment: .top, spacing: 6) {
                 Circle().fill(store.connected ? green : Color.orange).frame(width: 5, height: 5).padding(.top, 4)
@@ -269,6 +276,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var item: NSStatusItem!
     let store = UsageStore()
     var client: UsageClient!
+    var presentationTimer: Timer?
+    var sessionActive = true
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         client = UsageClient(store: store)
@@ -277,6 +286,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let size = host.fittingSize
         panel = NSPanel(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.contentView = host; panel.isFloatingPanel = true; panel.level = .floating
+        panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.isMovableByWindowBackground = true; panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = true
@@ -291,10 +301,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Salir", action: #selector(quit), keyEquivalent: "q").target = self
         item.menu = menu
         NotificationCenter.default.addObserver(self, selector: #selector(screenChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(sessionResigned), name: NSWorkspace.sessionDidResignActiveNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(sessionBecameActive), name: NSWorkspace.sessionDidBecomeActiveNotification, object: nil)
+        presentationTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.updatePresentation() }
+        updatePresentation()
         client.start()
     }
+    func screenSaverActive() -> Bool {
+        if NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.apple.ScreenSaver.Engine" }) { return true }
+        // Only inspect window-owner/layer metadata. No screenshot or window contents.
+        guard let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] else { return false }
+        let saverLevel = Int(CGWindowLevelForKey(.screenSaverWindow))
+        return windows.contains { row in
+            guard let pid = row[kCGWindowOwnerPID as String] as? Int, pid != ProcessInfo.processInfo.processIdentifier,
+                  let layer = row[kCGWindowLayer as String] as? Int, layer >= saverLevel,
+                  let owner = row[kCGWindowOwnerName as String] as? String else { return false }
+            return owner.localizedCaseInsensitiveContains("screensaver") || owner.localizedCaseInsensitiveContains("wallpaper")
+        }
+    }
+    func updatePresentation() {
+        guard sessionActive else { return }
+        let saver = screenSaverActive()
+        if saver != store.saverMode {
+            store.saverMode = saver
+            panel.level = saver ? NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.screenSaverWindow)) + 1) : .floating
+            panel.ignoresMouseEvents = saver
+            if saver { placeTopRight() }
+            panel.orderFrontRegardless()
+        }
+    }
+    @objc func sessionResigned() { sessionActive = false; panel.orderOut(nil) }
+    @objc func sessionBecameActive() { sessionActive = true; updatePresentation(); panel.orderFrontRegardless() }
     func placeTopRight() {
-        guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
+        guard let screen = NSScreen.screens.first else { return }
         let frame = screen.visibleFrame
         panel.setFrameTopLeftPoint(NSPoint(x: frame.maxX-panel.frame.width-18, y: frame.maxY-18))
     }
@@ -302,7 +341,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func screenChanged() { placeTopRight() }
     @objc func update() { client.refresh() }
     @objc func quit() { NSApp.terminate(nil) }
-    func applicationWillTerminate(_ notification: Notification) { client.stop() }
+    func applicationWillTerminate(_ notification: Notification) { presentationTimer?.invalidate(); client.stop() }
 }
 
 #if WIDGET_PROBE
@@ -326,6 +365,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static func main() {
         let app = NSApplication.shared; app.setActivationPolicy(.accessory)
         let store = UsageStore()
+        store.saverMode = CommandLine.arguments.contains("--saver")
         store.received(UsageSnapshot.parse(["rateLimits":["limitId":"codex","planType":"plus","primary":["usedPercent":37,"windowDurationMins":300,"resetsAt":1792628274],"secondary":["usedPercent":28,"windowDurationMins":10080,"resetsAt":1793088012]],"rateLimitResetCredits":["availableCount":1,"credits":[]]])!)
         let host = NSHostingView(rootView: UsageView(store:store,refresh:{},quit:{}))
         let size = host.fittingSize
