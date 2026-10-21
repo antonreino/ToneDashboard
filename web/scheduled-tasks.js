@@ -32,7 +32,7 @@ window.ToneScheduledTasks = (() => {
         ${task.follow_up ? `<div class="scheduled-follow-up"><strong>Actualización posterior · ${esc(date(task.follow_up.at))}</strong><p>${esc(task.follow_up.message)}</p></div>` : ''}
         ${execution ? `<p class="task-execution"><b>${execution.state === 'running' ? 'En ejecución' : 'Último lanzamiento manual'} · ${esc(date(execution.started_at))}</b><br>${esc(execution.message)}</p>` : ''}
         ${task.run_blocked_reason ? `<p>${esc(task.run_blocked_reason)}</p>` : ''}
-        ${task.can_run ? `<button class="button task-run" type="button" data-run-task="${esc(task.id)}" ${execution?.state === 'running' || task.run_blocked_reason ? 'disabled' : ''}>${execution?.state === 'running' ? 'Ejecutando…' : 'Ejecutar ahora'}</button>` : ''}
+        ${task.can_run ? `<div class="scheduled-actions"><button class="button task-run" type="button" data-run-task="${esc(task.id)}" ${execution?.state === 'running' || task.run_blocked_reason ? 'disabled' : ''}>${execution?.state === 'running' ? 'Ejecutando…' : 'Ejecutar ahora'}</button></div>` : ''}
       </section>
       <details class="scheduled-details"><summary>Qué necesita esta tarea</summary><p>${esc(Array.isArray(task.requirements) ? task.requirements.join(' · ') : task.requirements || 'Consulta supervisada, sin acciones desde esta pantalla.')}</p></details>
       <details class="scheduled-details"><summary>Registro de actividad <span>${logs.length ? `${logs.length} recientes` : 'Sin registros'}</span></summary>
