@@ -24,7 +24,7 @@ Las descargas directas solo aceptan destinos públicos HTTP/HTTPS en puertos 80 
 
 Las acciones POST y las mutaciones de Orbit comprueban `Origin` contra `Host`. Los clientes nativos sin `Origin` deben enviar `X-Dashboard-Action: write`. Las conexiones WebSocket de Orbit exigen un origen coincidente. El proxy inverso debe conservar el Host público. Actualiza la app junto con el servidor: los clientes antiguos sin la cabecera deberán actualizarse para descargar o subir torrents.
 
-El dashboard consulta cada 12 segundos y solo carga ofertas en Chollos y logs en Inicio. Orbit sigue siendo una aplicación de confianza que comparte origen con el dashboard; estos controles no aíslan un script comprometido servido por Orbit. Mantén el acceso privado y Orbit actualizado.
+El dashboard consulta cada 12 segundos y solo carga ofertas en Chollos y logs en su sección propia. Orbit sigue siendo una aplicación de confianza que comparte origen con el dashboard; estos controles no aíslan un script comprometido servido por Orbit. Mantén el acceso privado y Orbit actualizado.
 
 ## Mostrar el código de Orbit desde web y apps
 
@@ -60,7 +60,7 @@ En la pestaña Orbit abre **Conexión automática**, introduce la contraseña de
 `ORBIT_PAIR_CODE_PASSWORD` y pulsa **Recordar este dispositivo**. La autorización
 caduca a los 30 días. Se conserva en una cookie `Secure`, `HttpOnly` y
 `SameSite=Strict`; utiliza la URL HTTPS del dashboard, también en la red local.
-Las apps de esta arquitectura comparten la versión 1.0.0 y la interfaz web.
+Las apps de esta arquitectura comparten la versión 1.2.0 y la interfaz web.
 
 Si Orbit pierde su sesión o se reinicia, el puente consulta el código vigente
 mediante ToneOrbitCodeReader y realiza la vinculación normal de Orbit. El lector
@@ -81,7 +81,7 @@ La consola necesita tener iniciado su receptor de Orbit para utilizar sus funcio
 
 ### Seguimiento de productos por EAN
 
-En **Ofertas**, el formulario EAN permite añadir productos de 8 o 13 cifras con control válido. Cada producto dispone de una tarjeta y ofertas ordenadas por precio ascendente, igual que PS5 y Switch. Se muestra el precio del artículo; gastos de envío aparte. El registro se comparte con `ps5-price-bot` mediante su SQLite, conservando historial y destinatarios. El worker forma parte del mismo repositorio e incorpora las altas sin reinicio individual.
+En **Chollos**, el formulario EAN permite añadir productos de 8 o 13 cifras con control válido. Cada producto dispone de una tarjeta y ofertas ordenadas por precio ascendente, igual que PS5 y Switch. Se muestra el precio del artículo; gastos de envío aparte. El registro se comparte con el worker `workers/price_tracker` mediante su SQLite, conservando historial y destinatarios. El worker forma parte del mismo repositorio e incorpora las altas sin reinicio individual.
 
 PcComponentes y MediaMarkt se han validado con búsquedas y fichas reales. Chollometro se consulta por sus fuentes públicas existentes y exige coincidencia EAN para productos añadidos. Amazon (sin precios) e Idealo (403) continúan desactivados; no se presentan como fuentes operativas.
 
@@ -89,8 +89,13 @@ Validación local de esta actualización: 91 pruebas Python correctas, API HTTP 
 
 Cada tarjeta EAN incluye **Eliminar**, con confirmación. Deja de seguir ese producto y cancela sus avisos pendientes sin borrar el historial. Los productos nuevos notifican por el bot Telegram y a los destinatarios existentes.
 
-**PS5 y Switch también son eliminables** desde su tarjeta, igual que los EAN. Al retirarlas se detienen sus consultas y avisos, no solo se ocultan. Las familias retiradas muestran **Volver a seguir**. El historial se conserva y los EAN continúan usando sus tiendas, aunque se retire PS5 o Switch. El mismo control existe en iOS y macOS1.4(6).
+**PS5 y Switch también son eliminables** desde su tarjeta, igual que los EAN. Al retirarlas se detienen sus consultas y avisos, no solo se ocultan. Las familias retiradas muestran **Volver a seguir**. El historial se conserva y los EAN continúan usando sus tiendas, aunque se retire PS5 o Switch. El mismo control existe en web, iOS y macOS, con la versión pública común.
 
 ### Recuperación de conexiones SSH/SFTP
 
 El Organizer comprueba también si el canal SFTP está cerrado, mantiene viva la sesión SSH y aplica tiempos de espera a las lecturas. Biblioteca, espacio y CPU/RAM recuperan una conexión interrumpida con un único reintento, igual que las operaciones de subida. Se mantiene la verificación estricta de `known_hosts`; un fallo de autenticación o de clave del servidor no se trata como una interrupción recuperable. Los errores incluyen su tipo incluso cuando la excepción no tiene mensaje, sin exponer credenciales.
+
+
+### Interfaz y tareas programadas · 1.2.0
+
+El sistema visual crema es común a las tres plataformas. Inicio ofrece accesos directos; Más agrupa biblioteca, sistema y preferencias. La sección Tareas programadas usa `GET /api/scheduled-tasks` autenticado y de solo lectura. Descubre nuevas automatizaciones y consulta resultados acotados/sanitizados sin ejecutar procesos ni publicar prompts. Véanse [Tareas programadas](../docs/TAREAS-PROGRAMADAS.md) e [instantánea del proyecto](../docs/ESTADO-PROYECTO-2026-10-21.md). Las cifras de validación de apartados anteriores son históricas de sus entregas.

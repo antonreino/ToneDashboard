@@ -23,6 +23,7 @@ APP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(APP_DIR))
 sys.path.insert(0, str(APP_DIR.parent / 'workers' / 'price_tracker'))
 from state_db import (
+    DB_PATH,
     download_page, history_page,
     dashboard_statistics,
     dashboard_summary,
@@ -284,8 +285,8 @@ PWA_MANIFEST = json.dumps({
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
-    "background_color": "#07111f",
-    "theme_color": "#07111f",
+    "background_color": "#f5f2e9",
+    "theme_color": "#f5f2e9",
     "description": "Panel privado ToneDashboard",
     "icons": [
         {"src": "/app-icon.png", "sizes": "180x180", "type": "image/png"},
@@ -361,6 +362,15 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/scheduled-tasks':
+            from scheduled_tasks import snapshot
+            try:
+                data = snapshots.get('scheduled_tasks', 20, lambda: snapshot(database=DB_PATH))
+                code = 200
+            except Exception:
+                data, code = {'error': 'No se pudieron consultar las tareas programadas'}, 503
+            self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8', code)
+            return
         if parsed.path in ('/api/organizer/reviews','/api/activity','/api/organizer/rules','/api/diagnostics','/api/deals/preferences'):
             from operations import get
             try:

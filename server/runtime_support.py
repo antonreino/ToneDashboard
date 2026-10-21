@@ -1,5 +1,6 @@
 """Bounded log reads, shared snapshots and verified SQLite backups."""
 from contextlib import closing
+from concurrent.futures import Future
 from pathlib import Path
 import os
 import sqlite3
@@ -10,15 +11,41 @@ class SnapshotCache:
     def __init__(self):
         self.lock = threading.Lock()
         self.values = {}
+        self._inflight = {}
+
     def get(self, key, ttl, loader):
+        """Share one load per key without blocking unrelated snapshots.
+
+        Futures exist only while their loader runs. Failures reach the callers
+        already waiting for that load and are never stored as cached values.
+        """
         with self.lock:
             now = time.monotonic()
             value = self.values.get(key)
             if value and now - value[0] < ttl:
                 return value[1]
+            pending = self._inflight.get(key)
+            owner = pending is None
+            if owner:
+                pending = Future()
+                self._inflight[key] = pending
+
+        if not owner:
+            return pending.result()
+
+        try:
             result = loader()
+        except BaseException as exc:
+            with self.lock:
+                self._inflight.pop(key)
+            pending.set_exception(exc)
+            raise
+
+        with self.lock:
             self.values[key] = (time.monotonic(), result)
-            return result
+            self._inflight.pop(key)
+        pending.set_result(result)
+        return result
 
 snapshots = SnapshotCache()
 

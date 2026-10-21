@@ -9,7 +9,7 @@ try{
     try{const r=await fetch('http://127.0.0.1:8877/');if(r.ok)break;}catch{}
     await new Promise(r=>setTimeout(r,100));
   }
-  browser=await chromium.launch();const page=await browser.newPage();const errors=[];
+  browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||undefined});const page=await browser.newPage();const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await mkdir('test-results/browser',{recursive:true});
   await page.goto('http://127.0.0.1:8877/');
@@ -88,9 +88,9 @@ try{
     const layout=await page.locator('.anime-card').evaluateAll(cards=>cards.map(card=>{
       const poster=card.querySelector('.anime-card__poster').getBoundingClientRect();
       const buttons=[...card.querySelectorAll('.anime-card__actions button')].map(b=>b.getBoundingClientRect());
-      return {ratio:poster.width/poster.height,gap:buttons[1].top-buttons[0].bottom,fit:getComputedStyle(card.querySelector('img')).objectFit,top:card.getBoundingClientRect().top,title:card.querySelector('h3').getBoundingClientRect().top,note:card.querySelector('.anime-card__note').getBoundingClientRect().top,body:card.querySelector('.anime-card__events').getBoundingClientRect().top,dub:card.querySelector('.anime-card__dub').getBoundingClientRect().top,actions:card.querySelector('.anime-card__actions').getBoundingClientRect().top};
+      return {ratio:poster.width/poster.height,buttons:buttons.map(b=>({left:b.left,right:b.right,top:b.top,bottom:b.bottom,height:b.height})),fit:getComputedStyle(card.querySelector('img')).objectFit,top:card.getBoundingClientRect().top,title:card.querySelector('h3').getBoundingClientRect().top,note:card.querySelector('.anime-card__note').getBoundingClientRect().top,body:card.querySelector('.anime-card__events').getBoundingClientRect().top,dub:card.querySelector('.anime-card__dub').getBoundingClientRect().top,actions:card.querySelector('.anime-card__actions').getBoundingClientRect().top};
     }));
-    assert.equal(layout.length,6);for(const card of layout){assert(Math.abs(card.ratio-5/7)<.01);assert(card.gap>=11);assert.equal(card.fit,'contain');}
+    assert.equal(layout.length,6);for(const card of layout){assert(Math.abs(card.ratio-5/7)<.01);for(const button of card.buttons)assert(button.height>=44);for(let i=0;i<card.buttons.length;i++)for(let j=i+1;j<card.buttons.length;j++){const a=card.buttons[i],b=card.buttons[j];assert(a.right+11<=b.left||b.right+11<=a.left||a.bottom+11<=b.top||b.bottom+11<=a.top,'Anime actions overlap or spacing too small');}assert.equal(card.fit,'contain');}
     for(const card of layout){const row=layout.filter(other=>Math.abs(other.top-card.top)<1);for(const other of row)for(const key of ['title','note','body','dub','actions'])assert(Math.abs(card[key]-other[key])<1,`Misaligned ${key} at ${width}`);}
     await page.getByText('Esperando temporada',{exact:true}).first().waitFor();
     await page.screenshot({path:`test-results/browser/${width}-anime-calendar.png`,fullPage:true});
@@ -141,6 +141,55 @@ try{
     assert.equal(await page.locator('#amuleActionStatus').textContent(),'');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:`test-results/browser/${width}-amule-error.png`,fullPage:true});
+  }
+  // New read-only task catalogue, preserved disclosures and safely rendered logs.
+  await page.unroute('**/api/dashboard?*');
+  for(const width of [320,390,600,768,1024,1440,2560]){
+    await page.setViewportSize({width,height:1000});
+    await page.locator('.phone-nav').getByRole('button',{name:'Inicio',exact:true}).click();
+    await page.locator('#view-inicio [data-phone-go="tareas"]').click();
+    await page.locator('.scheduled-card h3').getByText('Anime: Japón y avisos',{exact:true}).waitFor();
+    assert.equal(await page.locator('.scheduled-card').count(),3);
+    assert.equal(await page.locator('.phone-nav [aria-current=page]:visible').count(),1);
+    const boxes=await page.locator('.scheduled-card').evaluateAll(cards=>cards.map(card=>({top:card.getBoundingClientRect().top,meta:card.querySelector('.scheduled-meta').getBoundingClientRect().top,description:card.querySelector('.scheduled-description').getBoundingClientRect().top})));
+    for(const box of boxes)for(const other of boxes.filter(b=>Math.abs(b.top-box.top)<1)){assert(Math.abs(box.meta-other.meta)<1);assert(Math.abs(box.description-other.description)<1);}
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Task overflow at ${width}`);
+    const task=page.locator('.scheduled-card').first();
+    const log=task.locator('details').last();
+    if(!await log.evaluate(el=>el.open))await log.locator('summary').click();
+    await page.locator('#scheduledRefresh').click();
+    await page.waitForFunction(()=>!document.getElementById('scheduledRefresh').disabled);
+    assert(await task.locator('details').last().evaluate(el=>el.open));
+    assert.equal(await page.locator('[data-task-id="future"]').getByText('Sin registros',{exact:true}).count(),2);
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'light');
+    await page.screenshot({path:`test-results/browser/${width}-scheduled-tasks.png`,fullPage:true});
+  }
+  await page.route('**/api/scheduled-tasks',route=>route.fulfill({status:503,json:{error:'Sin conexión al catálogo'}}));
+  await page.locator('#scheduledRefresh').click();
+  await page.getByText(/Se conserva la última lectura/).waitFor();
+  assert.equal(await page.locator('.scheduled-card').count(),3);
+  await page.unroute('**/api/scheduled-tasks');
+  await page.route('**/api/scheduled-tasks',route=>route.fulfill({json:{checked_at:'2026-10-21T12:00:00Z',summary:{total:1,active:1,paused:0,attention:0},warnings:['Catálogo parcialmente disponible'],tasks:[{id:'safe',name:'<img src=x onerror=alert(1)>',description:'Texto <script>unsafe</script>',enabled:true,status:'ok',schedule:'Cada 3 horas',executor:'Codex',logs:[{at:'invalid',status:'<script>',message:'<img src=x onerror=alert(1)>'}]}]}}));
+  await page.locator('#scheduledRefresh').click();
+  await page.getByRole('heading',{name:'<img src=x onerror=alert(1)>',exact:true}).waitFor();
+  assert.equal(await page.locator('.scheduled-card img,.scheduled-card script').count(),0);
+  await page.locator('#scheduledWarnings').filter({hasText:'Catálogo parcialmente disponible'}).waitFor();
+  // Verify secondary views remain accessible and fit the viewport after redesign.
+  for(const width of [390,1440]){
+    await page.setViewportSize({width,height:1000});
+    for(const [route,title] of [['equipos','Equipos'],['estadisticas','Estadísticas'],['historial','Historial'],['ajustes','Preferencias'],['logs','Logs']]){
+      await page.locator('.phone-nav').getByRole('button',{name:'Más',exact:true}).click();
+      await page.locator(`#view-mas [data-phone-go="${route}"]`).click();
+      await page.getByRole('heading',{name:title,exact:true,level:1}).waitFor();
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${route} overflow ${width}`);
+      assert.equal(await page.locator('.phone-nav [aria-current=page]:visible').count(),1);
+      await page.screenshot({path:`test-results/browser/${width}-${route}.png`,fullPage:true});
+    }
+  }
+  for(const route of ['calendario','tareas','logs']){
+    await page.locator('.phone-nav').getByRole('button',{name:'Más',exact:true}).click();
+    await page.locator(`#view-mas [data-phone-go="${route}"]`).click();
+    for(const width of [390,1440,390]){await page.setViewportSize({width,height:1000});await page.waitForFunction(()=>[...document.querySelectorAll('.phone-nav [aria-current=page]')].filter(el=>el.getClientRects().length).length===1);assert.equal(await page.locator('.phone-nav [aria-current=page]:visible').count(),1);}
   }
   assert.deepEqual(errors,[]);
   console.log('Browser checks: responsive layouts, operations, forms, unique controls, preferences, offline warning; no JavaScript exceptions.');

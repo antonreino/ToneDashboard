@@ -1,6 +1,6 @@
-# Tone Dashboard 1.1 · operación y recuperación
+# Tone Dashboard 1.2 · operación y recuperación
 
-La interfaz y las operaciones siguen compartidas por web, iOS y macOS. No se añaden servicios LaunchAgent. La versión pública es 1.1.0, sin sufijo de compilación.
+La interfaz y las operaciones siguen compartidas por web, iOS y macOS. No se añaden servicios LaunchAgent. La versión pública es 1.2.0, sin sufijo de compilación.
 
 ## Datos y actualización
 
@@ -67,3 +67,12 @@ El servidor usa `server/ps5_wake.py`; la tarea diaria usa el mismo módulo media
 Validación: pruebas de estados, credencial ausente, permisos, protocolo, contraseña incorrecta sin despertar, espera limitada, ausencia de Orbit y limitación de intentos. Despertar físico validado en esta instalación; la disponibilidad de jailbreak y Orbit tras reposo debe verificarse por separado.
 
 En macOS ejecutar `bash server/scripts/install-ps5-wake-helper.sh` y permitir Red local para TonePS5Wake cuando lo solicite. El Dashboard abre este asistente puntual mediante LaunchServices para respetar la identidad de privacidad del sistema. El asistente se cierra al terminar. Su código y el instalador se incluyen en el repositorio; la clave y la aplicación instalada son locales al Mac. Tras reemplazar el ejecutable, macOS puede pedir de nuevo el permiso.
+
+
+## Tareas programadas
+
+Inicio → Tareas programadas (o acceso directo en escritorio) muestra las automatizaciones de Codex y los trabajos internos de copias/aMule. El horario y el último resultado documentado son datos separados. El catálogo descubre nuevas automatizaciones al actualizar; la integración de sus registros sigue [TAREAS-PROGRAMADAS.md](TAREAS-PROGRAMADAS.md). El endpoint exige autenticación, es de solo lectura y nunca ejecuta una tarea desde el navegador. Los mensajes se acotan y se ocultan credenciales, URLs y rutas privadas.
+
+## Interfaz 1.2
+
+Tema crema común a web, macOS e iOS; conserva navegación, formularios e información. Los accesos rápidos llevan a Anime y Tareas desde Inicio; Más agrupa biblioteca, sistema y preferencias. Logs permanece al final del menú de escritorio y en Más en iPhone. El calendario y la supervisión de tareas tienen módulos separados y utilizan el transporte JSON común con timeout y controles de origen existentes.

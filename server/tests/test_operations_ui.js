@@ -4,6 +4,7 @@ const get=id=>nodes[id]||={textContent:'',hidden:false,innerHTML:'',contains:()=
 const context={window:{},console,AbortController,Blob,URL,JSON,Date,Set,setTimeout,clearTimeout,confirm:()=>true,loadAmule:async()=>{},document:{activeElement:null,getElementById:get,querySelector:()=>({id:'view-organizer'}),addEventListener(type,fn){events[type]=fn}},fetch:async(path,options)=>{requests.push({path,options});return {ok:true,json:async()=>({ok:true,items:[]})}}};
 vm.createContext(context);
 const main=fs.readFileSync('web/dashboard.js','utf8');vm.runInContext(main.slice(0,main.indexOf('async function loadDashboard()')),context);
+vm.runInContext(fs.readFileSync('web/api.js','utf8'),context);
 vm.runInContext(fs.readFileSync('web/operations.js','utf8'),context);
 const ops=context.window.ToneOperations;
 assert.match(ops.downloadButtons({id:7,status:'active'}),/Pausar/);

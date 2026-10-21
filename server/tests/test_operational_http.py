@@ -45,6 +45,20 @@ class OperationalHTTPTests(unittest.TestCase):
         with patch('operations.get',return_value=({'ok':True},200)) as get:
             self.assertEqual(self.request('GET','/api/diagnostics',Authorization='')[0],401);get.assert_not_called()
 
+    def test_scheduled_tasks_are_authenticated_read_only_and_no_store(self):
+        import scheduled_tasks
+        self.viewer.snapshots.values.pop('scheduled_tasks', None)
+        with patch.object(scheduled_tasks, 'snapshot', return_value={'tasks': [], 'summary': {'total': 0}}) as snapshot:
+            self.assertEqual(self.request('GET', '/api/scheduled-tasks', Authorization='')[0], 401)
+            snapshot.assert_not_called()
+            code, headers, body = self.request('GET', '/api/scheduled-tasks')
+            self.assertEqual(code, 200)
+            self.assertEqual(headers['Cache-Control'], 'no-store')
+            self.assertEqual(json.loads(body)['tasks'], [])
+            snapshot.assert_called_once()
+            # A GET never accepts a shell command or a task action.
+            self.assertEqual(self.request('POST', '/api/scheduled-tasks', b'{"action":"run"}')[0], 404)
+
     def test_calendar_feed_is_scoped_and_subscription_requires_auth(self):
         import anime_calendar
         import tempfile

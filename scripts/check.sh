@@ -8,6 +8,10 @@ trap 'rm -rf "$TEST_STATE_DIR"' EXIT
 (cd workers/price_tracker && "$ROOT/.venv/bin/python" -m unittest discover -s tests -v)
 node --check web/dashboard.js
 node --check web/operations.js
+node --check web/api.js
+node --check web/anime-calendar.js
+node --check web/scheduled-tasks.js
+node server/tests/test_api_ui.js
 (cd server && node tests/test_orbit_devices_ui.js)
 node server/tests/test_tracking_ui.js
 node server/tests/test_navigation_ui.js

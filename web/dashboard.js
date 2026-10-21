@@ -1,7 +1,4 @@
-async function dashboardJSON(path){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
-  try{const r=await fetch(path,{cache:'no-store',signal:controller.signal});if(!r.ok)throw new Error('No se pudo actualizar el panel');return await r.json();}finally{clearTimeout(timer);}
-}
+async function dashboardJSON(path){return window.ToneAPI.json(path);}
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function size(n){if(n==null)return "—";let v=Number(n),u=["B","KB","MB","GB","TB"],i=0;while(v>=1000&&i<u.length-1){v/=1000;i++}return `${v.toFixed(i?1:0)} ${u[i]}`}
 function serviceLabel(k){return {organizer:"Organizer",telegram:"Telegram bot",viewer:"Dashboard",alerts:"Alertas"}[k]||k}
@@ -503,6 +500,7 @@ async function refreshAll(){
     if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
     if(document.getElementById('view-amule').classList.contains('active')||['inicio','descargas'].some(v=>document.getElementById('view-'+v).classList.contains('active')))tasks.push(loadAmule());
     if(window.ToneOperations)tasks.push(window.ToneOperations.refresh());
+    if(window.ToneScheduledTasks)tasks.push(window.ToneScheduledTasks.refresh());
     const results=await Promise.allSettled(tasks);
     if(results.some(r=>r.status==='rejected'))throw new Error('Actualización incompleta');
     const notice=document.getElementById('connectionNotice');if(notice)notice.hidden=true;
@@ -529,16 +527,25 @@ function updatePhoneDownloadCount(){
   document.getElementById('phoneDownloadCount').textContent=String(phoneDirectCount+(phoneAmuleCount||0));
   document.getElementById('phoneDownloadHint').textContent=phoneAmuleCount==null?'Cola de enlaces':'Enlaces y aMule';
 }
-const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',calendario:'Calendario de anime',diagnostico:'Diagnóstico'};
-function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes','organizer','calendario','diagnostico'].includes(view)?'mas':view;}
+const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',calendario:'Calendario de anime',diagnostico:'Diagnóstico',tareas:'Tareas programadas'};
+function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes','organizer','calendario','diagnostico','tareas'].includes(view)?'mas':view;}
+function updateNavigationSelection(view){
+  const desktopTabs=[...document.querySelectorAll('[data-desktop-tab]')];
+  const directDesktop=!phoneMedia.matches&&desktopTabs.some(button=>button.dataset.desktopTab===view);
+  document.querySelectorAll('[data-phone-tab]').forEach(button=>{
+    if(!directDesktop&&button.dataset.phoneTab===phoneGroup(view))button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+  });
+  desktopTabs.forEach(button=>{
+    if(directDesktop&&button.dataset.desktopTab===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+  });
+}
 function navigateDashboard(view,{focus=false}={}){
   const target=document.getElementById('view-'+view);if(!target)return;
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v===target));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
-  document.querySelectorAll('[data-phone-tab]').forEach(b=>{
-    if(b.dataset.phoneTab===phoneGroup(view))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
-  });
+  updateNavigationSelection(view);
   const title=document.getElementById('phoneTitle');title.textContent=phoneTitles[view]||'Tone Dashboard';
+  if(view==='calendario')document.getElementById('animeCalendarLoad').click();
   if(view!=='orbitzero')clearOrbitCode();
   if(view==='orbitzero')orbitEnsureLoaded();else refreshAll();
   window.scrollTo({top:0,behavior:'instant'});if(focus)title.focus({preventScroll:true});
@@ -553,6 +560,8 @@ function applyPhoneLayout(){
     const github=document.querySelector('.github-link');if(github)document.getElementById('phoneSettingsSlot').append(github);
   }
   document.querySelectorAll('[data-phone-fold]').forEach(d=>d.open=!phoneMedia.matches);
+  const activeView=document.querySelector('.view.active');
+  if(activeView)updateNavigationSelection(activeView.id.replace(/^view-/,''));
 }
 function renderPhoneSummary(d){
   const services=Object.values(d.services||{}),failed=services.filter(s=>!s.running).length;
