@@ -19,7 +19,7 @@ La instantánea conserva las prioridades siguientes: separar handlers del servid
 
 ## Validación realizada
 
-- 229 pruebas Python del servidor y 74 del tracker: correctas.
+- 234 pruebas Python del servidor y 74 del tracker: correctas.
 - JavaScript: sintaxis, navegación, formularios únicos, conservación de estado, aMule, ofertas, Orbit, operaciones y transporte común: correcto.
 - Navegador real con datos ficticios: todas las vistas, anchos 320–2560 px, tarjetas alineadas, ausencia de desbordes, errores de conexión, contenido escapado, avisos y registros que mantienen su apertura. Sin excepciones JavaScript.
 - Pruebas Swift de autenticación/origen y persistencia de cookies: correctas. Compilaciones macOS, simulador iOS e iPhone firmado: correctas.
@@ -28,3 +28,10 @@ La instantánea conserva las prioridades siguientes: separar handlers del servid
 - Instantánea local recuperable: archivo del código inicial, modificación local previa, copias SQLite verificadas, calendario e instalación Mac anterior. Los datos y secretos no se incluyen en Git.
 
 Los escenarios simulados no certifican todos los dispositivos ni las fuentes externas. El controlador visual de Codex agotó el tiempo al intentar leer la ventana nativa del Mac; el propietario confirmó después que Inicio y Tareas, fondos, cajas y registros se ven correctamente tanto en Mac como en iPhone. Las capturas del navegador son fixtures de prueba, no su información personal.
+
+
+## Revisión de estados parciales
+
+Los badges indican el último resultado documentado, no una avería actual. Anime conserva el motivo concreto de sus fuentes incompletas; PS5 mantiene la instalación aplazada. Proxmox muestra un seguimiento posterior independiente: QEMU y la rotación MariaDB se resolvieron después del informe semanal, sin reescribirlo ni simular otra ejecución. El parser distingue «0 pendientes» de un pendiente real y la redacción conserva fechas y expresiones con barras.
+
+La auditoría remota detectó la dependencia certifi 2026.7.22 afectada por PYSEC-2026-4320/GHSA-6q48-6c7w-9gw2. Se actualizó únicamente a 2026.10.19 en el lock y los dos entornos existentes. Auditoría del lock: 16 dependencias, ninguna vulnerabilidad conocida. Pruebas completas repetidas: 234 de servidor y 74 de tracker correctas, más navegador y JavaScript.

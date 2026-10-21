@@ -85,6 +85,14 @@ class ScheduledTasksTests(unittest.TestCase):
         for secret in ("not-a-long-secret", "short-private-value", "short-auth", "43906485", "/Users/", "~/private", "user:pass", "token=abc", "abcdefghijklmnopq", "192.168.1.50", "owner@example.test", "abcdef" * 12):
             self.assertNotIn(secret, rendered)
 
+    def test_path_redaction_preserves_dates_slash_lists_and_version_names(self):
+        text = "21/10/2026, 171g/vk-285-177. No se han duplicado/reiniciado payloads. Ruta /data/config y C:\\Users\\private\\key y ~/secret y ../private.key y audits/report/RESULTADO.md. error/Users/private/key"
+        result = tasks._text(text)
+        for public in ("21/10/2026", "171g/vk-285-177", "duplicado/reiniciado"):
+            self.assertIn(public, result)
+        for private in ("/data/config", "C:\\Users", "~/secret", "../private.key", "audits/report", "/Users/private/key"):
+            self.assertNotIn(private, result)
+
     def test_symlinked_automation_directory_and_file_are_ignored(self):
         real = self.automation("real-task")
         (self.automations / "linked-task").symlink_to(real, target_is_directory=True)
@@ -180,6 +188,51 @@ class ScheduledTasksTests(unittest.TestCase):
         self.assertEqual(self.codex()[0]["status"], "partial")
         self.assertIn("Preparadas actualizaciones", self.codex()[0]["logs"][0]["message"])
         self.assertEqual(tasks._report_status("Resultado: ERROR. Falló la conexión"), "error")
+
+    def test_report_status_does_not_treat_negated_findings_as_partial(self):
+        for report in (
+            "Resultado: Correcto. 0 pendientes; sin incidencias.",
+            "Resultado: Revisión completada sin errores ni fallos.",
+            "Resultado: Sin cambios. No hay actualizaciones pendientes.",
+            "Resultado: Correcto. Pendientes: ninguno.",
+            "Resultado: Correcto. Incidencia resuelta.",
+            "Resultado: Correcto.\n\n## Pendientes\nNinguno.\n\n## Historial\nLa incidencia pasada quedó resuelta.",
+        ):
+            with self.subTest(report=report):
+                self.assertEqual(tasks._report_status(report), "ok")
+
+    def test_report_status_requires_evidence_and_keeps_real_pending_findings(self):
+        for report in (
+            "Resultado: Revisión completada. Incidencia previa de Home Assistant pendiente de intervención.",
+            "Resultado: Correcto. Sin incidencias, pero hay actualizaciones pendientes.",
+            "Resultado: Revisión completada.\n\n## Pendientes\n- El agente sigue sin responder.\n",
+            "Resultado: Revisión completada.\n\n## Pendientes\n- CT103 requiere planificar migración soportada.\n",
+            "Resultado: PARCIAL. Actualizaciones preparadas sin instalar.",
+        ):
+            with self.subTest(report=report):
+                self.assertEqual(tasks._report_status(report), "partial")
+        self.assertEqual(tasks._report_status("No consta el resultado. Hay un ejemplo de incidencia."), "unknown")
+        self.assertEqual(tasks._report_status("Resultado: consulta registrada."), "unknown")
+
+    def test_follow_up_is_separate_from_historical_result_and_run_time(self):
+        self.automation("mantenimiento-semanal-proxmox-y-emby")
+        self.report("proxmox-weekly-20261019/INFORME.md", "Resultado: PARCIAL. Incidencia Home Assistant pendiente de intervención.")
+        original = self.codex()[0]
+        self.report("scheduled-tasks/mantenimiento-semanal-proxmox-y-emby/metadata.json", {"follow_up": {"at": "2026-10-19T07:58:00Z", "message": "Agente y MariaDB revisados después del mantenimiento. Ruta /private/audit omitida.", "status": "ok", "command": "run shell"}})
+        updated = self.codex()[0]
+        self.assertEqual(updated["status"], "partial")
+        self.assertEqual(updated["last_run"], original["last_run"])
+        self.assertEqual(updated["logs"], original["logs"])
+        self.assertEqual(updated["follow_up"]["at"], "2026-10-19T07:58:00+00:00")
+        self.assertIn("Agente y MariaDB", updated["follow_up"]["message"])
+        self.assertNotIn("/private", updated["follow_up"]["message"])
+        self.assertNotIn("command", updated["follow_up"])
+        self.assertNotIn("status", updated["follow_up"])
+
+    def test_follow_up_requires_a_timezone_and_nonempty_safe_message(self):
+        self.assertIsNone(tasks._follow_up({"at": "2026-10-19", "message": "No cuenta como ejecución."}))
+        self.assertIsNone(tasks._follow_up({"at": "2026-10-19T07:58:00Z", "message": ""}))
+        self.assertIsNone(tasks._follow_up("not metadata"))
 
     def test_proxmox_report_uses_only_known_report_location(self):
         self.automation("mantenimiento-semanal-proxmox-y-emby")

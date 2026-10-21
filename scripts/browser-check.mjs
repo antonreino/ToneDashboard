@@ -150,6 +150,8 @@ try{
     await page.locator('#view-inicio [data-phone-go="tareas"]').click();
     await page.locator('.scheduled-card h3').getByText('Anime: Japón y avisos',{exact:true}).waitFor();
     assert.equal(await page.locator('.scheduled-card').count(),3);
+    assert.equal(await page.locator('.scheduled-result small').getByText('Último resultado',{exact:true}).count(),3);
+    assert.equal(await page.locator('.scheduled-follow-up').getByText(/Una incidencia antigua/).count(),1);
     assert.equal(await page.locator('.phone-nav [aria-current=page]:visible').count(),1);
     const boxes=await page.locator('.scheduled-card').evaluateAll(cards=>cards.map(card=>({top:card.getBoundingClientRect().top,meta:card.querySelector('.scheduled-meta').getBoundingClientRect().top,description:card.querySelector('.scheduled-description').getBoundingClientRect().top})));
     for(const box of boxes)for(const other of boxes.filter(b=>Math.abs(b.top-box.top)<1)){assert(Math.abs(box.meta-other.meta)<1);assert(Math.abs(box.description-other.description)<1);}

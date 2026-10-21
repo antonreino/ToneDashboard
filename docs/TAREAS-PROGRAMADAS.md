@@ -87,3 +87,8 @@ Los adaptadores actuales consultan únicamente informes conocidos de anime, PS5 
 - El frontend debe insertar las cadenas como texto, nunca como HTML, y conservar la autenticación del endpoint.
 
 Validación: `PYTHONPATH=server .venv/bin/python -m unittest discover -s server/tests -p 'test_scheduled_tasks.py' -v`. Las pruebas cubren descubrimiento futuro, horarios, separación de historiales, formato inválido, archivos grandes, enlaces simbólicos, redacción, registros acotados y ausencia de escrituras de base.
+
+
+## Seguimiento posterior a una ejecución
+
+`metadata.json` admite `follow_up: {"at":"2026-10-21T13:00:47Z","message":"La incidencia documentada fue resuelta posteriormente; se conserva el resultado original."}`. La interfaz lo muestra separado del último resultado. Nunca altera la fecha, estado o log de aquella ejecución. El texto también se acota y sanea; no constituye una nueva comprobación del servicio.

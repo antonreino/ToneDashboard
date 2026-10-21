@@ -323,9 +323,14 @@ td .button { min-height: 40px; margin: 2px 0; padding: 9px 12px; font-size: 12px
 .scheduled-summary strong { display: block; margin: 8px 0 0; color: var(--accent); font-size: 28px; font-weight: 650; line-height: 1.2; }
 .scheduled-summary span, .scheduled-summary small { color: var(--muted); font-size: 12px; }
 .scheduled-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 370px), 1fr)); align-items: start; gap: 20px; }
-.scheduled-card { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; min-width: 0; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+.scheduled-card { display: grid; grid-template-rows: subgrid; grid-row: span 6; row-gap: 0; min-width: 0; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
 .scheduled-card > header { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .scheduled-card > header > div { flex: 1 1 180px; min-width: 0; }
+.scheduled-result { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.scheduled-result > small { color: var(--muted); font-size: 10px; }
+.scheduled-follow-up:not(:empty) { margin-top: 18px; padding: 14px; border: 1px solid #d8dfce; border-radius: 12px; background: var(--surface-soft); font-size: 12px; line-height: 1.6; }
+.scheduled-follow-up strong { color: var(--accent); font-size: 11px; }
+.scheduled-follow-up p { margin: 7px 0 0; }
 .scheduled-card h3 { flex: 1 1 180px; margin: 0; font-size: 17px; line-height: 1.4; font-weight: 650; letter-spacing: -.025em; }
 .scheduled-card > p { margin: 14px 0 20px; color: var(--muted); font-size: 13px; line-height: 1.7; }
 .scheduled-meta { display: grid; grid-template-columns: minmax(82px, .35fr) minmax(0, 1fr); gap: 9px 14px; padding: 16px; margin: 0 0 18px; background: var(--surface-soft); border: 1px solid #e4e6da; border-radius: 12px; font-size: 12px; }

@@ -64,7 +64,13 @@ def _text(value: Any, limit: int = 1000) -> str:
     value = re.sub(r"(?im)^.*\b(?:password|passwd|contrase(?:ña|na)|secret|credential|credencial|token|authorization|api[_ -]?key|chat[_ -]?id|account[_ -]?id|c[oó]digo|clave|pin)[\"']?\s*[:=].*$", "[dato privado omitido]", value)
     value = re.sub(r"(?i)\bBearer\s+\S+", "[credencial omitida]", value)
     value = re.sub(r"(?i)\b[a-z][a-z0-9+.-]{1,12}://[^\s<>]+", "[enlace omitido]", value)
-    value = re.sub(r"(?:[A-Za-z]:[\\/]|~/|/)[^\s,;<>\"']+", "[ruta omitida]", value)
+    # A slash inside a word, date or version is not an absolute path. Keep
+    # "21/10/2026", "duplicado/reiniciado" and "171g/vk-285-177" readable.
+    value = re.sub(r"(?<![\w./-])(?:[A-Za-z]:[\\/]|~/|/)[^\s,;<>\"']+", "[ruta omitida]", value)
+    # Protect common private roots even if a logger concatenated its label
+    # without a separating space, e.g. "error/Users/...".
+    value = re.sub(r"/(?:Users|Volumes|private|tmp|var|home|data|etc|Applications|opt|root|run|media|mnt|srv)(?=/|\b)[^\s,;<>\"']*", "[ruta omitida]", value)
+    value = re.sub(r"(?<![\w.-])(?:\.{1,2}/|(?:audits|server|infra-maintenance)/)[^\s,;<>\"']+", "[ruta omitida]", value)
     value = re.sub(r"\b\d{5,}:[A-Za-z0-9_-]{15,}\b", "[credencial omitida]", value)
     value = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", "[red privada]", value)
     value = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "[correo omitido]", value)
@@ -210,6 +216,8 @@ def _anime_logs(audit_root: Path) -> list[dict[str, Any]]:
             summary += f" {uncertain} envíos pendientes de confirmar; no se repiten automáticamente."
         if has_limitations:
             summary += " Hay limitaciones en las fuentes; se conservan los datos sin confirmar publicaciones."
+            details = limitations if isinstance(limitations, str) else " ".join(item for item in limitations[:4] if isinstance(item, str))
+            summary += " " + _text(details, 800)
         if data.get("result"):
             summary += " " + _text(data["result"], 900)
         result.append(_event(data.get("trigger") or _file_time(path), status, summary))
@@ -218,15 +226,47 @@ def _anime_logs(audit_root: Path) -> list[dict[str, Any]]:
     return result
 
 
+def _outstanding(text: str) -> bool:
+    """Recognise affirmative findings, not "0 pendientes"/"sin incidencias".
+
+    Use this only on the declared result or an explicit pending section, never
+    on an entire narrative containing commands, historic errors and examples.
+    """
+    text = text.lower()
+    finding = r"(?:pendientes?|incidencias?|aplazad[oa]s?|errores?|fallos?)"
+    words = r"(?:\s+[a-záéíóúüñ]+){0,4}\s+"
+    text = re.sub(rf"\b(?:0|cero|sin|ning[uú]n[ao]?s?){words}{finding}\b", "", text)
+    text = re.sub(rf"\bno\s+(?:hay|quedan|existen|constan|se\s+(?:detectan|observan)){words}{finding}\b", "", text)
+    text = re.sub(rf"\b{finding}\s*:\s*(?:0|cero|ningun[oa]s?|ningún[oa]?|no\s+hay)\b", "", text)
+    text = re.sub(rf"\b{finding}(?:\s+[a-záéíóúüñ]+){{0,3}}\s+(?:resuelt[oa]s?|solucionad[oa]s?|cerrad[oa]s?)\b", "", text)
+    return bool(re.search(rf"\b{finding}\b|\bsigue[n]?\s+sin\s+responder\b|\brequiere[n]?\s+(?:intervención|planificar|migración)\b", text))
+
+
 def _report_status(text: str) -> str:
-    head = text[:1400].lower()
-    if re.search(r"resultado\s*:\s*(?:error|fallo)", head):
+    # Plain-text historical reports have no machine status. Require evidence
+    # from their Result line; unrecognised prose remains unknown, never green.
+    text = text[:MAX_FILE_BYTES]
+    declared = re.search(r"(?im)^\s*(?:\*\*)?resultado\s*:\s*(.+)$", text)
+    if not declared:
+        return "unknown"
+    result = declared.group(1).lower().strip()
+    if re.match(r"(?:error|fallo|fallid[oa])\b", result):
         return "error"
-    if re.search(r"resultado\s*:\s*parcial", head):
+    if re.match(r"parcial\b", result) or _outstanding(result):
         return "partial"
-    if any(word in head for word in ("pendiente", "parcial", "aplazad", "incidencia")):
+    pending = re.search(r"(?ims)^\s*#{1,6}\s+pendientes\s*\n(.*?)(?=^\s*#{1,6}\s|\Z)", text)
+    if pending and _outstanding(pending.group(1)):
         return "partial"
-    return "ok" if "resultado:" in head or "resultado :" in head else "unknown"
+    positive = re.match(r"(?:ok|correct[oa]|éxito|exito|sin\s+cambios|completad[oa])\b", result)
+    completed_review = re.match(r"revisión\b[^\n]*\bcompletad[oa]\b", result)
+    return "ok" if positive or completed_review else "unknown"
+
+
+def _follow_up(value: Any) -> dict[str, str] | None:
+    if not isinstance(value, dict):
+        return None
+    at, message = _timestamp(value.get("at")), _text(value.get("message"), 1400)
+    return {"at": at, "message": message} if at and message else None
 
 
 def _known_logs(kind: str, audit_root: Path) -> list[dict[str, Any]]:
@@ -248,7 +288,7 @@ def _known_logs(kind: str, audit_root: Path) -> list[dict[str, Any]]:
     return result
 
 
-def _task(task_id: str, name: str, description: str, executor: str, enabled: bool, schedule: str, logs: list[dict[str, Any]], requirements: list[str], source: str) -> dict[str, Any]:
+def _task(task_id: str, name: str, description: str, executor: str, enabled: bool, schedule: str, logs: list[dict[str, Any]], requirements: list[str], source: str, follow_up: Any = None) -> dict[str, Any]:
     logs = sorted(logs, key=lambda log: log.get("at") or "", reverse=True)[:MAX_LOGS]
     status = logs[0]["status"] if logs else "unknown"
     return {
@@ -257,6 +297,7 @@ def _task(task_id: str, name: str, description: str, executor: str, enabled: boo
         "status_label": "Pausada" if not enabled else _LABELS[status], "last_run": logs[0]["at"] if logs else None,
         "logs": logs, "requirements": [_text(item, 200) for item in requirements[:5] if isinstance(item, str)],
         "source": source, "history_available": bool(logs),
+        "follow_up": _follow_up(follow_up),
     }
 
 
@@ -339,7 +380,7 @@ def snapshot(*, automations_root: Path | None = None, audit_root: Path | None = 
             requirements = metadata.get("requirements", profile.get("requirements", ["Mac y Codex disponibles"]))
             if not isinstance(requirements, list):
                 requirements = ["Mac y Codex disponibles"]
-            tasks.append(_task(task_id, data.get("name"), description, "Codex", data.get("status") == "ACTIVE", _schedule(data.get("rrule")), logs, requirements, "Automatización Codex y auditorías registradas"))
+            tasks.append(_task(task_id, data.get("name"), description, "Codex", data.get("status") == "ACTIVE", _schedule(data.get("rrule")), logs, requirements, "Automatización Codex y auditorías registradas", metadata.get("follow_up")))
     tasks.extend(_internal(database if database is not None else DATABASE, audit_root))
     tasks.sort(key=lambda task: (task["executor"], task["name"].casefold()))
     return {
