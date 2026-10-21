@@ -20,7 +20,8 @@ jobs:
       - run: bash scripts/check.sh
       - run: .venv/bin/pip install pip-audit && .venv/bin/pip-audit -r requirements.lock
   apple:
-    runs-on: macos-latest
+    # Avoid the hosted arm64 capacity queue; native arm64 is also built locally.
+    runs-on: macos-26-intel
     steps:
       - uses: actions/checkout@v4
       - run: |
