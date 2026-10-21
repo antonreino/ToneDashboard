@@ -7,6 +7,9 @@ final class UsageStore: ObservableObject {
     @Published var lastRead: Date?
     @Published var message = "Consultando límites…"
     @Published var connected = false
+    @Published var resetBusy = false
+    @Published var resetUncertain = false
+    @Published var resetNotice = ""
     func received(_ snapshot: UsageSnapshot) {
         self.snapshot = snapshot; self.lastRead = Date(); self.connected = true
         self.message = "Consulta cada 3 segundos"
@@ -25,12 +28,43 @@ final class UsageClient {
     private var initialized = false
     private var pending: (Int, Date)?
     private var sequence = 1
+    private var pendingResetID: Int?
+    private var resetOperation: ResetOperation?
+    private var resetQueued = false
+    private let journal = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/ToneUsageWidget/reset-request.json")
     private var nextAttempt = Date.distantPast
     private var failures = 0
     private var stopping = false
     private let store: UsageStore
     private let executable = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
-    init(store: UsageStore) { self.store = store }
+    init(store: UsageStore) {
+        self.store = store
+        if let data = try? Data(contentsOf: journal), let operation = try? JSONDecoder().decode(ResetOperation.self, from: data) {
+            resetOperation = operation
+            store.resetUncertain = true
+            store.resetNotice = "Hay un reinicio sin confirmar. Comprueba su resultado antes de usar otro."
+        }
+    }
+    func reset(creditId: String?) {
+        queue.async {
+            guard !self.resetQueued && self.pendingResetID == nil else { return }
+            if self.resetOperation == nil {
+                let operation = ResetOperation.create(creditId: creditId)
+                do {
+                    try FileManager.default.createDirectory(at: self.journal.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                    try JSONEncoder().encode(operation).write(to: self.journal, options: .atomic)
+                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: self.journal.path)
+                    self.resetOperation = operation
+                } catch {
+                    DispatchQueue.main.async { self.store.resetNotice = "No se pudo guardar la operación; no se ha solicitado ningún reinicio." }
+                    return
+                }
+            }
+            self.resetQueued = true
+            DispatchQueue.main.async { self.store.resetBusy = true; self.store.resetNotice = "Solicitando reinicio…" }
+            self.nextAttempt = .distantPast; self.tick()
+        }
+    }
     func start() {
         queue.async { [self] in
             let timer = DispatchSource.makeTimerSource(queue: self.queue)
@@ -49,7 +83,12 @@ final class UsageClient {
         }
         guard Date() >= nextAttempt else { return }
         if process == nil { connect() }
-        else if initialized { requestLimits() }
+        else if initialized {
+            if resetQueued, let operation = resetOperation {
+                sequence += 1; pendingResetID = sequence; pending = (sequence, Date()); resetQueued = false
+                send(["id": sequence, "method": "account/rateLimitResetCredit/consume", "params": operation.params])
+            } else { requestLimits() }
+        }
     }
     private func connect() {
         guard FileManager.default.isExecutableFile(atPath: executable) else { fail("No se encuentra Codex en este Mac."); return }
@@ -92,6 +131,20 @@ final class UsageClient {
             guard let value = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] else { continue }
             if let id = value["id"] as? Int, id == pending?.0 {
                 pending = nil
+                if id == pendingResetID {
+                    pendingResetID = nil
+                    let result = value["result"] as? [String: Any]
+                    if let message = ResetOperation.confirmedMessage(result?["outcome"] as? String) {
+                        do {
+                            try FileManager.default.removeItem(at: journal)
+                            resetOperation = nil
+                            DispatchQueue.main.async { self.store.resetBusy = false; self.store.resetUncertain = false; self.store.resetNotice = message }
+                        } catch {
+                            DispatchQueue.main.async { self.store.resetBusy = false; self.store.resetUncertain = true; self.store.resetNotice = "Respuesta recibida; falta cerrar el registro local. Comprueba el mismo reinicio antes de usar otro." }
+                        }
+                    } else { uncertainReset() }
+                    requestLimits(); continue
+                }
                 if value["error"] != nil {
                     fail("No se pudieron leer los límites. Revisa la sesión de Codex."); return
                 }
@@ -106,7 +159,14 @@ final class UsageClient {
         failures = 0
         DispatchQueue.main.async { self.store.received(snapshot) }
     }
+    private func uncertainReset() {
+        DispatchQueue.main.async {
+            self.store.resetBusy = false; self.store.resetUncertain = true
+            self.store.resetNotice = "No se ha confirmado el reinicio. Comprueba el resultado; no se solicitará otro distinto."
+        }
+    }
     private func fail(_ message: String) {
+        if resetOperation != nil { resetQueued = false; pendingResetID = nil; uncertainReset() }
         disconnect(); failures += 1
         let delay = min(60.0, 3.0 * pow(2.0, Double(min(failures-1, 5))))
         nextAttempt = Date().addingTimeInterval(delay)
@@ -125,6 +185,7 @@ struct UsageView: View {
     @ObservedObject var store: UsageStore
     let refresh: () -> Void
     let quit: () -> Void
+    var reset: (String?) -> Void = { _ in }
     private let ink = Color(red: 0.17, green: 0.24, blue: 0.20)
     private let green = Color(red: 0.19, green: 0.38, blue: 0.30)
     private let muted = Color(red: 0.41, green: 0.45, blue: 0.40)
@@ -139,8 +200,19 @@ struct UsageView: View {
             }.buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 12) {
                 HStack { Text("Codex").font(.system(size: 20, weight: .semibold)); Spacer(); Text(store.snapshot?.plan?.capitalized ?? "Cuenta").font(.system(size: 11)).foregroundStyle(muted) }
-                quota(store.snapshot?.primary, fallback: "Ventana actual")
-                quota(store.snapshot?.secondary, fallback: "Ventana semanal")
+                quota(store.snapshot?.primary, title: "Diario", fallback: "Ventana actual")
+                quota(store.snapshot?.secondary, title: "Semanal", fallback: "Ventana semanal")
+            }
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Text("Reinicios disponibles").font(.system(size: 12, weight: .semibold))
+                    Spacer()
+                    Text(store.snapshot?.resetCount.map(String.init) ?? "—").font(.system(size: 16, weight: .semibold, design: .rounded))
+                }
+                if !store.resetNotice.isEmpty { Text(store.resetNotice).font(.system(size: 10)).foregroundStyle(muted).fixedSize(horizontal: false, vertical: true) }
+                Button(store.resetBusy ? "Procesando…" : store.resetUncertain ? "Comprobar reinicio pendiente" : "Usar un reinicio") { confirmReset() }
+                    .font(.system(size: 11, weight: .semibold)).buttonStyle(.borderedProminent).tint(green)
+                    .disabled(store.resetBusy || !store.connected || (!store.resetUncertain && (store.snapshot?.resetCount ?? 0) < 1))
             }
             Divider().overlay(Color.black.opacity(0.06))
             VStack(alignment: .leading, spacing: 7) {
@@ -158,17 +230,28 @@ struct UsageView: View {
                 Spacer(minLength: 0)
             }
         }.padding(20).foregroundStyle(ink)
-            .frame(width: 324, height: 400, alignment: .topLeading).background(Color(red: 0.96, green: 0.95, blue: 0.91))
+            .frame(width: 324, height: 560, alignment: .topLeading).background(Color(red: 0.96, green: 0.95, blue: 0.91))
             .preferredColorScheme(.light)
     }
-    @ViewBuilder private func quota(_ window: UsageWindow?, fallback: String) -> some View {
+    private func confirmReset() {
+        let alert = NSAlert()
+        alert.messageText = store.resetUncertain ? "¿Comprobar el reinicio pendiente?" : "¿Usar un reinicio disponible?"
+        let credit = store.snapshot?.resetCredits.first
+        alert.informativeText = store.resetUncertain ? "Se comprobará la misma operación con su identificador original. Si no se aplicó, se reintentará ese reinicio; no se solicitará otro distinto." : "\(credit?.title ?? "Reinicio de límites de Codex")\nSe consumirá uno de los reinicios disponibles y se restablecerán las ventanas incluidas en ese bono."
+        alert.addButton(withTitle: store.resetUncertain ? "Comprobar" : "Usar reinicio")
+        alert.addButton(withTitle: "Cancelar")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { reset(credit?.id) }
+    }
+    @ViewBuilder private func quota(_ window: UsageWindow?, title: String, fallback: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text(window?.title ?? fallback).font(.system(size: 12)).foregroundStyle(muted)
+                Text(title).font(.system(size: 13, weight: .semibold))
                 Spacer()
                 if let window = window { Text("\(Int(window.remaining.rounded())) %").font(.system(size: 20, weight: .semibold, design: .rounded)).monospacedDigit(); Text("restante").font(.system(size: 10)).foregroundStyle(muted) }
                 else { Text("—").font(.system(size: 20)).foregroundStyle(muted) }
             }
+            Text(window?.title ?? fallback).font(.system(size: 10)).foregroundStyle(muted)
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.black.opacity(0.07))
@@ -177,7 +260,7 @@ struct UsageView: View {
             }.frame(height: 5)
             if let reset = window?.reset { Text("Renueva \(reset.formatted(.dateTime.day().month(.abbreviated).hour().minute()))").font(.system(size: 10)).foregroundStyle(muted) }
             else { Text("Renovación no disponible").font(.system(size: 10)).foregroundStyle(muted) }
-        }
+        }.padding(12).background(Color.white.opacity(0.48)).clipShape(RoundedRectangle(cornerRadius: 11))
     }
 }
 
@@ -189,7 +272,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         client = UsageClient(store: store)
-        let view = UsageView(store: store, refresh: { [weak self] in self?.client.refresh() }, quit: { NSApp.terminate(nil) })
+        let view = UsageView(store: store, refresh: { [weak self] in self?.client.refresh() }, quit: { NSApp.terminate(nil) }, reset: { [weak self] id in self?.client.reset(creditId: id) })
         let host = NSHostingView(rootView: view)
         let size = host.fittingSize
         panel = NSPanel(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -235,7 +318,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard reads.count >= 2, let snapshot = store.snapshot, let primary = snapshot.primary, let secondary = snapshot.secondary else {
             print("Probe failed: no two valid reads"); exit(1)
         }
-        print("Two live reads; interval=\(reads[1].timeIntervalSince(reads[0])); remaining=\(primary.remaining)/\(secondary.remaining)")
+        print("Two live reads; reset availability=\(snapshot.resetCount.map(String.init) ?? "unknown"); interval=\(reads[1].timeIntervalSince(reads[0])); remaining=\(primary.remaining)/\(secondary.remaining)")
     }
 }
 #elseif WIDGET_RENDER
@@ -243,7 +326,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static func main() {
         let app = NSApplication.shared; app.setActivationPolicy(.accessory)
         let store = UsageStore()
-        store.received(UsageSnapshot.parse(["rateLimits":["limitId":"codex","planType":"plus","primary":["usedPercent":37,"windowDurationMins":300,"resetsAt":1792628274],"secondary":["usedPercent":28,"windowDurationMins":10080,"resetsAt":1793088012]]])!)
+        store.received(UsageSnapshot.parse(["rateLimits":["limitId":"codex","planType":"plus","primary":["usedPercent":37,"windowDurationMins":300,"resetsAt":1792628274],"secondary":["usedPercent":28,"windowDurationMins":10080,"resetsAt":1793088012]],"rateLimitResetCredits":["availableCount":1,"credits":[]]])!)
         let host = NSHostingView(rootView: UsageView(store:store,refresh:{},quit:{}))
         let size = host.fittingSize
         let window = NSWindow(contentRect:NSRect(origin:.zero,size:size),styleMask:[.borderless],backing:.buffered,defer:false)
