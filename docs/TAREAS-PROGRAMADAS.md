@@ -1,13 +1,12 @@
 # Tareas programadas
 
-La sección común web, macOS e iOS muestra el catálogo de automatizaciones de Codex y las tareas periódicas del propio Dashboard. El catálogo explica los resultados históricos. «Recargar informes» solo consulta los registros. «Ejecutar ahora» inicia una de las seis tareas autorizadas tras confirmación; no permite editar órdenes, horarios ni instrucciones desde el cliente.
+La sección común web, macOS e iOS muestra el catálogo de automatizaciones de Codex y las tareas periódicas del propio Dashboard. El catálogo explica los resultados históricos. «Recargar informes» solo consulta los registros. «Ejecutar ahora» inicia una de las cinco tareas autorizadas tras confirmación; no permite editar órdenes, horarios ni instrucciones desde el cliente.
 
 ## Qué se muestra
 
 | Tarea | Horario (Europe/Madrid) | Función |
 | --- | --- | --- |
-| Anime: Japón y avisos | Cada 3 horas | Portadas, próximas emisiones japonesas y doblajes castellanos; Telegram solo tras verificar la publicación. |
-| Anime: próximas temporadas | Lunes, 08:00 | Investigación de continuaciones y películas; conserva los animes archivados y las bajas manuales. |
+| Anime: revisión semanal y avisos | Lunes, 08:00 | Portadas, episodios japoneses, doblajes castellanos y próximas temporadas o películas; Telegram solo tras verificar publicaciones. |
 | Mantener payloads de PS5 | Diario, 10:00 | Versiones oficiales, compatibilidad, recuperación e informe Telegram. Puede despertar una consola emparejada; no ejecuta el jailbreak ni reinicia la consola. |
 | Mantenimiento semanal Proxmox y Emby | Lunes, 04:00 | Actualizaciones compatibles, copias y validaciones; aplaza reinicios con actividad y notifica siempre. |
 | Copias verificadas | Cada 24 horas de actividad del Dashboard | Copias consistentes de las bases, comprobación de integridad y retención. |
@@ -15,7 +14,7 @@ La sección común web, macOS e iOS muestra el catálogo de automatizaciones de 
 
 Los horarios Codex requieren que el Mac y Codex estén disponibles. No se promete ejecución puntual con el equipo apagado. El estado de programación (activa/pausada) se distingue del resultado de la última revisión (correcto/parcial/error/sin registros). Un registro documenta un resultado pasado; no demuestra que una ejecución esté en curso ni que un servicio siga activo.
 
-Las limitaciones de una fuente externa o una instalación aplazada se muestran como resultado parcial. **Sin registros** no significa error y nunca se inventa una ejecución. Las dos tareas anime tienen historiales independientes: una revisión de episodios no acredita una investigación semanal.
+Las limitaciones de una fuente externa o una instalación aplazada se muestran como resultado parcial. **Sin registros** no significa error y nunca se inventa una ejecución. Desde el 21/10/2026 hay una sola tarea de anime. Se agregan sus historiales anteriores sin borrar los originales; las entradas de la antigua revisión de temporadas conservan su procedencia. Un registro antiguo de episodios no acredita una investigación semanal completa.
 
 ## Contrato del backend
 
@@ -75,7 +74,7 @@ Resultado de cada ejecución (fecha con zona horaria y nombre ordenable por fech
 
 Estados admitidos: `ok`, `partial`, `error`, `unknown`. Nunca incluir secretos, sesiones, enlaces de recuperación o registros crudos. Cada tarea puede añadir resultados con esta convención a su flujo existente, sin crear servicios. El catálogo conserva hasta ocho eventos recientes y limita cada mensaje visible a 2400 caracteres; los informes originales siguen íntegros en el almacenamiento local. Para las tareas internas también se admite esta convención con los IDs `dashboard-backups` y `dashboard-amule-recovery`; mientras no haya historial propio se muestra únicamente el último estado de servicio disponible.
 
-Los adaptadores actuales consultan únicamente informes conocidos de anime, PS5 y mantenimiento semanal. No buscan recursivamente cualquier archivo del ordenador ni atribuyen al calendario semanal el historial de episodios. Una tarea futura sin metadatos muestra una descripción neutral; sin informe muestra «Sin registros».
+Los adaptadores actuales consultan únicamente informes conocidos de anime, PS5 y mantenimiento semanal. No buscan recursivamente cualquier archivo del ordenador y solo agregan los dos historiales anime en su tarea unificada, conservando procedencia y fechas. Una tarea futura sin metadatos muestra una descripción neutral; sin informe muestra «Sin registros».
 
 ## Límites y seguridad
 
@@ -98,7 +97,7 @@ Validación: `PYTHONPATH=server .venv/bin/python -m unittest discover -s server/
 
 Cada tarjeta muestra un resumen visible, motivo, estado de consola cuando consta, siguiente paso y seguimiento posterior. «Parcial» describe la última ejecución guardada: no demuestra que el servicio esté caído. El seguimiento no borra incidencias históricas.
 
-POST `/api/scheduled-tasks/run` acepta exclusivamente `{id}` (hasta 256 bytes), con autenticación y protección de origen existentes. IDs permitidos: las cuatro automatizaciones mantenidas y las comprobaciones de copias y aMule. Las futuras automatizaciones aparecen en el catálogo, pero no reciben capacidad de ejecución automáticamente.
+POST `/api/scheduled-tasks/run` acepta exclusivamente `{id}` (hasta 256 bytes), con autenticación y protección de origen existentes. IDs permitidos: las tres automatizaciones mantenidas y las comprobaciones de copias y aMule. Las futuras automatizaciones aparecen en el catálogo, pero no reciben capacidad de ejecución automáticamente.
 
 El ejecutor carga las instrucciones de la configuración local de confianza, nunca del navegador. Codex recibe el prompt por stdin y devuelve un JSON validado; el cliente no recibe prompts, rutas, órdenes, credenciales ni salida cruda. Las copias y aMule usan las funciones existentes. Se conserva el horario periódico: una ejecución manual no lo cambia. El lanzamiento de Codex requiere el perfil limitado autorizado; no se usa acceso completo ni omisión de aprobaciones.
 
@@ -106,4 +105,4 @@ Solo una tarea manual puede ejecutarse a la vez, con bloqueo de proceso y ficher
 
 Los resultados manuales se guardan como informes fechados en el catálogo existente; no se añade un servicio permanente. La prueba de navegador simula la ejecución, sin realizar mantenimiento real.
 
-Validación de la ejecución manual: copias verificadas probadas contra el servicio real (HTTP 202 y resultado correcto). Perfil limitado autorizado por el propietario; prueba real del ejecutor Codex completada con JSON correcto, sin usar herramientas ni realizar mantenimiento. Las cuatro revisiones Codex están habilitadas. Esta prueba acredita el lanzamiento y la respuesta del ejecutor, no una nueva actualización de PS5 o Proxmox.
+Validación de la ejecución manual: copias verificadas probadas contra el servicio real (HTTP 202 y resultado correcto). Perfil limitado autorizado por el propietario; prueba real del ejecutor Codex completada con JSON correcto, sin usar herramientas ni realizar mantenimiento. Las tres revisiones Codex están habilitadas. Esta prueba acredita el lanzamiento y la respuesta del ejecutor, no una nueva actualización de PS5 o Proxmox.

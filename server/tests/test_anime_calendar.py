@@ -154,6 +154,17 @@ class ImmediatePosterTests(unittest.TestCase):
         with patch('anime_metadata.lookup',side_effect=ValueError('No hay coincidencia')):
             with self.assertRaises(ValueError):c.manage_series('add','Unknown title')
         self.assertFalse((self.root/'schedule.json').exists())
+    def test_refresh_reports_progress_and_final_failure(self):
+        c.private_write(self.root/'schedule.json',self.data)
+        progress=[]
+        with patch('anime_metadata.lookup',side_effect=ValueError('Fuente inaccesible')):
+            result=c.refresh_metadata(progress=progress.append)
+        self.assertEqual(result['updated'],0)
+        self.assertEqual(len(result['failed']),1)
+        self.assertEqual(progress[-1]['completed'],progress[-1]['total'])
+        self.assertEqual(progress[-1]['failed'],1)
+        self.assertEqual(c.read_data()['series'][0]['id'],self.data['series'][0]['id'])
+
     def test_refresh_rereads_and_preserves_manual_removal(self):
         c.private_write(self.root/'schedule.json',self.data)
         def lookup(title):

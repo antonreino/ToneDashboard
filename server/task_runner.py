@@ -61,7 +61,7 @@ def _prompt(task_id):
         raise ValueError('No se puede leer la configuración de esta tarea.') from None
     if data.get('id') != task_id or data.get('status') != 'ACTIVE' or not isinstance(data.get('prompt'), str):
         raise ValueError('La tarea está pausada o su configuración no es válida.')
-    return data['prompt'] + '\nEjecución manual autorizada desde Tone Dashboard. Respeta todos los límites de la tarea; no modifiques código ni automatizaciones, no reinicies host/consola ni ejecutes jailbreak. Usa los informes técnicos existentes y devuelve un resumen JSON: status ok/partial/error y message con comprobado, instalado y pendiente. Un proceso que acaba sin errores no prueba que el mantenimiento esté completo. No publiques secretos. Si falta acceso o aprobación, informa partial sin eludir controles. No envíes mensajes a otros chats. No cambies manual-state.json ni los permisos del ejecutor.'
+    return data['prompt'] + '\nEjecución manual autorizada desde Tone Dashboard. Respeta todos los límites de la tarea; no modifiques código ni automatizaciones, no reinicies host/consola ni ejecutes jailbreak. Usa los informes técnicos existentes y devuelve un resumen JSON: status ok/partial/error y message con comprobado, instalado y pendiente. Un proceso que acaba sin errores no prueba que el mantenimiento esté completo. No publiques secretos. Si falta acceso o aprobación, informa partial sin eludir controles. No envíes mensajes a otros chats. No lances subagentes. Espera los procesos iniciados hasta obtener su resultado; no cierres la revisión con el refresco aún en curso. No cambies manual-state.json ni los permisos del ejecutor.'
 
 
 def _codex(prompt, descriptor):

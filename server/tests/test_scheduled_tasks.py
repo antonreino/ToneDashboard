@@ -181,6 +181,19 @@ class ScheduledTasksTests(unittest.TestCase):
         for private in ("private-exception", "PRIVATE_OWNER", "private-series", "example.test"):
             self.assertNotIn(private, json.dumps(task))
 
+    def test_unified_anime_collects_both_histories_without_changing_dates(self):
+        self.automation("anime-espa-a-estrenos-y-avisos", name="Anime: revisión semanal y avisos", rrule="FREQ=WEEKLY;BYDAY=MO;BYHOUR=8;BYMINUTE=0")
+        self.report("scheduled-tasks/anime-pr-ximas-temporadas/2026-10-20.json", {"at":"2026-10-20T08:00:00Z","status":"ok","message":"Continuación investigada."})
+        self.report("scheduled-tasks/anime-espa-a-estrenos-y-avisos/2026-10-21.json", {"at":"2026-10-21T08:00:00Z","status":"partial","message":"Fuente pendiente."})
+        task=self.codex()[0]
+        self.assertEqual(len(self.codex()),1)
+        self.assertEqual(task['schedule'],'Cada lunes a las 08:00')
+        self.assertEqual(task['status'],'partial')
+        self.assertEqual(len(task['logs']),2)
+        self.assertEqual(task['logs'][1]['at'],'2026-10-20T08:00:00+00:00')
+        self.assertIn('tarea anterior',task['logs'][1]['origin'])
+        self.assertTrue((self.audits/'scheduled-tasks/anime-pr-ximas-temporadas/2026-10-20.json').exists())
+
     def test_weekly_anime_does_not_claim_three_hourly_runs_as_its_own(self):
         self.automation("anime-pr-ximas-temporadas")
         self.report("anime-calendar/2026-10-21.json", {"trigger": "2026-10-21T10:00:00Z", "metadata": {"updated": 35}})

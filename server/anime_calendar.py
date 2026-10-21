@@ -169,7 +169,7 @@ def manage_series(action,title=None,series_id=None):
         return {'ok':True,'id':series['id']}
 
 
-def refresh_metadata():
+def refresh_metadata(progress=None):
     from anime_metadata import lookup
     with LOCK:targets=[(s['id'],s['title']) for s in read_data()['series'] if s.get('tracking',True) and s['status']!='finished']
     updated=[];failed=[]
@@ -182,6 +182,7 @@ def refresh_metadata():
                 apply_metadata(data,series,metadata);private_write(ROOT/'schedule.json',validate(data))
             updated.append(ident)
         except (ValueError,OSError,KeyError) as exc:failed.append({'id':ident,'error':str(exc)})
+        if progress:progress({'completed':len(updated)+len(failed),'total':len(targets),'id':ident,'failed':len(failed)})
     return {'updated':len(updated),'failed':failed}
 
 
@@ -289,5 +290,7 @@ if __name__=='__main__':
         data=validate(json.loads(args.import_file.read_text()))
         with LOCK:private_write(ROOT/'schedule.json',data)
         print('Calendario validado y guardado; enlace privado conservado')
-    if args.refresh_metadata:print(json.dumps(refresh_metadata(),ensure_ascii=False))
+    if args.refresh_metadata:
+        import sys
+        print(json.dumps(refresh_metadata(progress=lambda value:print(json.dumps({'progress':value},ensure_ascii=False),file=sys.stderr,flush=True)),ensure_ascii=False),flush=True)
     if args.notify:print(json.dumps(notify_available()))

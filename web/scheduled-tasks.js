@@ -18,6 +18,11 @@ window.ToneScheduledTasks = (() => {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? 'Fecha no disponible' : parsed.toLocaleString('es-ES', {timeZone: 'Europe/Madrid', dateStyle: 'medium', timeStyle: 'short'});
   }
+  function elapsed(value, end) {
+    const seconds = Math.max(0, Math.floor(((end ? Date.parse(end) : Date.now()) - Date.parse(value)) / 1000));
+    if (!Number.isFinite(seconds)) return '';
+    return `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+  }
   function card(task) {
     const logs = task.logs || [];
     const outcome = task.outcome;
@@ -30,13 +35,13 @@ window.ToneScheduledTasks = (() => {
       <section class="scheduled-outcome" aria-label="Resumen del resultado">
         ${outcome ? `<strong>${esc(outcome.title)}</strong><p>${esc(outcome.reason)}</p>${outcome.console ? `<p><b>Consola:</b> ${esc(outcome.console)}</p>` : ''}<p><b>Siguiente paso:</b> ${esc(outcome.next_step)}</p>` : '<p>Consulta el registro para conocer el alcance de la última revisión.</p>'}
         ${task.follow_up ? `<div class="scheduled-follow-up"><strong>Actualización posterior · ${esc(date(task.follow_up.at))}</strong><p>${esc(task.follow_up.message)}</p></div>` : ''}
-        ${execution ? `<p class="task-execution"><b>${execution.state === 'running' ? 'En ejecución' : 'Último lanzamiento manual'} · ${esc(date(execution.started_at))}</b><br>${esc(execution.message)}</p>` : ''}
+        ${execution ? `<p class="task-execution"><b>${execution.state === 'running' ? `En ejecución · ${elapsed(execution.started_at)}` : `Último lanzamiento manual${execution.finished_at ? ` · ${elapsed(execution.started_at, execution.finished_at)}` : ''}`} · ${esc(date(execution.started_at))}</b><br>${esc(execution.message)}</p>` : ''}
         ${task.run_blocked_reason ? `<p>${esc(task.run_blocked_reason)}</p>` : ''}
         ${task.can_run ? `<div class="scheduled-actions"><button class="button task-run" type="button" data-run-task="${esc(task.id)}" ${execution?.state === 'running' || task.run_blocked_reason ? 'disabled' : ''}>${execution?.state === 'running' ? 'Ejecutando…' : 'Ejecutar ahora'}</button></div>` : ''}
       </section>
       <details class="scheduled-details"><summary>Qué necesita esta tarea</summary><p>${esc(Array.isArray(task.requirements) ? task.requirements.join(' · ') : task.requirements || 'Consulta supervisada, sin acciones desde esta pantalla.')}</p></details>
       <details class="scheduled-details"><summary>Registro de actividad <span>${logs.length ? `${logs.length} recientes` : 'Sin registros'}</span></summary>
-        ${logs.length ? `<ol class="scheduled-logs">${logs.map(log => `<li><div><time>${esc(date(log.at))}</time>${statusBadge(log.status)}</div><p>${esc(log.message)}</p></li>`).join('')}</ol>` : '<p>No hay un resultado registrado todavía. La tarea puede estar programada aunque no tenga historial disponible.</p>'}
+        ${logs.length ? `<ol class="scheduled-logs">${logs.map(log => `<li><div><time>${esc(date(log.at))}</time>${statusBadge(log.status)}${log.origin ? `<span class="task-log-origin">${esc(log.origin)}</span>` : ''}</div><p>${esc(log.message)}</p></li>`).join('')}</ol>` : '<p>No hay un resultado registrado todavía. La tarea puede estar programada aunque no tenga historial disponible.</p>'}
       </details>
 
     </article>`;

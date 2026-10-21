@@ -32,14 +32,9 @@ _LABELS = {"ok": "Correcto", "partial": "Parcial", "error": "Error", "unknown": 
 # Curated descriptions explain intent without disclosing private instructions.
 _PROFILES = {
     "anime-espa-a-estrenos-y-avisos": {
-        "description": "Actualiza las portadas y comprueba estrenos originales en Japón y doblajes en castellano. Avisa por Telegram cuando la publicación está confirmada, sin repetir avisos.",
+        "description": "Cada lunes revisa episodios en Japón, doblajes castellanos y próximas temporadas o películas de todos los animes seguidos. Completa portadas y avisa por Telegram solo de publicaciones confirmadas, sin repetir avisos.",
         "requirements": ["Mac y Codex disponibles", "Fuentes públicas accesibles"],
         "report_type": "anime",
-    },
-    "anime-pr-ximas-temporadas": {
-        "description": "Investiga nuevas temporadas y continuaciones, también películas, de todos los animes seguidos. Los archivados siguen vigilados; respeta las bajas manuales.",
-        "requirements": ["Mac y Codex disponibles", "Fuentes públicas accesibles"],
-        "report_type": "anime-weekly",
     },
     "mantener-payloads-de-ps5": {
         "description": "Comprueba versiones oficiales de los payloads y prepara actualizaciones compatibles con recuperación. Puede despertar la consola emparejada; aplaza la instalación si no puede comprobar juegos o transferencias. Envía un informe diario por Telegram.",
@@ -226,6 +221,25 @@ def _anime_logs(audit_root: Path) -> list[dict[str, Any]]:
     return result
 
 
+def _legacy_anime_logs(audit_root: Path) -> list[dict[str, Any]]:
+    """Read reports previously written under the repo, preserving their provenance."""
+    folder = audit_root.parent / "ToneDashboard" / "audits" / "anime-calendar"
+    root = audit_root.parent / "ToneDashboard" / "audits"
+    result = []
+    for path in _reports(folder, "*.json", root):
+        data = _json(path, root)
+        if not data or not data.get("checked_at") or not isinstance(data.get("series_review"), list):
+            continue
+        pending = data.get("pending", [])
+        message = f"Informe técnico anterior: {_count(data.get('tracked'))} series incluidas; no acredita un refresco de metadatos completado. "
+        if isinstance(pending, list):
+            message += " ".join(str(item) for item in pending[:4] if isinstance(item, str))
+        event = _event(data["checked_at"], data.get("status", "unknown"), message)
+        event["origin"] = "Episodios y avisos · informe técnico anterior"
+        result.append(event)
+    return result[:MAX_LOGS]
+
+
 def _outstanding(text: str) -> bool:
     """Recognise affirmative findings, not "0 pendientes"/"sin incidencias".
 
@@ -398,6 +412,13 @@ def snapshot(*, automations_root: Path | None = None, audit_root: Path | None = 
             profile = _PROFILES.get(task_id, {})
             metadata, logs = _generic(task_id, audit_root)
             logs.extend(_known_logs(profile.get("report_type", ""), audit_root))
+            if task_id == "anime-espa-a-estrenos-y-avisos":
+                _, previous = _generic("anime-pr-ximas-temporadas", audit_root)
+                for event in previous:
+                    event["origin"] = "Próximas temporadas · tarea anterior"
+                logs.extend(previous)
+                for event in _legacy_anime_logs(audit_root):
+                    logs.append(event)
             description = metadata.get("description") or profile.get("description") or "Automatización gestionada por Codex. Su descripción detallada aún no está registrada en este catálogo."
             requirements = metadata.get("requirements", profile.get("requirements", ["Mac y Codex disponibles"]))
             if not isinstance(requirements, list):

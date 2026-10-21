@@ -537,3 +537,5 @@ td .button { min-height: 40px; margin: 2px 0; padding: 9px 12px; font-size: 12px
 .scheduled-actions { margin-top: auto; padding-top: 20px; }
 .scheduled-actions .task-run { margin: 0; }
 .task-execution { border-top: 1px solid var(--border); padding-top: 12px; }
+
+.task-log-origin { color: var(--muted); font-size: 10px; }
