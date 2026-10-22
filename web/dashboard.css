@@ -539,3 +539,7 @@ td .button { min-height: 40px; margin: 2px 0; padding: 9px 12px; font-size: 12px
 .task-execution { border-top: 1px solid var(--border); padding-top: 12px; }
 
 .task-log-origin { color: var(--muted); font-size: 10px; }
+
+/* Shared local assistant: no HTML generated from model responses. */
+.tonetti-panel{max-width:1100px;margin:16px auto}.tonetti-messages{display:flex;flex-direction:column;gap:16px;max-height:55vh;overflow:auto;padding:16px 4px;margin:16px 0}.tonetti-message{border:1px solid var(--border,#ddd8ca);border-radius:16px;padding:16px;max-width:92%;background:#fffdf7}.tonetti-message.user{align-self:flex-end;background:#e5eddf}.tonetti-message p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0}.tonetti-actions{display:flex;gap:16px;justify-content:space-between;align-items:center;margin-top:16px}#tonettiInput{width:100%;box-sizing:border-box;resize:vertical;font:inherit;padding:12px;border:1px solid #c9cebf;border-radius:12px;background:#fffdf7;color:#253c32}@media(max-width:600px){.tonetti-message{max-width:100%}.tonetti-actions{align-items:flex-start}.tonetti-messages{max-height:48vh}}
+.tonetti-actions{flex-wrap:wrap}.tonetti-actions>[role="status"]{flex:1 1 180px;min-width:0;overflow-wrap:anywhere}.tonetti-actions>button{flex-shrink:0}

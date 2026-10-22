@@ -32,9 +32,11 @@ def diagnostics(services,price_db):
             'backups':state_db.get_runtime_state('backup_status')}
 
 
+TONETTI_DB=Path(__file__).resolve().parents[1]/'data'/'tonetti'/'chat.sqlite3'
+
 def backup_all(price_db):
     files=[]
-    for source in (state_db.DB_PATH,Path(price_db)):
+    for source in (state_db.DB_PATH,Path(price_db),TONETTI_DB):
         if source.is_file():
             target=backup_database(source,state_db.DB_PATH.parent/'backups'/source.stem)
             files.append({'database':source.name,'snapshot':target.name})

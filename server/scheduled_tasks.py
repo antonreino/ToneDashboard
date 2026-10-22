@@ -359,7 +359,7 @@ def _internal(database: Path, audit_root: Path) -> list[dict[str, Any]]:
     states = _runtime(database)
     result = []
     definitions = [
-        ("dashboard-backups", "Copias verificadas", "Crea copias consistentes de las bases del Dashboard y del tracker, comprueba su integridad y aplica la retención configurada. Conserva los datos y el historial.", "Cada 24 horas mientras el Dashboard está activo", "backup_status"),
+        ("dashboard-backups", "Copias verificadas", "Crea copias consistentes de las bases del Dashboard, del tracker y de la memoria de Tonetti, comprueba su integridad y aplica la retención configurada. Conserva los datos y el historial.", "Cada 24 horas mientras el Dashboard está activo", "backup_status"),
         ("dashboard-amule-recovery", "Disponibilidad de aMule", "Comprueba aMule y lo abre si está ausente y la recuperación está habilitada. No termina procesos ni reinicia una instancia que ya está abierta.", "Cada 30 segundos; reintentos de apertura separados al menos 2 minutos", "amule_recovery"),
     ]
     for task_id, name, description, schedule, key in definitions:

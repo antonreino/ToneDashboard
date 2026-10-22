@@ -55,3 +55,6 @@ __MACOSX/
 # Browser QA artifacts and dependencies
 node_modules/
 test-results/
+
+# Optional symlink to bundled browser-test dependencies
+/node_modules

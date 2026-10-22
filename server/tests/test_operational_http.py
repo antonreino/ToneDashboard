@@ -22,6 +22,18 @@ class OperationalHTTPTests(unittest.TestCase):
         try:
             conn.request(method,path,body,h);r=conn.getresponse();return r.status,dict(r.getheaders()),r.read()
         finally:conn.close()
+    def test_tonetti_is_authenticated_and_origin_protected(self):
+        import tonetti
+        with patch.object(tonetti,'snapshot',return_value={'messages': [], 'local':True}), patch.object(tonetti,'start',return_value=({'accepted':True},202)) as start:
+            self.assertEqual(self.request('GET','/api/tonetti',Authorization='')[0],401)
+            status,headers,body=self.request('GET','/api/tonetti')
+            self.assertEqual(status,200);self.assertEqual(headers['Cache-Control'],'no-store')
+            self.assertEqual(self.request('POST','/api/tonetti/chat',Origin='https://evil.test')[0],403)
+            self.assertEqual(self.request('POST','/api/tonetti/chat',b'not-json')[0],400)
+            start.assert_not_called()
+            self.assertEqual(self.request('POST','/api/tonetti/chat',b'{"message":"hola"}')[0],202)
+            self.assertEqual(self.request('POST','/api/tonetti/chat',**{'Content-Length':'24001'})[0],400)
+
     def test_operations_need_auth_origin_and_bounded_object_body(self):
         with patch('operations.post',return_value=({'ok':True},202)) as post:
             for path in ['/api/downloads/control','/api/organizer/review','/api/deals/preferences','/api/organizer/rules/remove']:
@@ -107,3 +119,9 @@ class OperationalHTTPTests(unittest.TestCase):
             code,headers,body=self.request('GET',path)
             self.assertEqual(code,200);self.assertEqual(headers['Content-Type'],'image/jpeg');self.assertTrue(body.startswith(b'\xff\xd8'))
             self.assertEqual(self.request('GET','/api/anime-calendar/covers/../subscription.json')[0],404)
+
+    def test_tonetti_storage_failure_is_reported_without_details(self):
+        import tonetti
+        with patch.object(tonetti,'snapshot',side_effect=RuntimeError('PRIVATE_INTERNAL_PATH')):
+            status,_,body=self.request('GET','/api/tonetti')
+        self.assertEqual(status,503);self.assertNotIn(b'PRIVATE_INTERNAL_PATH',body)

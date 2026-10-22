@@ -70,6 +70,21 @@ class OperationalTests(unittest.TestCase):
         cache=SnapshotCache();load=Mock(return_value={'ok':True})
         self.assertEqual(cache.get('x',60,load),cache.get('x',60,load));load.assert_called_once()
 
+    def test_verified_backups_include_tonetti_memory(self):
+        import operations
+        memory=self.root/'chat.sqlite3'
+        with sqlite3.connect(memory) as conn:
+            conn.execute('CREATE TABLE memories(value TEXT)')
+            conn.execute("INSERT INTO memories VALUES('Mirabel47123')")
+        with patch.object(operations,'TONETTI_DB',memory):
+            result=operations.backup_all(self.root/'absent-price.sqlite3')
+        self.assertTrue(any(item['database']=='chat.sqlite3' for item in result['files']))
+        copy=next((self.root/'backups'/'chat').glob('*.sqlite3'))
+        with sqlite3.connect(copy) as conn:self.assertEqual(conn.execute('SELECT value FROM memories').fetchone()[0],'Mirabel47123')
+        self.assertEqual(copy.stat().st_mode&0o777,0o600)
+
+
+
 class ReviewExecutionTests(unittest.TestCase):
     setUp=OperationalTests.setUp
     def test_approved_review_runs_safe_uploader_and_preserves_existing_remote(self):

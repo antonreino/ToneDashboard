@@ -527,8 +527,8 @@ function updatePhoneDownloadCount(){
   document.getElementById('phoneDownloadCount').textContent=String(phoneDirectCount+(phoneAmuleCount||0));
   document.getElementById('phoneDownloadHint').textContent=phoneAmuleCount==null?'Cola de enlaces':'Enlaces y aMule';
 }
-const phoneTitles={inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',calendario:'Calendario de anime',diagnostico:'Diagnóstico',tareas:'Tareas programadas'};
-function phoneGroup(view){return view==='amule'?'descargas':['equipos','historial','estadisticas','logs','ajustes','organizer','calendario','diagnostico','tareas'].includes(view)?'mas':view;}
+const phoneTitles={tonetti:'Tonetti',inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',calendario:'Calendario de anime',diagnostico:'Diagnóstico',tareas:'Tareas programadas'};
+function phoneGroup(view){return view==='amule'?'descargas':['tonetti','equipos','historial','estadisticas','logs','ajustes','organizer','calendario','diagnostico','tareas'].includes(view)?'mas':view;}
 function updateNavigationSelection(view){
   const desktopTabs=[...document.querySelectorAll('[data-desktop-tab]')];
   const directDesktop=!phoneMedia.matches&&desktopTabs.some(button=>button.dataset.desktopTab===view);

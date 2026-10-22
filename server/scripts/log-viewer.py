@@ -362,6 +362,14 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/tonetti':
+            from tonetti import snapshot
+            try:
+                data,code=snapshot(),200
+            except Exception:
+                data,code={'error':'No se pudo consultar la memoria de Tonetti; no borres la base y revisa el registro.'},503
+            self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8',code)
+            return
         if parsed.path == '/api/scheduled-tasks':
             from scheduled_tasks import snapshot
             try:
@@ -482,6 +490,18 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path == '/api/tonetti/chat':
+            from tonetti import start
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if not 0 < length <= 24000: raise ValueError('Solicitud demasiado grande')
+                data, code = start(json.loads(self.rfile.read(length)))
+            except (ValueError, TypeError, UnicodeError):
+                data, code = {'error': 'Mensaje no válido (máximo 4000 caracteres)'}, 400
+            except Exception:
+                data, code = {'error': 'No se pudo guardar el mensaje; consulta el historial antes de repetir'}, 503
+            self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8', code)
+            return
         if parsed.path == '/api/scheduled-tasks/run':
             try:
                 length = int(self.headers.get('Content-Length', '0'))
