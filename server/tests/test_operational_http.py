@@ -20,7 +20,7 @@ class OperationalHTTPTests(unittest.TestCase):
         h={'Authorization':'Basic '+base64.b64encode(b'test:only-test').decode(),'X-Dashboard-Action':'write'};h.update(headers)
         conn=http.client.HTTPConnection(*self.server.server_address,timeout=5)
         try:
-            conn.request(method,path,body,h);r=conn.getresponse();return r.status,dict(r.getheaders()),r.read()
+            conn.request(method,path,None if method in ('GET','HEAD') else body,h);r=conn.getresponse();return r.status,dict(r.getheaders()),r.read()
         finally:conn.close()
     def test_tonetti_is_authenticated_and_origin_protected(self):
         import tonetti
