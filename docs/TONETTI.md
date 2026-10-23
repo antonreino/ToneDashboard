@@ -1,8 +1,8 @@
-# Tonetti 0.0.1: IA local con memoria
+# Tonetti 0.0.2: IA local con memoria
 
-Implementación independiente en el proyecto privado [antonreino/tonetti](https://github.com/antonreino/tonetti), antes carpeta Jarvis. La versión del asistente es0.0.1; no reinicia la versión pública del Dashboard. El adapter `server/tonetti.py` usa un ZIP versionado del paquete y comprueba su SHA256. Se genera con `../tonetti/scripts/bundle_dashboard.py`, sin datos privados ni una segunda implementación manual. Dashboard y su CI funcionan sin acceso al checkout privado.
+Implementación independiente en el proyecto privado [antonreino/tonetti](https://github.com/antonreino/tonetti), antes carpeta Jarvis. La versión del asistente es0.0.2; no reinicia la versión pública del Dashboard. El adapter `server/tonetti.py` usa un ZIP versionado del paquete y comprueba su SHA256. Se genera con `../tonetti/scripts/bundle_dashboard.py`, sin datos privados ni una segunda implementación manual. Dashboard y su CI funcionan sin acceso al checkout privado.
 
-La interfaz única `web/tonetti.js` sirve a web,Mac e iPhone. No requiere reinstalar contenedores Apple. Conversación protegida por auth y origen existentes, salida renderizada como texto, API modelo solo127.0.0.1. No hay SSH,shell,Telegram,navegador ni escritura de proyectos disponible para el modelo: genera propuestas, no ejecuta ni aplica parches.
+La interfaz única `web/tonetti.js` sirve a web,Mac e iPhone. No requiere reinstalar contenedores Apple. Conversación protegida por auth y origen existentes, salida renderizada como texto, API modelo solo127.0.0.2. No hay SSH,shell,Telegram,navegador ni escritura de proyectos disponible para el modelo: genera propuestas, no ejecuta ni aplica parches.
 
 ## Identidad y contexto
 
@@ -25,3 +25,5 @@ Ollama estable0.40.8,servicio sh.brew.ollama,cloud desactivado,un modelo/una inf
 Pruebas: batería delDashboard,backendauth/origen,adaptaciónresponsive,pruebas delpaqueteTonetti ymensajessintéticosconmásde2100entradas. Evaluacionesdeincidentes guardan respuestas completas y fallos:coincidenciasdepalabrasno equivalenacorreccióntécnica. No es fine-tuning ni promesa de resolución autónoma.
 
 Se conserva la base en su rutaoriginal; no se migra al renombrar elproyecto. Copia previa verificada antes de modificar esquema en audits/tonetti-training-20261023/chat-before.sqlite3. La memoriaSQLite ya está incluida en la tarea existenteCopiasverificadas,conintegridad yretención14. SoncopiaslocalesdelMac,norespaldoexternoindependiente. Conservartambiéndocumentosprivadosenlas copiasdelpropietario; nunca subirlosalrepo.
+
+Tone Dashboard es la aplicación; Tonetti es la IA independiente y Ollama es el motor. Integrar el chat no fusiona proyectos, datos ni versiones.

@@ -88,15 +88,20 @@ try{
     // Image decode can finish before fonts/subgrid have their final geometry.
     // Wait for the same dimensions asserted below; do not relax the invariant.
     await page.evaluate(()=>document.fonts.ready);
-    await page.waitForFunction(()=>{
-      const posters=[...document.querySelectorAll('.anime-card__poster')];
-      return posters.length===6 && posters.every(el=>{const r=el.getBoundingClientRect();return r.width>0 && r.height>0 && Math.abs(r.width/r.height-5/7)<.01;});
+    // Capture and validate geometry in the same browser turn. Polling can
+    // rerender cards between a readiness check and a separate DOM read.
+    const layoutHandle=await page.waitForFunction(()=>{
+      const cards=[...document.querySelectorAll('.anime-card')];
+      if(cards.length!==6)return false;
+      const layout=cards.map(card=>{
+        const poster=card.querySelector('.anime-card__poster').getBoundingClientRect();
+        const buttons=[...card.querySelectorAll('.anime-card__actions button')].map(b=>b.getBoundingClientRect());
+        return {ratio:poster.width/poster.height,buttons:buttons.map(b=>({left:b.left,right:b.right,top:b.top,bottom:b.bottom,height:b.height})),fit:getComputedStyle(card.querySelector('img')).objectFit,top:card.getBoundingClientRect().top,title:card.querySelector('h3').getBoundingClientRect().top,note:card.querySelector('.anime-card__note').getBoundingClientRect().top,body:card.querySelector('.anime-card__events').getBoundingClientRect().top,dub:card.querySelector('.anime-card__dub').getBoundingClientRect().top,actions:card.querySelector('.anime-card__actions').getBoundingClientRect().top};
+      });
+      return layout.every(card=>Number.isFinite(card.ratio)&&Math.abs(card.ratio-5/7)<.01)?layout:false;
     },null,{timeout:5000});
-    const layout=await page.locator('.anime-card').evaluateAll(cards=>cards.map(card=>{
-      const poster=card.querySelector('.anime-card__poster').getBoundingClientRect();
-      const buttons=[...card.querySelectorAll('.anime-card__actions button')].map(b=>b.getBoundingClientRect());
-      return {ratio:poster.width/poster.height,buttons:buttons.map(b=>({left:b.left,right:b.right,top:b.top,bottom:b.bottom,height:b.height})),fit:getComputedStyle(card.querySelector('img')).objectFit,top:card.getBoundingClientRect().top,title:card.querySelector('h3').getBoundingClientRect().top,note:card.querySelector('.anime-card__note').getBoundingClientRect().top,body:card.querySelector('.anime-card__events').getBoundingClientRect().top,dub:card.querySelector('.anime-card__dub').getBoundingClientRect().top,actions:card.querySelector('.anime-card__actions').getBoundingClientRect().top};
-    }));
+    const layout=await layoutHandle.jsonValue();
+    await layoutHandle.dispose();
     assert.equal(layout.length,6);for(const card of layout){assert(Math.abs(card.ratio-5/7)<.01,`Unexpected poster ratio ${card.ratio} at ${width}`);for(const button of card.buttons)assert(button.height>=44);for(let i=0;i<card.buttons.length;i++)for(let j=i+1;j<card.buttons.length;j++){const a=card.buttons[i],b=card.buttons[j];assert(a.right+11<=b.left||b.right+11<=a.left||a.bottom+11<=b.top||b.bottom+11<=a.top,'Anime actions overlap or spacing too small');}assert.equal(card.fit,'contain');}
     for(const card of layout){const row=layout.filter(other=>Math.abs(other.top-card.top)<1);for(const other of row)for(const key of ['title','note','body','dub','actions'])assert(Math.abs(card[key]-other[key])<1,`Misaligned ${key} at ${width}`);}
     await page.getByText('Esperando temporada',{exact:true}).first().waitFor();
