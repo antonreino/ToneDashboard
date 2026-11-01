@@ -1,6 +1,6 @@
 # Tone Dashboard 1.2 · operación y recuperación
 
-La interfaz y las operaciones siguen compartidas por web, iOS y macOS. No se añaden servicios LaunchAgent. La versión pública es 1.2.0, sin sufijo de compilación.
+La interfaz y las operaciones siguen compartidas por web, iOS y macOS. No se añaden servicios LaunchAgent. La versión pública se obtiene de `VERSION`, sin sufijo de compilación.
 
 ## Datos y actualización
 
@@ -71,7 +71,7 @@ En macOS ejecutar `bash server/scripts/install-ps5-wake-helper.sh` y permitir Re
 
 ## Tareas programadas
 
-Inicio → Tareas programadas (o acceso directo en escritorio) muestra las automatizaciones de Codex y los trabajos internos de copias/aMule. El horario y el último resultado documentado son datos separados. El catálogo descubre nuevas automatizaciones al actualizar; la integración de sus registros sigue [TAREAS-PROGRAMADAS.md](TAREAS-PROGRAMADAS.md). El endpoint exige autenticación, es de solo lectura y nunca ejecuta una tarea desde el navegador. Los mensajes se acotan y se ocultan credenciales, URLs y rutas privadas.
+Inicio → Tareas programadas (o acceso directo en escritorio) muestra las automatizaciones de Codex y los trabajos internos de copias/aMule. El horario y el último resultado documentado son datos separados. El catálogo descubre nuevas automatizaciones al actualizar; la integración de sus registros sigue [TAREAS-PROGRAMADAS.md](TAREAS-PROGRAMADAS.md). La lectura usa GET autenticado. «Ejecutar ahora» usa POST autenticado con protección de origen e IDs fijos; conserva el perfil limitado y la revisión de acciones sensibles descritos en TAREAS-PROGRAMADAS.md. Los mensajes se acotan y se ocultan credenciales, URLs y rutas privadas.
 
 ## Interfaz 1.2
 

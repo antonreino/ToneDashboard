@@ -5,6 +5,7 @@ No toca el estado de Orbit Zero ni las tablas del dashboard principal.
 """
 from __future__ import annotations
 import argparse
+from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 import sqlite3
@@ -27,14 +28,14 @@ def purge(db: Path, backup: Path | None = None):
     """Sólo elimina tablas con nombres conocidos y conserva copia SQLite consistente."""
     if not db.is_file():
         raise FileNotFoundError(f'No existe la base de datos: {db}')
-    with sqlite3.connect(db,timeout=30) as conn:
+    with closing(sqlite3.connect(db,timeout=30)) as conn, conn:
         tables={row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         found=[name for name in LEGACY_TABLES if name in tables]
         if backup is None or not found:
             return found
         backup.parent.mkdir(parents=True,exist_ok=True)
         if backup.exists(): raise FileExistsError(f'Backup ya existe: {backup}')
-        with sqlite3.connect(backup,timeout=30) as copy:
+        with closing(sqlite3.connect(backup,timeout=30)) as copy, copy:
             conn.backup(copy)
             if copy.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
                 raise RuntimeError('Backup de SQLite inválido; no se modificó el original')

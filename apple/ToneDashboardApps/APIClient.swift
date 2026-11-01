@@ -13,6 +13,9 @@ enum DashboardOrigin {
               let inner = URL(string:String(url.absoluteString.dropFirst(5))) else { return false }
         return trusted(inner,baseURL:baseURL)
     }
+    static func chatAttachment(_ url: URL, baseURL: URL) -> Bool {
+        trusted(url,baseURL:baseURL) && url.query == nil && url.fragment == nil && url.path.range(of:"^/api/tonetti/attachment/[a-f0-9]{32}$",options:.regularExpression) != nil
+    }
     static func permitsFrame(_ url: URL, sourceURL: URL, baseURL: URL) -> Bool {
         valid(url) && (trusted(sourceURL,baseURL:baseURL) || trusted(url,baseURL:sourceURL))
     }

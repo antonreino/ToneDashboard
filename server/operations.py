@@ -40,7 +40,11 @@ def backup_all(price_db):
         if source.is_file():
             target=backup_database(source,state_db.DB_PATH.parent/'backups'/source.stem)
             files.append({'database':source.name,'snapshot':target.name})
-    value={'ok':True,'checked_at':state_db.utc_now(),'files':files}
+    from tonetti_attachments import backup_files
+    attachments=backup_files(TONETTI_DB.parent,state_db.DB_PATH.parent/'backups'/'chat'/'attachments') if TONETTI_DB.is_file() else 0
+    from tonetti_context_backup import backup_context
+    curated=backup_context(TONETTI_DB.parent,state_db.DB_PATH.parent/'backups'/'chat'/'context') if TONETTI_DB.is_file() else {'files':[]}
+    value={'ok':True,'checked_at':state_db.utc_now(),'files':files,'attachment_files':attachments,'curated_context':curated}
     state_db.set_runtime_state('backup_status',value)
     return value
 

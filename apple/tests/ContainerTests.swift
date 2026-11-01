@@ -33,6 +33,10 @@ import Foundation
         precondition(DashboardOrigin.diagnosticBlob(URL(string:"blob:https://dashboard.test/uuid")!,sourceURL:base,baseURL:base))
         precondition(!DashboardOrigin.diagnosticBlob(URL(string:"blob:https://evil.test/uuid")!,sourceURL:base,baseURL:base))
         precondition(!DashboardOrigin.diagnosticBlob(URL(string:"blob:https://dashboard.test/uuid")!,sourceURL:URL(string:"https://orbit.test/")!,baseURL:base))
+        precondition(DashboardOrigin.chatAttachment(URL(string:"https://dashboard.test/api/tonetti/attachment/"+String(repeating:"a",count:32))!,baseURL:base))
+        for value in ["https://evil.test/api/tonetti/attachment/"+String(repeating:"a",count:32),"https://dashboard.test/api/tonetti/attachment/../secret","https://dashboard.test/api/tonetti/attachment/"+String(repeating:"a",count:32)+"?preview=1"] {
+            precondition(!DashboardOrigin.chatAttachment(URL(string:value)!,baseURL:base))
+        }
         var savedKeys:[String]=[]
         defaults.removeObject(forKey:"legacyCredentialAccount")
         defaults.set("https://dashboard.test",forKey:"baseURL")

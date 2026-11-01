@@ -30,6 +30,7 @@
     <button class="phone-alert" id="phoneAlert" data-phone-go="logs" hidden></button>
     <h3>A tu alcance</h3>
     <div class="phone-menu"><button data-phone-go="tonetti"><span class="phone-menu-icon">✦</span><span><b>Tonetti</b><small>Tu IA local y el contexto de tu infraestructura</small></span><span>›</span></button>
+      <button data-phone-go="pokemon"><span class="phone-menu-icon">◉</span><span><b>Adivina el Pokémon</b><small>Descubre la silueta de la primera generación</small></span><span>›</span></button>
       <button data-phone-go="calendario"><span class="phone-menu-icon">▦</span><span><b>Calendario de anime</b><small>Próximos estrenos y series que sigues</small></span><span aria-hidden="true">›</span></button>
       <button data-phone-go="tareas"><span class="phone-menu-icon">◷</span><span><b>Tareas programadas</b><small>Qué se ejecuta, cuándo y con qué resultado</small></span><span aria-hidden="true">›</span></button>
       <button data-phone-go="amule"><span class="phone-menu-icon">⌕</span><span><b>Buscar en aMule</b><small>Encuentra y descarga desde aquí</small></span><span aria-hidden="true">›</span></button>
@@ -184,7 +185,25 @@
     <div id="phoneAmuleQueueSlot"></div><div id="phoneDownloadSlot"></div>
     <details class="phone-info shared-ui"><summary>Cómo se gestionan las descargas</summary><p class="phone-lead" style="padding:0 16px">Organizer revisa los archivos terminados de aMule para incorporarlos a Emby. Las descargas por URL mantienen su destino habitual.</p><div id="phoneDownloadInfoSlot"></div></details>
   </div>
-  <div id="view-tonetti" class="view phone-view"><button class="phone-back shared-ui" data-phone-go="mas">‹ Más</button><section class="panel tonetti-panel"><div class="panel__head"><h2>Tonetti <small>Tu asistente local</small></h2></div><div class="panel__body pad"><p class="muted">Conversación privada en el Mac. Conoce el inventario documentado; no ejecuta acciones ni consulta el estado en vivo.</p><div id="tonettiMessages" class="tonetti-messages" role="log" aria-label="Conversación con Tonetti"></div><form id="tonettiForm"><label for="tonettiInput">Tu mensaje</label><textarea id="tonettiInput" maxlength="4000" rows="3" required placeholder="¿Qué servicios hay en Proxmox?"></textarea><p id="tonettiError" role="alert" hidden></p><div class="tonetti-actions"><span id="tonettiStatus" role="status">Modelo local</span><button class="button" id="tonettiSend" type="submit">Enviar</button></div></form></div></section></div>
+  <div id="view-tonetti" class="view phone-view">
+<button class="phone-back" type="button" data-phone-go="mas">‹ Más</button>
+<section id="tonettiWorkspace" class="tonetti-workspace" aria-label="Chat con Tonetti">
+<aside class="tonetti-sidebar"><button id="tonettiNew" type="button" class="button">＋ Nueva conversación</button><details id="tonettiHistory" open><summary>Conversaciones</summary><nav id="tonettiThreads" aria-label="Historial de conversaciones"></nav></details><details class="tonetti-options"><summary>Opciones del chat</summary><details class="tonetti-info"><summary>Acerca de tu memoria</summary><p id="tonettiMemory" class="muted">Historial privado en el Mac.</p></details><details id="tonettiTaskPanel" class="tonetti-task-panel"><summary>Preparar una tarea de mantenimiento</summary><p>Elige la tarea y revisa su plan. Solo se ejecuta al confirmar; el texto del chat y los adjuntos no dan órdenes al sistema.</p><form id="tonettiTaskForm"><label for="tonettiTaskSelect">Tarea</label><select id="tonettiTaskSelect" required><option value="">Cargando catálogo…</option></select><button class="button tonetti-secondary" type="submit">Preparar plan</button></form><div id="tonettiTaskPlan"></div><p id="tonettiTaskStatus" role="status"></p><button type="button" class="button tonetti-secondary" data-phone-go="tareas">Ver registros de tareas</button></details></details></aside>
+<div class="tonetti-chat"><header class="tonetti-chat__header"><div><span class="eyebrow">TU IA LOCAL</span><h2 id="tonettiTitle">Tonetti</h2></div><details id="tonettiRenamePanel"><summary>Renombrar</summary><form id="tonettiRename"><label for="tonettiName">Nombre de la conversación</label><input id="tonettiName" maxlength="100" required><button type="submit" class="button tonetti-secondary">Guardar</button></form></details></header>
+
+<button id="tonettiOlder" type="button" class="button tonetti-secondary" hidden>Cargar mensajes anteriores</button>
+<div id="tonettiMessages" class="tonetti-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+<form id="tonettiForm" class="tonetti-composer"><div id="tonettiAttachments" class="tonetti-attachment-row"></div><label class="sr-only" for="tonettiInput">Mensaje para Tonetti</label><textarea id="tonettiInput" rows="2" maxlength="4000" placeholder="Pregunta a Tonetti…"></textarea><input id="tonettiFiles" type="file" hidden multiple accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,.docx,.txt,.md,.csv,.json,.log,.py,.js,.ts,.css,.html,.xml,.yaml,.yml,.swift,.sh"><p id="tonettiError" class="error" role="alert" hidden></p><div class="tonetti-composer__actions"><button id="tonettiAttach" type="button" class="button tonetti-secondary" aria-label="Adjuntar documentos o fotos">＋ Adjuntar</button><span id="tonettiStatus" class="muted" role="status">Tonetti · agente local mediante OpenClaw</span><button id="tonettiSend" type="submit" class="button">Enviar</button></div><details class="tonetti-help"><summary>Adjuntos y atajos</summary><p>Hasta 4 archivos de 8 MB · 2 fotos · PDF, DOCX y texto. Los documentos escaneados requieren OCR. Enter envía; Mayús + Enter añade una línea en ordenador. Las acciones sensibles requieren confirmación.</p></details></form></div></section></div>
+  <div id="view-pokemon" class="view phone-view">
+    <button class="phone-back shared-ui" type="button" data-phone-go="mas">‹ Más</button>
+    <section class="pokemon-game" aria-labelledby="pokemonHeading">
+      <header><span class="eyebrow">MINIJUEGO</span><h2 id="pokemonHeading">¿Quién es ese Pokémon?</h2><p>Adivina la silueta. Puedes pulsar una respuesta o usar las teclas del 1 al 4.</p></header>
+      <div class="pokemon-stage"><div id="pokemonLoading" class="pokemon-loading">Preparando una ronda…</div><img id="pokemonImage" alt="Silueta del Pokémon que debes adivinar" hidden></div>
+      <div id="pokemonOptions" class="pokemon-options" aria-label="Posibles respuestas"></div>
+      <p id="pokemonResult" class="pokemon-result" role="status" aria-live="polite"></p>
+      <button id="pokemonNext" class="button" type="button">Nueva ronda</button>
+    </section>
+  </div>
   <div id="view-mas" class="view phone-view">
     <p class="phone-lead">Tu biblioteca, la actividad del sistema y los ajustes. Cada cosa en su sitio.</p>
     <div class="more-grid">
@@ -194,6 +213,7 @@
       <button data-phone-go="historial"><span class="phone-menu-icon">↺</span><span><b>Historial</b><small>Eventos y archivos procesados</small></span><span>›</span></button>
       </div></section>
       <section class="more-section"><h2>Automatización y sistema</h2><div class="phone-menu"><button data-phone-go="tonetti"><span class="phone-menu-icon">✦</span><span><b>Tonetti</b><small>Tu IA local y el contexto de tu infraestructura</small></span><span>›</span></button>
+      <button data-phone-go="pokemon"><span class="phone-menu-icon">◉</span><span><b>Adivina el Pokémon</b><small>Un juego rápido de la primera generación</small></span><span>›</span></button>
       <button data-phone-go="tareas"><span class="phone-menu-icon">◷</span><span><b>Tareas programadas</b><small>Horarios, resultados y registros de cada tarea</small></span><span>›</span></button>
       <button data-phone-go="equipos"><span class="phone-menu-icon">▣</span><span><b>Equipos y servicios</b><small>Mac mini y servidor Emby</small></span><span>›</span></button>
       <button data-phone-go="estadisticas"><span class="phone-menu-icon">▥</span><span><b>Estadísticas</b><small>Transferencias y bibliotecas</small></span><span>›</span></button>

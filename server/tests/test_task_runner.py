@@ -43,3 +43,45 @@ class RunnerTests(unittest.TestCase):
         reports=list(runner._folder('dashboard-backups').glob('*-manual.json'))
         self.assertEqual(len(reports),1)
 
+
+    def test_proxmox_network_permission_is_explicit_but_does_not_change_profile(self):
+        task='mantenimiento-semanal-proxmox-y-emby'
+        raw='id="'+task+'"\nstatus="ACTIVE"\nprompt="Revisión autorizada"'
+        with patch.object(runner.catalogue,'_read',return_value=raw):
+            prompt=runner._prompt(task)
+        self.assertIn('permiso puntual de red',prompt)
+        self.assertIn('require_escalated',prompt)
+        self.assertIn('No cambiar perfiles ni permisos permanentes',prompt)
+        self.assertIn('remote.py --probe',prompt)
+        self.assertNotIn('dangerously-bypass',prompt)
+
+    def test_proxmox_uses_one_shot_app_and_private_job_files(self):
+        helper=self.root/'ToneMaintenanceRunner.app';helper.mkdir()
+        def run(command,**kwargs):
+            self.assertEqual(command[:4],['/usr/bin/open','-n','-g','-W'])
+            directory=Path(command[-1]);self.assertEqual(json.loads((directory/'task.json').read_text()),{'id':'mantenimiento-semanal-proxmox-y-emby'})
+            self.assertEqual((directory/'prompt.txt').stat().st_mode&0o777,0o600)
+            self.assertEqual((directory/'prompt.txt').read_text(),'trusted prompt')
+            (directory/'answer.json').write_text(json.dumps({'status':'ok','message':'Revisión de prueba'}))
+            return Mock(returncode=0)
+        with patch.object(runner,'MAINTENANCE_HELPER',helper),patch.object(runner.sys,'platform','darwin'),patch.object(runner.subprocess,'run',side_effect=run):
+            result=runner._codex('trusted prompt',7,'mantenimiento-semanal-proxmox-y-emby')
+        self.assertEqual(result['status'],'ok')
+    def test_ps5_uses_same_one_shot_network_helper(self):
+        helper=self.root/'ToneMaintenanceRunner.app';helper.mkdir()
+        def run(command,**kwargs):
+            self.assertEqual(command[:4],['/usr/bin/open','-n','-g','-W'])
+            directory=Path(command[-1])
+            self.assertEqual(json.loads((directory/'task.json').read_text()),{'id':'mantener-payloads-de-ps5'})
+            (directory/'answer.json').write_text(json.dumps({'status':'partial','message':'Consola apagada; sin cambios'}))
+            return Mock(returncode=0)
+        with patch.object(runner,'MAINTENANCE_HELPER',helper),patch.object(runner.sys,'platform','darwin'),patch.object(runner.subprocess,'run',side_effect=run):
+            result=runner._codex('trusted prompt',7,'mantener-payloads-de-ps5')
+        self.assertEqual(result['status'],'partial')
+    def test_live_native_helper_lock_blocks_duplicate_manual_task(self):
+        import fcntl,os
+        path=self.root/'scheduled-tasks'/'maintenance-helper.lock';path.parent.mkdir()
+        with path.open('w') as handle:
+            fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            with patch.object(runner,'_ACTIVE',None):data,code=runner.start('dashboard-backups',Path('/tmp/test.sqlite3'))
+            self.assertEqual(code,409)

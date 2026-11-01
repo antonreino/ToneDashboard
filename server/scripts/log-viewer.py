@@ -330,12 +330,13 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
         return False
 
-    def send_bytes(self, body: bytes, content_type: str, status: int = 200):
+    def send_bytes(self, body: bytes, content_type: str, status: int = 200, disposition=None):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "same-origin")
+        if disposition:self.send_header('Content-Disposition',disposition)
         if content_type.startswith('text/html'):
             from orbit_isolation import origins
             configured=origins()
@@ -365,10 +366,21 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == '/api/tonetti':
             from tonetti import snapshot
             try:
-                data,code=snapshot(),200
+                query=parse_qs(parsed.query)
+                data,code=snapshot(int(query.get('conversation',['1'])[0]),int(query['before'][0]) if 'before' in query else None),200
+            except (ValueError,OverflowError):data,code={'error':'Conversación no válida'},400
             except Exception:
                 data,code={'error':'No se pudo consultar la memoria de Tonetti; no borres la base y revisa el registro.'},503
             self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8',code)
+            return
+        if parsed.path.startswith('/api/tonetti/attachment/'):
+            from tonetti import attachment
+            from urllib.parse import quote
+            try:
+                preview=parse_qs(parsed.query).get('preview')==['1']
+                row,path=attachment(parsed.path.removeprefix('/api/tonetti/attachment/'),preview)
+                self.send_bytes(path.read_bytes(),'image/jpeg' if preview else 'application/octet-stream',disposition='inline' if preview else "attachment; filename*=UTF-8''"+quote(row[0],safe=''))
+            except (ValueError,OSError):self.send_bytes(b'Not found','text/plain',404)
             return
         if parsed.path == '/api/scheduled-tasks':
             from scheduled_tasks import snapshot
@@ -377,6 +389,14 @@ class Handler(BaseHTTPRequestHandler):
                 code = 200
             except Exception:
                 data, code = {'error': 'No se pudieron consultar las tareas programadas'}, 503
+            self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8', code)
+            return
+        if parsed.path == '/api/pokemon/round':
+            from pokemon_game import new_round
+            try:
+                data, code = snapshots.get('pokemon_round', 2, new_round), 200
+            except Exception:
+                data, code = {'error': 'No se pudo preparar la ronda. Inténtalo de nuevo.'}, 503
             self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8', code)
             return
         if parsed.path in ('/api/organizer/reviews','/api/activity','/api/organizer/rules','/api/diagnostics','/api/deals/preferences'):
@@ -490,6 +510,32 @@ class Handler(BaseHTTPRequestHandler):
         if orbit_serve(self):
             return
         parsed = urlparse(self.path)
+        if parsed.path in ('/api/tonetti/conversations','/api/tonetti/attachments'):
+            from tonetti import conversation,upload
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                maximum=11201000 if parsed.path.endswith('/attachments') else 1200
+                if not 0<length<=maximum:raise ValueError('Solicitud demasiado grande')
+                body=json.loads(self.rfile.read(length))
+                data,code=(upload(body) if parsed.path.endswith('/attachments') else conversation(body))
+            except (ValueError,TypeError,UnicodeError) as exc:data,code={'error':str(exc)[:200]},400
+            except Exception:data,code={'error':'No se pudo guardar. Consulta el estado antes de repetir.'},503
+            self.send_bytes(json.dumps(data,ensure_ascii=False).encode(),'application/json; charset=utf-8',code)
+            return
+        if parsed.path in ('/api/tonetti/task-plans','/api/tonetti/task-plans/execute','/api/tonetti/task-plans/status'):
+            import tonetti_tasks
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                if not 0<length<=256:raise ValueError('Solicitud no válida')
+                body=json.loads(self.rfile.read(length))
+                if parsed.path.endswith('/execute'):data,code=tonetti_tasks.execute(body,PRICE_BOT_DB)
+                elif parsed.path.endswith('/status'):data,code=tonetti_tasks.status(body)
+                else:data,code=tonetti_tasks.create(body)
+                snapshots.values.pop('scheduled_tasks',None)
+            except (ValueError,TypeError,UnicodeError) as exc:data,code={'error':str(exc)[:240]},400
+            except Exception:data,code={'error':'No se pudo consultar el plan; revisa los registros antes de repetir.'},503
+            self.send_bytes(json.dumps(data,ensure_ascii=False).encode(),'application/json; charset=utf-8',code)
+            return
         if parsed.path == '/api/tonetti/chat':
             from tonetti import start
             try:

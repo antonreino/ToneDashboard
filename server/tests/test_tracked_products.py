@@ -1,3 +1,4 @@
+from contextlib import closing
 import base64
 import http.client
 import importlib.util
@@ -16,7 +17,7 @@ class DashboardEANTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
   self.db=Path(self.tmp.name)/'prices.sqlite3';self.config=Path(self.tmp.name)/'config.json';self.config.write_text(json.dumps({'sources':[{'name':'Test','enabled':True}]}))
-  with sqlite3.connect(self.db) as c:
+  with closing(sqlite3.connect(self.db)) as c, c:
    c.executescript('CREATE TABLE offers(source TEXT,payload TEXT,seen REAL,active INTEGER,price INTEGER); CREATE TABLE sources(name TEXT,ok INTEGER); CREATE TABLE published_notifications(body TEXT,created REAL); CREATE TABLE source_events(id INTEGER,name TEXT,level TEXT,detail TEXT,created REAL); INSERT INTO sources VALUES ("Test",1);')
    for model,price in [('slim_disc',60000),('ean:0711719021247',20000),('slim_disc',40000)]:c.execute('INSERT INTO offers VALUES (?,?,?,?,?)',('Test',json.dumps({'model':model,'title':'Producto','price':price,'source':'Test'}),1,1,price))
   for name,value in [('PRICE_BOT_DB',self.db),('PRICE_BOT_CONFIG',self.config),('PRICE_BOT_LOG',Path(self.tmp.name)/'empty.log')]:

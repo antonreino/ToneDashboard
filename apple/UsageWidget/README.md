@@ -23,10 +23,10 @@ Instalación del usuario: `~/Applications/ToneUsageWidget.app`. Compilación nat
 Compilar UsageModel.swift + ModelTests.swift y ejecutar. Compilar UsageModel.swift + UsageWidget.swift con `-D WIDGET_PROBE` para dos consultas reales sin abrir el panel ni crear conversaciones. Las pruebas de reinicio usan modelos y respuestas simuladas: no consumen ningún bono real. La prueba de lectura debe tener dos lecturas válidas separadas aproximadamente tres segundos y no registrar identificadores de cuenta ni tokens.
 
 
-## Escritorio y salvapantallas
+## Orden de ventanas
 
-El panel no se oculta al desactivarse su aplicación (`hidesOnDeactivate=false`). Se conserva el salvapantallas, el fondo y la configuración de seguridad existentes. Se comprueba el motor de salvapantallas y, como alternativa, únicamente propietario/capa de ventanas visibles; no se capturan imágenes ni contenidos.
+El panel usa el nivel normal de ventanas, sin prioridad flotante, sin elevarse al activar el salvapantallas y sin invadir aplicaciones a pantalla completa ni todos los espacios. Otras aplicaciones pueden cubrirlo. Solo Mostrar widget o volver a abrir Tone Usage lo trae delante; al recuperar la sesión se coloca detrás. El fondo y el salvapantallas permanecen intactos.
 
-Al detectar el salvapantallas se eleva la ventana por encima de su capa, sin sustituir el fondo. En ese modo no hay controles interactivos: se ocultan acciones y se ignora el ratón. Al salir vuelve a la capa flotante normal. Ante cambio de sesión se oculta. Esto no implementa un widget de login ni garantiza visibilidad en la pantalla de autenticación protegida de macOS.
+## Cerrar, volver a abrir y mover
 
-La instalación del 21/10 se comprobó visible en el monitor principal de 3440×1440, esquina superior derecha (ventana 324×560). La comprobación visual sobre el salvapantallas real se solicita al propietario; no se considera superada solo por haber compilado.
+La X oculta el panel sin terminar la aplicación. Se recupera con el icono de medidor en la barra de menús → Mostrar widget, o volviendo a abrir Tone Usage desde Applications. Salir en el menú sí termina la aplicación. La cabecera TU USO permite arrastrar el panel mediante el arrastre nativo de NSWindow; las acciones de actualizar y cerrar quedan fuera de esa zona. La posición se conserva entre aperturas y existe la acción Colocar arriba a la derecha. La reapertura tras ocultar se verificó en el Mac; el desplazamiento mediante el controlador visual no confirmó un cambio de coordenadas y requiere comprobación manual.

@@ -1,6 +1,6 @@
 # Tareas programadas
 
-La sección común web, macOS e iOS muestra el catálogo de automatizaciones de Codex y las tareas periódicas del propio Dashboard. El catálogo explica los resultados históricos. «Recargar informes» solo consulta los registros. «Ejecutar ahora» inicia una de las cinco tareas autorizadas tras confirmación; no permite editar órdenes, horarios ni instrucciones desde el cliente.
+La sección común web, macOS e iOS muestra el catálogo de automatizaciones de Codex y las tareas periódicas del propio Dashboard. El catálogo explica los resultados históricos. «Recargar informes» solo consulta los registros. «Ejecutar ahora» inicia una de las seis tareas autorizadas tras confirmación; no permite editar órdenes, horarios ni instrucciones desde el cliente.
 
 ## Qué se muestra
 
@@ -9,6 +9,7 @@ La sección común web, macOS e iOS muestra el catálogo de automatizaciones de 
 | Anime: revisión semanal y avisos | Lunes, 08:00 | Portadas, episodios japoneses, doblajes castellanos y próximas temporadas o películas; Telegram solo tras verificar publicaciones. |
 | Mantener payloads de PS5 | Diario, 10:00 | Versiones oficiales, compatibilidad, recuperación e informe Telegram. Puede despertar una consola emparejada; no ejecuta el jailbreak ni reinicia la consola. |
 | Mantenimiento semanal Proxmox y Emby | Lunes, 04:00 | Actualizaciones compatibles, copias y validaciones; aplaza reinicios con actividad y notifica siempre. |
+| Tonetti: revisión diaria de calidad | Diario, 06:30 | Regresiones y dos casos como máximo, con revisión semántica; no entrena pesos ni ejecuta propuestas. |
 | Copias verificadas | Cada 24 horas de actividad del Dashboard | Copias consistentes de las bases, comprobación de integridad y retención. |
 | Disponibilidad de aMule | Cada 30 segundos | Comprueba el proceso; si está ausente y la recuperación está habilitada, solicita abrirlo. Espera al menos 2 minutos entre intentos. |
 
@@ -97,7 +98,7 @@ Validación: `PYTHONPATH=server .venv/bin/python -m unittest discover -s server/
 
 Cada tarjeta muestra un resumen visible, motivo, estado de consola cuando consta, siguiente paso y seguimiento posterior. «Parcial» describe la última ejecución guardada: no demuestra que el servicio esté caído. El seguimiento no borra incidencias históricas.
 
-POST `/api/scheduled-tasks/run` acepta exclusivamente `{id}` (hasta 256 bytes), con autenticación y protección de origen existentes. IDs permitidos: las tres automatizaciones mantenidas y las comprobaciones de copias y aMule. Las futuras automatizaciones aparecen en el catálogo, pero no reciben capacidad de ejecución automáticamente.
+POST `/api/scheduled-tasks/run` acepta exclusivamente `{id}` (hasta 256 bytes), con autenticación y protección de origen existentes. IDs permitidos: las cuatro automatizaciones mantenidas y las comprobaciones de copias y aMule. Las futuras automatizaciones aparecen en el catálogo, pero no reciben capacidad de ejecución automáticamente.
 
 El ejecutor carga las instrucciones de la configuración local de confianza, nunca del navegador. Codex recibe el prompt por stdin y devuelve un JSON validado; el cliente no recibe prompts, rutas, órdenes, credenciales ni salida cruda. Las copias y aMule usan las funciones existentes. Se conserva el horario periódico: una ejecución manual no lo cambia. El lanzamiento de Codex requiere el perfil limitado autorizado; no se usa acceso completo ni omisión de aprobaciones.
 
@@ -105,4 +106,10 @@ Solo una tarea manual puede ejecutarse a la vez, con bloqueo de proceso y ficher
 
 Los resultados manuales se guardan como informes fechados en el catálogo existente; no se añade un servicio permanente. La prueba de navegador simula la ejecución, sin realizar mantenimiento real.
 
-Validación de la ejecución manual: copias verificadas probadas contra el servicio real (HTTP 202 y resultado correcto). Perfil limitado autorizado por el propietario; prueba real del ejecutor Codex completada con JSON correcto, sin usar herramientas ni realizar mantenimiento. Las tres revisiones Codex están habilitadas. Esta prueba acredita el lanzamiento y la respuesta del ejecutor, no una nueva actualización de PS5 o Proxmox.
+Validación de la ejecución manual: copias verificadas probadas contra el servicio real (HTTP 202 y resultado correcto). Perfil limitado autorizado por el propietario; prueba real del ejecutor Codex completada con JSON correcto, sin usar herramientas ni realizar mantenimiento. Las cuatro revisiones Codex están habilitadas. Esta prueba acredita el lanzamiento y la respuesta del ejecutor, no una nueva actualización de PS5 o Proxmox.
+
+### Proxmox desde macOS
+
+La ejecución manual abre `ToneMaintenanceRunner`, auxiliar firmado con el permiso de Red local autorizado por el propietario. Se cierra al finalizar: no añade un daemon. Mantiene el perfil limitado y las revisiones de acciones sensibles. Un segundo bloqueo heredado por Codex impide iniciar otra revisión manual si el Dashboard se recarga mientras el auxiliar sigue trabajando. El directorio temporal es privado; solo admite el ID fijo de Proxmox, rechaza enlaces y solicitudes ya respondidas, y devuelve únicamente el resumen saneado. Los permisos de macOS y el permiso puntual de red de cada orden son controles distintos. Si falla la conexión, el informe conserva el errno y no afirma que el servidor esté apagado ni que se hayan completado las actualizaciones.
+
+Un seguimiento cuya fecha no es posterior al último resultado no se muestra como resolución de esa ejecución. El metadato histórico original se conserva en disco.

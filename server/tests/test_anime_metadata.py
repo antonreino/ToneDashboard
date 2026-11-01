@@ -35,3 +35,9 @@ class MetadataTests(unittest.TestCase):
         episode={'season':2,'number':1,'airstamp':'2026-10-24T16:30:00Z','url':'https://www.tvmaze.com/episodes/23/example'}
         with patch.object(m,'get_json',side_effect=[[{'show':show}],episode]):result=m.lookup('Example Anime')
         self.assertEqual(result['_next_event']['date'],'2026-10-25');self.assertEqual(result['_next_event']['region'],'JP')
+    def test_typographic_apostrophes_are_normalized_for_search_only(self):
+        show={**self.show,'name':"Tone's Anime"}
+        with self.json_patch([show]) as query:
+            result=m.lookup('Tone’s Anime')
+        self.assertEqual(query.call_args.kwargs['params']['q'],"Tone's Anime")
+        self.assertEqual(result['catalogue_title'],"Tone's Anime")

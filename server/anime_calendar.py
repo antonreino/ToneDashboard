@@ -50,6 +50,12 @@ def validate(data):
         if 'tracking' in series and type(series['tracking']) is not bool:raise ValueError('Seguimiento no válido')
         if series.get('status')=='finished' and series.get('conclusion_confirmed') is not True:raise ValueError('Final definitivo no confirmado')
         if series.get('status') not in ('active','archived','finished'):raise ValueError('Estado no válido')
+        premiere=series.get('premiere')
+        if premiere is not None:
+            if not isinstance(premiere,dict) or type(premiere.get('season')) is not int or not 1<=premiere['season']<=999 or premiere.get('region')!='JP':raise ValueError('Anuncio de temporada no válido')
+            date.fromisoformat(premiere['date'])
+            url=urlsplit(premiere.get('source',''))
+            if url.scheme!='https' or not url.hostname or url.username or url.password or any(ord(c)<32 for c in premiere.get('source','')):raise ValueError('Fuente oficial no válida')
         if not isinstance(series.get('title'),str) or not 1<=len(series['title'])<=150:raise ValueError('Título no válido')
     keys=set()
     for event in data['events']:
@@ -121,6 +127,10 @@ def apply_metadata(data,series,metadata):
     series['cover']='/api/anime-calendar/covers/'+series['id']+'.jpg'
     series['metadata_checked_at']=datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat()
     if series.get('season_note'):series['season_note']=series['season_note'].replace('en España','en Japón').replace('Día en España','Día en Japón')
+    premiere=metadata.get('_season_premiere')
+    if premiere:
+        series['premiere']=premiere
+        series['season_note']='Temporada '+str(premiere['season'])+' anunciada oficialmente en Japón. Fecha prevista, no emisión confirmada.'
     event=metadata.get('_next_event')
     if event and event['date']>=datetime.now(ZoneInfo('Asia/Tokyo')).date().isoformat():
         key=(series['id'],event['season'],event['episode'],'jp-original')
@@ -172,10 +182,11 @@ def manage_series(action,title=None,series_id=None):
 def refresh_metadata(progress=None):
     from anime_metadata import lookup
     with LOCK:targets=[(s['id'],s['title']) for s in read_data()['series'] if s.get('tracking',True) and s['status']!='finished']
-    updated=[];failed=[]
+    updated=[];failed=[];warnings=[]
     for ident,title in targets:
         try:
             metadata=lookup(title)
+            if metadata.get('_official_warning'):warnings.append({'id':ident,'warning':metadata['_official_warning']})
             with LOCK:
                 data=read_data();series=next((s for s in data['series'] if s['id']==ident),None)
                 if not series or not series.get('tracking',True):continue
@@ -183,7 +194,7 @@ def refresh_metadata(progress=None):
             updated.append(ident)
         except (ValueError,OSError,KeyError) as exc:failed.append({'id':ident,'error':str(exc)})
         if progress:progress({'completed':len(updated)+len(failed),'total':len(targets),'id':ident,'failed':len(failed)})
-    return {'updated':len(updated),'failed':failed}
+    return {'updated':len(updated),'failed':failed,'warnings':warnings}
 
 
 def private_write(path,data):
@@ -229,6 +240,11 @@ def calendar(data=None):
                 'SUMMARY:'+escape(f"{titles[e['series']]} · T{e.get('season',1)} E{e['episode']} · {version}"),
                 'DESCRIPTION:'+escape(('Fecha de estreno en Japón (JST); no garantiza publicación subtitulada en España.' if e['version']=='jp-original' else 'Fecha de estreno en España.')+' Hora no confirmada. Fuente: '+e['source']),
                 'URL:'+e['source'],'TRANSP:TRANSPARENT','END:VEVENT']
+    for series in data['series']:
+        premiere=series.get('premiere')
+        if not premiere or not series.get('tracking',True) or series.get('status')=='finished' or premiere['date']<datetime.now(ZoneInfo('Asia/Tokyo')).date().isoformat():continue
+        if any(e['series']==series['id'] and e.get('season')==premiere['season'] and e.get('episode')==1 and e['version']=='jp-original' for e in data['events']):continue
+        lines+=['BEGIN:VEVENT','UID:'+series['id']+'-premiere-s'+str(premiere['season'])+'@tone-dashboard','DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+premiere['date'].replace('-',''),'SUMMARY:'+escape(series['title']+' · Estreno T'+str(premiere['season'])+' · Japón'),'DESCRIPTION:'+escape('Anuncio oficial de temporada en Japón (JST), no confirmación de emisión. Fuente: '+premiere['source']),'URL:'+premiere['source'],'TRANSP:TRANSPARENT','END:VEVENT']
     lines+=['END:VCALENDAR']
     # Fold by UTF-8 octets, without splitting characters (RFC 5545).
     folded=[]

@@ -163,6 +163,22 @@ def mac_system_snapshot() -> dict:
     except Exception:
         pass
 
+    # `top` rounds "15G used"; adding its rounded fields understates the
+    # physical total and can exaggerate the occupied percentage. Keep the
+    # approximate used reading, but prefer the kernel's exact installed bytes.
+    try:
+        physical = subprocess.run(
+            ["/usr/sbin/sysctl", "-n", "hw.memsize"],
+            capture_output=True, text=True, timeout=2,
+        )
+        total = int(physical.stdout.strip()) if physical.returncode == 0 else 0
+        if total > 0:
+            ram_total = total
+            if ram_used is not None:
+                ram_used = min(ram_used, ram_total)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        pass
+
     memory_free_percent = None
     swap_used = None
     try:

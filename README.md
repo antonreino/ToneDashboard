@@ -1,4 +1,4 @@
-# Tone Dashboard · 1.2.0
+# Tone Dashboard · 1.2.2
 
 Un único proyecto para web, macOS/iOS, Organizer, descargas, Telegram, ofertas y Orbit.
 
@@ -31,7 +31,7 @@ El dashboard mantiene el puerto8765 y las rutas API. El tracker utiliza `workers
 
 ## Apps Apple
 
-Abrir `apple/ToneDashboardApps.xcodeproj`: versión 1.2.0. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
+Abrir `apple/ToneDashboardApps.xcodeproj`: versión 1.2.1. Los identificadores de bundle y llavero anteriores se conservan para actualizar sin perder credenciales, preferencias ni cookies. La cuenta anterior mantiene su almacén WebKit; otras cuentas tienen almacenes persistentes separados. No se borra el almacén de Orbit.
 
 Las apps cargan `/` del dashboard HTTPS. Las mejoras de interfaz se reciben al recargar; cambios del contenedor requieren nueva compilación. Autenticación y navegación quedan limitadas al origen configurado. No se entregan contraseñas a JavaScript ni hay un puente de ejecución de comandos.
 
@@ -75,7 +75,7 @@ Consulta [Operación y recuperación](docs/OPERACIONES.md) para conocer límites
 
 ## Numeración de versiones
 
-La versión publicada es **1.2.0**; la siguiente será **1.2.1**, seguida de 1.2.2, …, 1.2.9 y 1.3.0. Cada versión publicada incrementa el último dígito; después de 9, ese dígito vuelve a 0 y se incrementa el componente central. La versión principal permanece en 1 hasta que el propietario autorice expresamente cambiarla. La versión pública es común a web, macOS e iOS y se presenta sin sufijos ni números entre paréntesis. El contador interno de Apple no forma parte del nombre público.
+La versión publicada es **1.2.1**; la siguiente será **1.2.2**, seguida de 1.2.3, …, 1.2.9 y 1.3.0. Cada versión publicada incrementa el último dígito; después de 9, ese dígito vuelve a 0 y se incrementa el componente central. La versión principal permanece en 1 hasta que el propietario autorice expresamente cambiarla. La versión pública es común a web, macOS e iOS y se presenta sin sufijos ni números entre paréntesis. El contador interno de Apple no forma parte del nombre público.
 
 Con `AMULE_AUTOSTART=true`, el mantenimiento existente del Dashboard comprueba aMule cada 30 segundos y solicita abrir la aplicación instalada si no existe proceso ni control EC disponible. No mata ni reinicia instancias abiertas, limita reintentos a dos minutos y no añade agentes permanentes. La búsqueda compartida usa siempre «Todos los servidores» y muestra un único aviso ante el mismo fallo de conexión.
 
@@ -86,8 +86,12 @@ El calendario ordena siempre las series en emisión primero y las demás despué
 
 ## Interfaz y estado del proyecto
 
-La versión 1.2.0 comparte un tema crema entre web, Mac e iPhone, con accesos directos a Anime y Tareas y herramientas agrupadas por función. Tareas programadas descubre las automatizaciones de Codex y muestra horarios, requisitos y resultados documentados, junto con las copias y recuperación de aMule del Dashboard. Es de solo lectura y no publica instrucciones privadas.
+La versión 1.2.0 comparte un tema crema entre web, Mac e iPhone, con accesos directos a Anime y Tareas y herramientas agrupadas por función. Tareas programadas descubre las automatizaciones de Codex y muestra horarios, requisitos y resultados documentados, junto con las copias y recuperación de aMule del Dashboard. Permite lanzar tareas autorizadas y no publica instrucciones privadas.
 
 - [Instantánea del proyecto y prioridades](docs/ESTADO-PROYECTO-2026-10-21.md)
 - [Catálogo de tareas y registro de nuevas automatizaciones](docs/TAREAS-PROGRAMADAS.md)
 - [Operación, datos y recuperación](docs/OPERACIONES.md)
+
+## Novedades 1.2.1
+
+Tonetti incorpora conversaciones, historial paginado, Markdown seguro y adjuntos privados (texto, PDF, DOCX e imágenes). El calendario distingue anuncios oficiales de temporada y episodios emitidos; incluye la fecha oficial japonesa de Shangri-La Frontier y normaliza apóstrofos en búsquedas del catálogo.

@@ -31,6 +31,10 @@ _LABELS = {"ok": "Correcto", "partial": "Parcial", "error": "Error", "unknown": 
 
 # Curated descriptions explain intent without disclosing private instructions.
 _PROFILES = {
+    "tonetti-revisi-n-diaria-de-calidad": {
+        "description": "Comprueba las regresiones de Tonetti y dos respuestas locales rotativas. Revisa exactitud sin ejecutar propuestas ni modificar infraestructura; los lunes incluye el servidor completo.",
+        "requirements": ["Mac, Codex y Ollama disponibles", "Chat inactivo y memoria suficiente", "Revisión humana de las respuestas"],
+    },
     "anime-espa-a-estrenos-y-avisos": {
         "description": "Cada lunes revisa episodios en Japón, doblajes castellanos y próximas temporadas o películas de todos los animes seguidos. Completa portadas y avisa por Telegram solo de publicaciones confirmadas, sin repetir avisos.",
         "requirements": ["Mac y Codex disponibles", "Fuentes públicas accesibles"],
@@ -43,7 +47,7 @@ _PROFILES = {
     },
     "mantenimiento-semanal-proxmox-y-emby": {
         "description": "Revisa Proxmox, contenedores y aplicaciones, con copias y comprobaciones posteriores. Aplaza reinicios con actividad y envía un informe por Telegram incluso sin cambios. No reinicia el host automáticamente.",
-        "requirements": ["Mac y Codex disponibles", "Servidor accesible", "Autorización adicional para cambios de versión principal"],
+        "requirements": ["Mac y Codex disponibles", "Permiso de Red local para ToneMaintenanceRunner", "Servidor accesible", "Autorización adicional para cambios de versión principal"],
         "report_type": "proxmox",
     },
 }
@@ -185,8 +189,8 @@ def _generic(task_id: str, audit_root: Path) -> tuple[dict[str, Any], list[dict[
         message = _text(data.get("message"), 2400)
         if message:
             result.append(_event(data["at"], data["status"], message))
-        if len(result) == MAX_LOGS:
-            break
+    # The bounded candidate set must be sorted by event time in _task(), not
+    # truncated by filename first: legacy names need not be chronological.
     return metadata, result
 
 
@@ -326,13 +330,18 @@ def _outcome(task_id: str, status: str, logs: list[dict[str, Any]]) -> dict[str,
 def _task(task_id: str, name: str, description: str, executor: str, enabled: bool, schedule: str, logs: list[dict[str, Any]], requirements: list[str], source: str, follow_up: Any = None) -> dict[str, Any]:
     logs = sorted(logs, key=lambda log: log.get("at") or "", reverse=True)[:MAX_LOGS]
     status = logs[0]["status"] if logs else "unknown"
+    follow_up = _follow_up(follow_up)
+    # A resolution predating the latest run cannot resolve that run. Preserve
+    # the original metadata on disk, but do not label it a later follow-up.
+    if follow_up and logs and follow_up["at"] <= logs[0]["at"]:
+        follow_up = None
     return {
         "id": task_id, "name": _text(name, 140) or "Tarea programada", "description": _text(description, 1400),
         "executor": executor, "enabled": enabled, "schedule": schedule, "status": "disabled" if not enabled else status,
         "status_label": "Pausada" if not enabled else _LABELS[status], "last_run": logs[0]["at"] if logs else None,
         "logs": logs, "requirements": [_text(item, 200) for item in requirements[:5] if isinstance(item, str)],
         "source": source, "history_available": bool(logs),
-        "follow_up": _follow_up(follow_up),
+        "follow_up": follow_up,
         "outcome": _outcome(task_id, status, logs),
     }
 

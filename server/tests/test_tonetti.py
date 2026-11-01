@@ -16,22 +16,19 @@ class TonettiTests(unittest.TestCase):
         self.assertEqual(tonetti.snapshot()['messages'],[])
     def test_async_persists_and_limits_concurrency(self):
         entered=threading.Event();release=threading.Event()
-        class Response:
-            def __enter__(self):entered.set();release.wait(3);return self
-            def __exit__(self,*args):pass
-            def read(self,*args):return json.dumps({'message':{'content':'Emby está documentado en 192.168.1.177.'}}).encode()
-        with patch.object(tonetti.urllib.request,'urlopen',return_value=Response()) as call:
+        def answer(*args,**kwargs):
+            entered.set();release.wait(3);return 'Emby está documentado en 192.168.1.177.',[{'source':'agent','reference':'openclaw:test'}]
+        with patch.object(tonetti.service,'generate',side_effect=answer) as call:
             self.assertEqual(tonetti.start({'message':'¿Dónde está Emby?'})[1],202)
             self.assertTrue(entered.wait(2));self.assertEqual(tonetti.start({'message':'otra'})[1],409)
             self.assertTrue(tonetti.snapshot()['busy']);release.set()
             self.assertTrue(tonetti._LOCK.acquire(timeout=4));tonetti._LOCK.release()
-            req=call.call_args.args[0];self.assertEqual(req.full_url,'http://127.0.0.1:11434/api/chat')
-            payload=json.loads(req.data);self.assertFalse(payload['stream']);self.assertNotIn('tools',payload)
+            self.assertEqual(call.call_args.args[4],1)
         self.assertEqual([m['role'] for m in tonetti.snapshot()['messages']],['user','assistant'])
         self.assertIn('192.168.1.177',tonetti.snapshot()['messages'][-1]['content'])
         self.assertEqual((Path(self.tmp.name)/'chat.sqlite3').stat().st_mode & 0o777,0o600)
     def test_failure_is_persisted_and_unlocks(self):
-        with patch.object(tonetti.urllib.request,'urlopen',side_effect=OSError('private details')):
+        with patch.object(tonetti.service,'generate',side_effect=OSError('private details')):
             tonetti.start({'message':'hola'})
             self.assertTrue(tonetti._LOCK.acquire(timeout=4));tonetti._LOCK.release()
         last=tonetti.snapshot()['messages'][-1]

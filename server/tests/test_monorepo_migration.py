@@ -1,3 +1,4 @@
+from contextlib import closing
 import importlib.util
 from pathlib import Path
 import sqlite3
@@ -14,7 +15,7 @@ class MigrationTests(unittest.TestCase):
  def test_sqlite_copy_preserves_all_rows_binary_and_history(self):
   with tempfile.TemporaryDirectory() as d:
    source=Path(d)/'old.sqlite3';target=Path(d)/'new.sqlite3'
-   with sqlite3.connect(source) as c:
+   with closing(sqlite3.connect(source)) as c, c:
     c.executescript('PRAGMA journal_mode=WAL;CREATE TABLE history(id INTEGER PRIMARY KEY,body TEXT);CREATE TABLE queue(payload BLOB);INSERT INTO history VALUES (1,"historial");INSERT INTO queue VALUES (X\'001122\');')
    expected=migration.verified_database_copy(source,target);self.assertEqual(expected,migration.database_manifest(source));self.assertEqual(expected,migration.database_manifest(target));self.assertEqual(expected['history']['rows'],1);self.assertTrue(source.exists())
  def test_source_never_overwritten(self):

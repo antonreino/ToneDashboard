@@ -1,3 +1,4 @@
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -38,6 +39,13 @@ class ScheduledTasksTests(unittest.TestCase):
 
     def codex(self):
         return [task for task in self.snapshot()["tasks"] if task["executor"] == "Codex"]
+
+    def test_tonetti_quality_can_run_manually_without_exposing_prompt(self):
+        self.automation("tonetti-revisi-n-diaria-de-calidad")
+        task = self.codex()[0]
+        self.assertTrue(task["can_run"])
+        self.assertIn("Tonetti", task["description"])
+        self.assertNotIn("NEVER_PUBLISH_THIS_PRIVATE_PROMPT", json.dumps(task))
 
     def test_outcome_explains_pending_console_and_preserves_history(self):
         logs = [tasks._event("2026-10-21T08:00:00Z", "partial", "Resultado: PARCIAL. Preparados, sin instalar.\nEstado: Despertada; gestor accesible.\nPendiente: Certificar transferencias y probar arranque.")]
@@ -248,7 +256,11 @@ class ScheduledTasksTests(unittest.TestCase):
 
     def test_follow_up_is_separate_from_historical_result_and_run_time(self):
         self.automation("mantenimiento-semanal-proxmox-y-emby")
-        self.report("proxmox-weekly-20261019/INFORME.md", "Resultado: PARCIAL. Incidencia Home Assistant pendiente de intervención.")
+        report = self.report("proxmox-weekly-20261019/INFORME.md", "Resultado: PARCIAL. Incidencia Home Assistant pendiente de intervención.")
+        import os
+        from datetime import datetime
+        at = datetime.fromisoformat("2026-10-19T02:05:00+00:00").timestamp()
+        os.utime(report, (at, at))
         original = self.codex()[0]
         self.report("scheduled-tasks/mantenimiento-semanal-proxmox-y-emby/metadata.json", {"follow_up": {"at": "2026-10-19T07:58:00Z", "message": "Agente y MariaDB revisados después del mantenimiento. Ruta /private/audit omitida.", "status": "ok", "command": "run shell"}})
         updated = self.codex()[0]
@@ -260,6 +272,25 @@ class ScheduledTasksTests(unittest.TestCase):
         self.assertNotIn("/private", updated["follow_up"]["message"])
         self.assertNotIn("command", updated["follow_up"])
         self.assertNotIn("status", updated["follow_up"])
+
+    def test_recent_event_is_not_hidden_by_legacy_filename_order(self):
+        self.automation()
+        for i in range(9):
+            self.report(f"scheduled-tasks/future-task/z-legacy-{i}.json", {"at": f"2026-10-19T0{i}:00:00Z", "status": "partial", "message": "Revisión anterior."})
+        self.report("scheduled-tasks/future-task/a-new.json", {"at": "2026-10-25T00:00:00Z", "status": "ok", "message": "Comprobación reciente."})
+        task = self.codex()[0]
+        self.assertEqual(task["status"], "ok")
+        self.assertEqual(task["logs"][0]["message"], "Comprobación reciente.")
+        self.assertEqual(len(task["logs"]), 8)
+
+    def test_follow_up_older_than_latest_run_is_not_shown_as_resolution(self):
+        self.automation("mantenimiento-semanal-proxmox-y-emby")
+        self.report("scheduled-tasks/mantenimiento-semanal-proxmox-y-emby/metadata.json", {"follow_up": {"at": "2026-10-21T10:00:00Z", "message": "Incidencia anterior resuelta."}})
+        self.report("scheduled-tasks/mantenimiento-semanal-proxmox-y-emby/latest.json", {"at": "2026-10-24T10:00:00Z", "status": "partial", "message": "Actualización nueva aplazada."})
+        task = self.codex()[0]
+        self.assertIsNone(task["follow_up"])
+        self.assertEqual(task["status"], "partial")
+        self.assertIn("aplazada", task["logs"][0]["message"])
 
     def test_follow_up_requires_a_timezone_and_nonempty_safe_message(self):
         self.assertIsNone(tasks._follow_up({"at": "2026-10-19", "message": "No cuenta como ejecución."}))
@@ -274,7 +305,7 @@ class ScheduledTasksTests(unittest.TestCase):
         self.assertNotIn("PRIVATE_NOT", json.dumps(self.codex()))
 
     def test_internal_tasks_read_runtime_without_initializing_or_mutating_database(self):
-        with sqlite3.connect(self.database) as connection:
+        with closing(sqlite3.connect(self.database)) as connection, connection:
             connection.execute("CREATE TABLE runtime_state (key TEXT, value TEXT, updated_at TEXT)")
             connection.executemany("INSERT INTO runtime_state VALUES (?,?,?)", [("backup_status", json.dumps({"ok": True, "files": [{"snapshot": "/private/snapshot", "database": "private.sqlite"}]}), "2026-10-21T10:00:00Z"), ("amule_recovery", json.dumps({"state": "failed", "error": "PRIVATE_EXCEPTION"}), "2026-10-21T10:00:00Z"), ("private-other", json.dumps({"token": "PRIVATE_TOKEN"}), "2026-10-21T10:00:00Z")])
         before = self.database.read_bytes()

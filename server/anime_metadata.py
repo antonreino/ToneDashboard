@@ -31,6 +31,8 @@ def get_json(session,url,**kwargs):
 
 def lookup(title):
     query=ALIASES.get(normalize(title),title)
+    # TVmaze search currently returns HTTP 500 for typographic apostrophes.
+    query=query.translate(str.maketrans({'’':"'",'‘':"'",'ʼ':"'",'–':'-','—':'-'}))
     session=requests.Session();session.trust_env=False
     try:
         rows=get_json(session,'https://api.tvmaze.com/search/shows',params={'q':query})
@@ -58,6 +60,12 @@ def lookup(title):
             stamp=episode.get('airstamp')
             if stamp and type(episode.get('number')) is int and type(episode.get('season')) is int:
                 result['_next_event']={'season':episode['season'],'episode':episode['number'],'date':datetime.fromisoformat(stamp.replace('Z','+00:00')).astimezone(ZoneInfo('Asia/Tokyo')).date().isoformat(),'version':'jp-original','region':'JP','source':episode['url']}
+        from anime_official import lookup_premiere
+        try:
+            premiere=lookup_premiere(show['id'])
+            if premiere:result['_season_premiere']=premiere
+        except (requests.RequestException,ValueError,UnicodeError):
+            result['_official_warning']='No se pudo actualizar el anuncio oficial; se conserva cualquier fecha verificada anterior.'
         return result
     except requests.RequestException:
         raise ValueError('No se pudo consultar el catálogo o descargar la portada. Inténtalo de nuevo.') from None

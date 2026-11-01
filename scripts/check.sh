@@ -12,6 +12,7 @@ node --check web/api.js
 node --check web/anime-calendar.js
 node --check web/scheduled-tasks.js
 node --check web/tonetti.js
+node --check web/markdown.js
 node server/tests/test_api_ui.js
 (cd server && node tests/test_orbit_devices_ui.js)
 node server/tests/test_tracking_ui.js

@@ -2,6 +2,7 @@
 import json
 import os
 import sqlite3
+import stat
 import threading
 import time
 from contextlib import closing
@@ -23,8 +24,41 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _prepare_private_database() -> None:
+    """Keep download URLs and account identifiers private, including WAL files.
+
+    Validate owner/type without following symlinks before changing permissions.
+    Existing data stays in place; chmod does not interrupt SQLite connections.
+    """
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    parent = os.open(DB_PATH.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        if os.fstat(parent).st_uid != os.getuid():
+            raise PermissionError("El directorio de estado no pertenece al usuario actual")
+        os.fchmod(parent, 0o700)
+        for suffix in ("", "-wal", "-shm"):
+            flags = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK
+            if not suffix:
+                flags |= os.O_CREAT
+            try:
+                descriptor = os.open(DB_PATH.name + suffix, flags, 0o600, dir_fd=parent)
+            except FileNotFoundError:
+                if suffix:
+                    continue
+                raise
+            try:
+                info = os.fstat(descriptor)
+                if info.st_uid != os.getuid() or not stat.S_ISREG(info.st_mode):
+                    raise PermissionError("El archivo de estado no es un archivo privado del usuario")
+                os.fchmod(descriptor, 0o600)
+            finally:
+                os.close(descriptor)
+    finally:
+        os.close(parent)
+
+
 def connect() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _prepare_private_database()
     conn = sqlite3.connect(DB_PATH, timeout=DB_BUSY_TIMEOUT_MS / 1000)
     conn.row_factory = sqlite3.Row
     conn.execute(f"PRAGMA busy_timeout={DB_BUSY_TIMEOUT_MS}")

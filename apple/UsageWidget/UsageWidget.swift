@@ -182,6 +182,18 @@ final class UsageClient {
     }
 }
 
+private final class UsagePanel: NSPanel {
+    override func sendEvent(_ event: NSEvent) {
+        let point = event.locationInWindow
+        if event.type == .leftMouseDown, point.y >= frame.height - 52,
+           point.x >= 0, point.x < frame.width - 82 {
+            performDrag(with: event)
+            return
+        }
+        super.sendEvent(event)
+    }
+}
+
 struct UsageView: View {
     @ObservedObject var store: UsageStore
     let refresh: () -> Void
@@ -271,31 +283,40 @@ struct UsageView: View {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var panel: NSPanel!
     var item: NSStatusItem!
     let store = UsageStore()
     var client: UsageClient!
-    var presentationTimer: Timer?
     var sessionActive = true
+    var panelHidden = false
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         client = UsageClient(store: store)
-        let view = UsageView(store: store, refresh: { [weak self] in self?.client.refresh() }, quit: { NSApp.terminate(nil) }, reset: { [weak self] id in self?.client.reset(creditId: id) })
+        let view = UsageView(store: store, refresh: { [weak self] in self?.client.refresh() }, quit: { [weak self] in self?.hidePanel() }, reset: { [weak self] id in self?.client.reset(creditId: id) })
         let host = NSHostingView(rootView: view)
         let size = host.fittingSize
-        panel = NSPanel(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.contentView = host; panel.isFloatingPanel = true; panel.level = .floating
+        panel = UsagePanel(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.contentView = host; panel.isFloatingPanel = false; panel.level = .normal
         panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        panel.collectionBehavior = [.managed]
         panel.isMovableByWindowBackground = true; panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = true
         host.wantsLayer = true; host.layer?.cornerRadius = 18; host.layer?.masksToBounds = true
-        placeTopRight(); panel.orderFrontRegardless()
+        placeTopRight()
+        if let saved = UserDefaults.standard.string(forKey: "widgetFrame") {
+            let frame = NSRectFromString(saved)
+            if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(frame) }) {
+                panel.setFrameOrigin(frame.origin)
+            }
+        }
+        panel.delegate = self
+        panel.orderFront(nil)
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "gauge.with.dots.needle.50percent", accessibilityDescription: "Tone Usage")
         let menu = NSMenu()
-        menu.addItem(withTitle: "Mostrar arriba a la derecha", action: #selector(showPanel), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Mostrar widget", action: #selector(showPanel), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Colocar arriba a la derecha", action: #selector(resetPosition), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Actualizar", action: #selector(update), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Salir", action: #selector(quit), keyEquivalent: "q").target = self
@@ -303,45 +324,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(screenChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(sessionResigned), name: NSWorkspace.sessionDidResignActiveNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(sessionBecameActive), name: NSWorkspace.sessionDidBecomeActiveNotification, object: nil)
-        presentationTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.updatePresentation() }
-        updatePresentation()
         client.start()
     }
-    func screenSaverActive() -> Bool {
-        if NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == "com.apple.ScreenSaver.Engine" }) { return true }
-        // Only inspect window-owner/layer metadata. No screenshot or window contents.
-        guard let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] else { return false }
-        let saverLevel = Int(CGWindowLevelForKey(.screenSaverWindow))
-        return windows.contains { row in
-            guard let pid = row[kCGWindowOwnerPID as String] as? Int, pid != ProcessInfo.processInfo.processIdentifier,
-                  let layer = row[kCGWindowLayer as String] as? Int, layer >= saverLevel,
-                  let owner = row[kCGWindowOwnerName as String] as? String else { return false }
-            return owner.localizedCaseInsensitiveContains("screensaver") || owner.localizedCaseInsensitiveContains("wallpaper")
-        }
-    }
-    func updatePresentation() {
-        guard sessionActive else { return }
-        let saver = screenSaverActive()
-        if saver != store.saverMode {
-            store.saverMode = saver
-            panel.level = saver ? NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.screenSaverWindow)) + 1) : .floating
-            panel.ignoresMouseEvents = saver
-            if saver { placeTopRight() }
-            panel.orderFrontRegardless()
-        }
-    }
     @objc func sessionResigned() { sessionActive = false; panel.orderOut(nil) }
-    @objc func sessionBecameActive() { sessionActive = true; updatePresentation(); panel.orderFrontRegardless() }
+    @objc func sessionBecameActive() { sessionActive = true; if !panelHidden { panel.orderBack(nil) } }
     func placeTopRight() {
         guard let screen = NSScreen.screens.first else { return }
         let frame = screen.visibleFrame
         panel.setFrameTopLeftPoint(NSPoint(x: frame.maxX-panel.frame.width-18, y: frame.maxY-18))
     }
-    @objc func showPanel() { placeTopRight(); panel.orderFrontRegardless() }
+    func hidePanel() { panelHidden = true; panel.orderOut(nil) }
+    @objc func showPanel() { panelHidden = false; panel.orderFront(nil) }
+    @objc func resetPosition() { placeTopRight(); showPanel() }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showPanel()
+        return false
+    }
+    func windowDidMove(_ notification: Notification) {
+        UserDefaults.standard.set(NSStringFromRect(panel.frame), forKey: "widgetFrame")
+    }
     @objc func screenChanged() { placeTopRight() }
     @objc func update() { client.refresh() }
     @objc func quit() { NSApp.terminate(nil) }
-    func applicationWillTerminate(_ notification: Notification) { presentationTimer?.invalidate(); client.stop() }
+    func applicationWillTerminate(_ notification: Notification) {
+        client.stop()
+    }
 }
 
 #if WIDGET_PROBE
