@@ -49,22 +49,6 @@ try{
   await page.route('**/api/dashboard?*',route=>route.abort());
   await page.getByRole('button',{name:'Actualizar información'}).click();
   await page.locator('#connectionNotice').waitFor({state:'visible'});
-  for (const width of [390,1440]) {
-    await page.setViewportSize({width,height:1000});
-    await page.locator('.phone-nav').getByRole('button',{name:'Orbit',exact:true}).click();
-    await page.route('**/api/orbit/pair-code', async route => {
-      assert.equal(route.request().headers()['x-orbit-action'],'reveal-code');
-      await route.fulfill({json:{code:'123456',console_woken:true}});
-    });
-    await page.locator('#orbitReveal').click();
-    await page.locator('#orbitPairPassword').fill('test-only-password');
-    await page.locator('#orbitPairForm button[type=submit]').click();
-    await page.getByText(/PS5 encendida desde reposo/).waitFor();
-    assert.equal(await page.locator('#orbitPairPassword').inputValue(),'');
-    await page.locator('#orbitPairClose').click();
-    await page.waitForFunction(()=>document.getElementById('orbitPairResult').textContent==='');
-    await page.unroute('**/api/orbit/pair-code');
-  }
   const animeFixtures=[
     {id:'aoashi',title:'Ao Ashi',status:'active',cover:'https://cover.test/aoashi.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'},
     {id:'black-clover',title:'Black Clover',status:'archived',cover:'https://cover.test/black.jpg',dub_status:'Sin fecha confirmada de doblaje castellano'},

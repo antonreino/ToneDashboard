@@ -12,7 +12,13 @@ import tomllib
 
 import scheduled_tasks as catalogue
 
-CODEX = Path('/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex')
+_CODEX_RELATIVE = Path('Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex')
+_CHATGPT_APPS = (
+    Path('/Applications/ChatGPT.app'),
+    Path.home() / 'Applications/ChatGPT.app',
+    Path('/Volumes/Datos/Apps/ChatGPT.app'),
+)
+CODEX = next((app / _CODEX_RELATIVE for app in _CHATGPT_APPS if (app / _CODEX_RELATIVE).is_file()), _CHATGPT_APPS[0] / _CODEX_RELATIVE)
 MAINTENANCE_HELPER = Path.home() / 'Applications/ToneMaintenanceRunner.app'
 HELPER_TASKS = frozenset({'mantenimiento-semanal-proxmox-y-emby', 'mantener-payloads-de-ps5'})
 CODEX_MANUAL_ENABLED = True  # Limited approve-for-me profile explicitly authorized by the owner.

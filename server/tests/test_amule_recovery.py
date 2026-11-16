@@ -21,7 +21,7 @@ class RecoveryTests(unittest.TestCase):
             self.assertEqual(r.ensure_running(clock=lambda:1)['state'],'starting')
             r.ensure_running(clock=lambda:2);self.assertEqual(run.call_count,3)
             r.ensure_running(clock=lambda:122);self.assertEqual(run.call_count,5)
-            self.assertEqual(run.call_args.args[0],['/usr/bin/open','-g','-a','/Applications/aMule.app'])
+            self.assertEqual(run.call_args.args[0],['/usr/bin/open','-g','-a',str(r.APP)])
     def test_missing_app_unknown_process_and_disabled_never_launch(self):
         with patch.object(r.socket,'create_connection',side_effect=OSError),patch.object(r.Path,'is_file',return_value=False),patch.object(r.subprocess,'run',return_value=Mock(returncode=1)) as run:
             self.assertEqual(r.ensure_running()['state'],'failed');self.assertEqual(run.call_count,1)

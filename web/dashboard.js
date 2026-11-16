@@ -335,80 +335,6 @@ torrentForm.addEventListener('submit',async e=>{
 });
 
 
-// orbit-catalog-proxy v2: proxy mismo origen para Safari/iPhone, sin direcciones LAN en el cliente.
-// Orbit Zero v3: cargar solo en la pestaña, sin comprobaciones HEAD.
-let orbitCodeTimer,orbitCodeRequest;
-function clearOrbitCode(){
- clearTimeout(orbitCodeTimer);orbitCodeRequest?.abort();
- document.getElementById('orbitPairPassword').value='';
- document.getElementById('orbitPairResult').textContent='';
-}
-document.getElementById('orbitReveal').addEventListener('click',()=>{
- clearOrbitCode();document.getElementById('orbitPairDialog').showModal();
- document.getElementById('orbitPairPassword').focus();
-});
-document.getElementById('orbitPairClose').addEventListener('click',()=>document.getElementById('orbitPairDialog').close());
-document.getElementById('orbitPairDialog').addEventListener('close',clearOrbitCode);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){clearOrbitCode();document.getElementById('orbitPairDialog').close();}});
-document.getElementById('orbitPairForm').addEventListener('submit',async e=>{
- e.preventDefault();clearTimeout(orbitCodeTimer);orbitCodeRequest?.abort();
- const secret=document.getElementById('orbitPairPassword');const password=secret.value;secret.value='';
- const output=document.getElementById('orbitPairResult');output.textContent='Conectando con la PS5; si está en reposo intentaremos encenderla…';
- const request=new AbortController();orbitCodeRequest=request;
- try{
-  const response=await fetch('/api/orbit/pair-code',{method:'POST',cache:'no-store',signal:request.signal,
-   headers:{'Content-Type':'application/json','X-Dashboard-Action':'write','X-Orbit-Action':'reveal-code','X-Orbit-Pair-Password':password},body:'{}'});
-  const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo consultar Orbit');
-  if(request.signal.aborted)return;
-  output.textContent=(data.console_woken?'PS5 encendida desde reposo.\n':'')+'Código vigente: '+data.code+'\nSe ocultará en 60 segundos.';
-  orbitCodeTimer=setTimeout(()=>{clearOrbitCode();document.getElementById('orbitPairDialog').close();},60000);
- }catch(error){if(!request.signal.aborted)output.textContent=error.message;}
-});
-let orbitLoaded=false,orbitRefreshing=false;
-async function orbitRefreshStatus(loadFrame=false){
- const status=document.getElementById('orbitStatus');
- const start=document.getElementById('orbitStart');
- try{
-  const r=await fetch('/api/orbit/status',{cache:'no-store'});
-  if(!r.ok)throw new Error('HTTP '+r.status);
-  const d=await r.json();
-  start.hidden=Boolean(d.running)||!d.can_start;
-  if(d.running){
-    status.textContent='Orbit Zero disponible en el Mac mini.';
-    if(loadFrame&&!orbitLoaded){
-      let url='/orbit-bridge/zero/';
-      if(d.isolated){const response=await fetch('/api/orbit/isolation-ticket',{method:'POST',headers:{'X-Dashboard-Action':'write'}});if(!response.ok)throw new Error('No se pudo autorizar el origen aislado');url=(await response.json()).url;}
-      document.getElementById('orbitFrame').src=url;document.getElementById('orbitOpen').href=d.isolated?new URL('/orbit-bridge/zero/',url).href:url;orbitLoaded=true;
-    }
-  }else{
-    status.textContent=d.can_start?'Orbit Zero no está iniciado. Pulsa «Iniciar Orbit» para abrirlo en el Mac mini.':'Orbit Zero no responde. Comprueba que está instalado y que el control de inicio está configurado.';
-    if(loadFrame){document.getElementById('orbitFrame').src='about:blank';orbitLoaded=false;}
-  }
- }catch(err){status.textContent='No se pudo comprobar Orbit: '+err.message;start.hidden=true;}
-}
-function orbitEnsureLoaded(){
- if(!orbitRefreshing){orbitRefreshing=true;orbitRefreshStatus(true).finally(()=>orbitRefreshing=false);}
-}
-document.getElementById('orbitRetry').addEventListener('click',()=>{orbitLoaded=false;orbitEnsureLoaded();});
-document.getElementById('orbitStart').addEventListener('click',()=>{
- const dialog=document.getElementById('orbitControlDialog');
- dialog.showModal();document.getElementById('orbitControlPassword').focus();
-});
-document.getElementById('orbitCancelStart').addEventListener('click',()=>document.getElementById('orbitControlDialog').close());
-document.getElementById('orbitControlForm').addEventListener('submit',async e=>{
- e.preventDefault();
- const secret=document.getElementById('orbitControlPassword');
- const password=secret.value; secret.value='';
- document.getElementById('orbitControlDialog').close();
- const status=document.getElementById('orbitStatus');status.textContent='Solicitando inicio de Orbit Zero…';
- try{
-   const r=await fetch('/api/orbit/start',{method:'POST',headers:{'Content-Type':'application/json','X-Orbit-Control-Password':password,'X-Orbit-Action':'start'},body:'{}',credentials:'same-origin'});
-   const data=await r.json();if(!r.ok)throw new Error(data.error||'HTTP '+r.status);
-   status.textContent=data.running?'Orbit ya está disponible.':'Solicitud de inicio enviada. Espera unos segundos y pulsa Reconectar.';
-   orbitLoaded=false;await orbitRefreshStatus(true);
- }catch(err){status.textContent='No se pudo iniciar Orbit: '+err.message;}
-});
-
 // aMule: structured local EC data through the authenticated server.
 let amuleEpoch=0,amuleLoading=false,amuleSearchId='',amuleSearchBusy=false,amuleConnectionError='';
 document.getElementById('amuleNetwork').value='global';
@@ -494,7 +420,7 @@ async function refreshAll(){
   if(refreshingWeb)return;
   refreshingWeb=true;
   try{
-    if(document.hidden||document.getElementById('view-orbitzero').classList.contains('active'))return;
+    if(document.hidden)return;
     const tasks=[loadDashboard()];
     if(document.getElementById('view-logs').classList.contains('active'))tasks.push(loadLogs());
     if(document.getElementById('view-chollos').classList.contains('active'))tasks.push(loadDeals());
@@ -527,7 +453,7 @@ function updatePhoneDownloadCount(){
   document.getElementById('phoneDownloadCount').textContent=String(phoneDirectCount+(phoneAmuleCount||0));
   document.getElementById('phoneDownloadHint').textContent=phoneAmuleCount==null?'Cola de enlaces':'Enlaces y aMule';
 }
-const phoneTitles={tonetti:'Tonetti',pokemon:'Adivina el Pokémon',inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',orbitzero:'Orbit',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',calendario:'Calendario de anime',diagnostico:'Diagnóstico',tareas:'Tareas programadas'};
+const phoneTitles={tonetti:'Tonetti',pokemon:'Adivina el Pokémon',inicio:'Inicio',descargas:'Descargas',amule:'aMule',chollos:'Chollos',mas:'Más',equipos:'Equipos',historial:'Historial',estadisticas:'Estadísticas',logs:'Logs',ajustes:'Preferencias',organizer:'Revisar archivos',calendario:'Calendario de anime',diagnostico:'Diagnóstico',tareas:'Tareas programadas'};
 function phoneGroup(view){return view==='amule'?'descargas':['tonetti','pokemon','equipos','historial','estadisticas','logs','ajustes','organizer','calendario','diagnostico','tareas'].includes(view)?'mas':view;}
 function updateNavigationSelection(view){
   const desktopTabs=[...document.querySelectorAll('[data-desktop-tab]')];
@@ -546,8 +472,7 @@ function navigateDashboard(view,{focus=false}={}){
   updateNavigationSelection(view);
   const title=document.getElementById('phoneTitle');title.textContent=phoneTitles[view]||'Tone Dashboard';
   if(view==='calendario')document.getElementById('animeCalendarLoad').click();
-  if(view!=='orbitzero')clearOrbitCode();
-  if(view==='orbitzero')orbitEnsureLoaded();else refreshAll();
+  refreshAll();
   window.scrollTo({top:0,behavior:'instant'});if(focus)title.focus({preventScroll:true});
 }
 function applyPhoneLayout(){
@@ -584,9 +509,5 @@ setInterval(refreshAll,12000);
 // Native containers call the same cleanup used when the page leaves the foreground.
 window.ToneDashboard = Object.freeze({
   version: document.documentElement.dataset.version || 'unknown',
-  clearSensitiveState(){
-    clearOrbitCode();
-    ['orbitPairDialog','orbitControlDialog'].forEach(id=>{const dialog=document.getElementById(id);if(dialog?.open)dialog.close();});
-    ['orbitPairPassword','orbitControlPassword'].forEach(id=>{const input=document.getElementById(id);if(input)input.value='';});
-  }
+  clearSensitiveState(){}
 });

@@ -45,11 +45,6 @@ class OperationalHTTPTests(unittest.TestCase):
             post.assert_not_called()
             self.assertEqual(self.request('POST','/api/downloads/control',b'{"id":1,"action":"pause"}')[0],202)
             post.assert_called_once()
-    def test_isolated_host_cannot_read_dashboard_even_with_dashboard_credentials(self):
-        with patch.dict(os.environ,{'DASHBOARD_PUBLIC_ORIGIN':'https://dashboard.test','ORBIT_ISOLATED_ORIGIN':'https://orbit.test'}):
-            status,headers,_=self.request('GET','/api/dashboard',Host='orbit.test')
-            self.assertEqual(status,403);self.assertNotIn('WWW-Authenticate',headers)
-            self.assertEqual(self.request('POST','/api/downloads/control',Host='orbit.test')[0],403)
     def test_html_security_headers_preserve_current_embed(self):
         status,headers,body=self.request('GET','/')
         self.assertEqual(status,200);self.assertEqual(headers['X-Content-Type-Options'],'nosniff');self.assertIn("frame-src 'self'",headers['Content-Security-Policy']);self.assertIn(b'operationsDialog',body)

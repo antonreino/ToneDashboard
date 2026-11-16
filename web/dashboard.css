@@ -249,8 +249,8 @@ td .button { min-height: 40px; margin: 2px 0; padding: 9px 12px; font-size: 12px
 .operations-form label { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--muted); font-size: 12px; }
 .operations-form input, .operations-form select { width: 100%; }
 .operations-form input[type=checkbox] { width: 24px; min-height: 24px; }
-.operations-dialog, .orbit-password-dialog { width: min(1000px, calc(100vw - 32px)); max-height: 85dvh; padding: 24px; border: 1px solid var(--border); border-radius: 20px; background: var(--panel); color: var(--text); overflow: auto; box-shadow: 0 30px 90px #24322235; }
-.operations-dialog::backdrop, .orbit-password-dialog::backdrop { background: #24322270; backdrop-filter: blur(4px); }
+.operations-dialog { width: min(1000px, calc(100vw - 32px)); max-height: 85dvh; padding: 24px; border: 1px solid var(--border); border-radius: 20px; background: var(--panel); color: var(--text); overflow: auto; box-shadow: 0 30px 90px #24322235; }
+.operations-dialog::backdrop { background: #24322270; backdrop-filter: blur(4px); }
 .operations-dialog > form { display: flex; justify-content: flex-end; margin-bottom: 18px; }
 .operations-dialog > form .button, #animeAddCancel, #animeCalendarLoad, #animeCalendarSubscribe { background: #edf0e6; border-color: #d4ddca; color: var(--accent); }
 .operations-dialog > form .button:hover, #animeAddCancel:hover, #animeCalendarLoad:hover, #animeCalendarSubscribe:hover { background: #e0e8d8; }
@@ -260,22 +260,6 @@ td .button { min-height: 40px; margin: 2px 0; padding: 9px 12px; font-size: 12px
 #phoneSettingsSlot label { display: flex; align-items: center; gap: 16px; }
 #view-ajustes > .phone-lead { margin-top: 20px; }
 
-/* Orbit's own embedded application retains its native appearance. */
-.orbit-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
-.orbit-toolbar h2 { margin: 0; }
-.orbit-toolbar-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-.orbit-toolbar-buttons .button { min-height: 42px; padding: 9px 13px; background: #edf0e6; border-color: #d6dece; color: var(--accent); font-size: 12px; }
-.orbit-toolbar-buttons #orbitReveal { background: var(--accent); color: var(--panel); border-color: var(--accent); }
-.orbit-status, .orbit-note { color: var(--muted); font-size: 12px; line-height: 1.65; }
-.orbit-status { margin: 10px 0 14px; }
-.orbit-note { margin: 14px 0 0; }
-.orbit-frame { display: block; width: 100%; height: calc(100dvh - 295px); min-height: 430px; border: 1px solid #d3d7ca; border-radius: 13px; background: #101010; }
-#view-orbitzero .panel__body { padding: 20px; }
-.orbit-password-dialog { width: min(440px, calc(100vw - 32px)); }
-.orbit-password-dialog form { display: grid; gap: 14px; }
-.orbit-password-dialog h3, .orbit-password-dialog p { margin: 0; }
-.orbit-password-dialog input { width: 100%; }
-.orbit-password-dialog menu { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 0; }
 
 /* Anime cards share their six tracks: titles never displace release boxes. */
 #animeCalendarPanel { padding: clamp(18px, 2vw, 28px); }
@@ -488,11 +472,6 @@ td .button { min-height: 40px; margin: 2px 0; padding: 9px 12px; font-size: 12px
   #phoneSettingsSlot { align-items: stretch; flex-direction: column; gap: 18px; padding: 18px; }
   #phoneSettingsSlot label { justify-content: space-between; }
   #phoneSettingsSlot select { font-size: 16px; }
-  #view-orbitzero .panel__body { padding: 14px; }
-  .orbit-toolbar-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
-  .orbit-toolbar-buttons .button { min-width: 0; min-height: 44px; font-size: 11px; }
-  .orbit-frame { height: calc(100dvh - 325px); min-height: 390px; border-radius: 10px; }
-  .orbit-note { font-size: 11px; }
   #animeCalendarPanel { padding: 18px 14px; }
   #animeCalendarPanel > h2, .section-intro h2 { font-size: 22px; }
   .anime-calendar-toolbar { display: grid; grid-template-columns: 1fr; }

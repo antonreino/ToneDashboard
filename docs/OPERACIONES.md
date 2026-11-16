@@ -31,7 +31,7 @@ Cada seguimiento tiene un botón Alertas. Se configura precio máximo, bajada m�
 
 ## Diagnóstico y copias
 
-Más → Diagnóstico distingue procesos en ejecución de lecturas disponibles; consulta EC de aMule, disponibilidad de Orbit, antigüedad de lecturas Emby y resultado de las copias. No pretende certificar la entrega de un mensaje de Telegram sin enviarlo. La exportación no incluye contraseñas, tokens, cookies, enlaces privados, rutas locales ni logs completos. Las apps ofrecen guardar/compartir el JSON generado por el origen del Dashboard.
+Más → Diagnóstico distingue procesos en ejecución de lecturas disponibles; consulta EC de aMule, antigüedad de lecturas Emby y resultado de las copias. No pretende certificar la entrega de un mensaje de Telegram sin enviarlo. La exportación no incluye contraseñas, tokens, cookies, enlaces privados, rutas locales ni logs completos. Las apps ofrecen guardar/compartir el JSON generado por el origen del Dashboard.
 
 El proceso existente del Dashboard crea una copia diaria de cada SQLite mediante la API online de backup, incluyendo datos confirmados del WAL. Comprueba integridad y conserva las 14 últimas copias de cada base en `~/.local/share/emby_organizer/backups/`. Las carpetas se crean privadas y los archivos con modo 0600. Las copias permanecen en el mismo Mac: protegen frente a errores de datos, no frente a la pérdida de ese disco.
 
@@ -43,30 +43,12 @@ Restauración segura a una ruta **nueva**:
 
 La herramienta rechaza sobrescribir un archivo existente y comprueba integridad. Detener los servicios afectados antes de sustituir una base activa; conservar su copia anterior junto con sus archivos WAL/SHM. No copiar una base activa con `cp` ni sustituirla mientras se escribe.
 
-## Aislamiento opcional de Orbit
-
-**Preparado y desactivado por decisión del propietario.** La conexión actual se conserva. No activar hasta disponer de un segundo dominio HTTPS, preferiblemente del mismo dominio principal para compatibilidad de cookies, que llegue al listener existente del Dashboard.
-
-Configurar `DASHBOARD_PUBLIC_ORIGIN=https://dashboard.ejemplo` y `ORBIT_ISOLATED_ORIGIN=https://orbit.ejemplo` en `.env`. El proxy frontal debe conservar Host y servir ambos HTTPS. El host aislado solo admite el proxy Orbit con una sesión específica; las APIs del Dashboard se rechazan incluso si recibe sus credenciales Basic. El Dashboard emite tickets de un solo uso, de 60 segundos, para establecer esa sesión. Los tickets no contienen la contraseña y no deben conservarse en registros del proxy frontal. La cookie es Secure, HttpOnly y limitada al host. Las sesiones expiran a las 12 horas y al reiniciar el proceso; se recuperan desde el Dashboard.
-
-Antes de activar: probar ruta HTTPS, carga, cookies, WebSocket y reconexión en Safari y ambas apps con el dominio real. El lector y la autorización automática existentes siguen en el origen principal; las operaciones sensibles no se exponen en el host aislado. La funcionalidad no se considera validada en infraestructura real hasta completar esas pruebas. Dejar ambas variables vacías mantiene el funcionamiento anterior.
-
 ## Verificación
 
 `bash scripts/check.sh` usa una base temporal para las pruebas del servidor. Incluye seguridad, protocolo aMule, revisión, recuperación de descargas, copias y preferencias. Los tests de Swift verifican el aislamiento por autoridad HTTPS y la migración del llavero sin copiar una credencial heredada a otro servidor.
 
 CI ejecuta también `npm ci`, instala Chromium y realiza recorridos de navegador contra `scripts/ui-fixture.py`, un servidor ficticio que nunca accede a `.env`, aMule, Telegram ni los archivos del usuario y rechaza escrituras. Guarda capturas de diferentes tamaños como artefactos de CI. La prueba visual no sustituye las comprobaciones de dispositivos físicos.
 
-
-## PS5 desde reposo · 1.1.1
-
-«Ver código» y «Recordar dispositivo» comprueban la PS5 solo después de validar contraseña y origen. Si responde standby, se envía un único despertar Remote Play y se espera a Orbit antes de leer el código. El flujo es común para web, macOS e iOS; las apps instaladas lo reciben al recargar el Dashboard. No se ejecuta el jailbreak. La consola apagada o sin respuesta no se considera en reposo. Límite entre señales: 90 segundos por proceso y espera acotada.
-
-El servidor usa `server/ps5_wake.py`; la tarea diaria usa el mismo módulo mediante su entrada de mantenimiento. El emparejamiento permanece fuera del repositorio en `~/.config/tone-maintenance/ps5-wake.json`, propio del usuario y permisos 600, con host fijo de la consola y su registration_key. Nunca enviar esta clave al navegador, Telegram o Git.
-
-Validación: pruebas de estados, credencial ausente, permisos, protocolo, contraseña incorrecta sin despertar, espera limitada, ausencia de Orbit y limitación de intentos. Despertar físico validado en esta instalación; la disponibilidad de jailbreak y Orbit tras reposo debe verificarse por separado.
-
-En macOS ejecutar `bash server/scripts/install-ps5-wake-helper.sh` y permitir Red local para TonePS5Wake cuando lo solicite. El Dashboard abre este asistente puntual mediante LaunchServices para respetar la identidad de privacidad del sistema. El asistente se cierra al terminar. Su código y el instalador se incluyen en el repositorio; la clave y la aplicación instalada son locales al Mac. Tras reemplazar el ejecutable, macOS puede pedir de nuevo el permiso.
 
 
 ## Tareas programadas

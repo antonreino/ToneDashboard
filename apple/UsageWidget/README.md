@@ -16,7 +16,7 @@ Fuente: https://learn.chatgpt.com/docs/app-server (rate limits, account/rateLimi
 
 `bash apple/UsageWidget/build.sh /private/tmp/ToneUsageWidget.app`
 
-Instalación del usuario: `~/Applications/ToneUsageWidget.app`. Compilación nativa Release, firma ad hoc con hardened runtime; no incluye Debug dylibs ni desactiva library validation. Requiere el Codex instalado con ChatGPT en su ruta actual. No incluye dependencias externas.
+Instalación del usuario: `~/Applications/ToneUsageWidget.app`. Compilación nativa Release, firma ad hoc con hardened runtime; no incluye Debug dylibs ni desactiva library validation. Busca Codex dentro de ChatGPT en `/Applications`, `~/Applications` y `/Volumes/Datos/Apps`, en ese orden. No incluye dependencias externas.
 
 ## Verificación
 

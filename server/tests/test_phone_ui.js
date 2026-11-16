@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('web/dashboard.js','utf8'),html=fs.readFileSync('web/index.html','utf8');
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);assert.equal(ids.length,new Set(ids).size);
-for(const id of ['downloadForm','torrentForm','amuleSearchForm','eanProductForm','orbitPairForm','orbitControlForm'])assert.equal(ids.filter(x=>x===id).length,1);
+for(const id of ['downloadForm','torrentForm','amuleSearchForm','eanProductForm'])assert.equal(ids.filter(x=>x===id).length,1);
 const nodes={};const node=id=>nodes[id]||={textContent:'',hidden:false};
 const context={console,document:{getElementById:node,addEventListener(type,fn){this.click=fn}},Set,Date};
 vm.createContext(context);vm.runInContext(source.slice(0,source.indexOf('async function loadDashboard()')),context);

@@ -104,7 +104,6 @@ struct ConnectionSettings: View {
         if action.shouldPerformDownload, DashboardOrigin.chatAttachment(url,baseURL:baseURL), DashboardOrigin.trusted(action.sourceFrame.request.url ?? baseURL,baseURL:baseURL) { decisionHandler(.download);return }
         if DashboardOrigin.trusted(url,baseURL:baseURL) || url.absoluteString == "about:blank" { decisionHandler(.allow); return }
         // Embedded HTTPS frames receive no Dashboard authentication challenges.
-        // The server CSP restricts them to the explicitly configured Orbit origin.
         if action.targetFrame?.isMainFrame == false,
            DashboardOrigin.permitsFrame(url,sourceURL:action.sourceFrame.request.url ?? baseURL,baseURL:baseURL) { decisionHandler(.allow); return }
         if action.navigationType == .linkActivated, ["https","http"].contains(url.scheme?.lowercased() ?? ""), url.user == nil, url.password == nil {

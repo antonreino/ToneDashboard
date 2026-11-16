@@ -129,27 +129,3 @@ class ResumeTests(unittest.TestCase):
             path=Path(tmp)/'file';path.write_bytes(b'abc');r=self.response(200,{'Content-Length':'5000'},[])
             with patch.object(downloads,'open_public',return_value=r),patch.object(downloads.shutil,'disk_usage',return_value=Mock(free=100)),self.assertRaises(OSError):downloads.download_public('https://example.test/f',path)
             self.assertEqual(path.read_bytes(),b'abc')
-
-class IsolationTests(unittest.TestCase):
-    def test_disabled_invalid_and_separate_authority(self):
-        import orbit_isolation as m
-        with patch.dict(os.environ,{'DASHBOARD_PUBLIC_ORIGIN':'','ORBIT_ISOLATED_ORIGIN':''}):self.assertIsNone(m.origins())
-        with patch.dict(os.environ,{'DASHBOARD_PUBLIC_ORIGIN':'https://dashboard.test','ORBIT_ISOLATED_ORIGIN':'https://orbit.test'}):
-            self.assertTrue(m.isolated_host({'Host':'orbit.test'}));self.assertFalse(m.valid({'Host':'orbit.test'}))
-            self.assertTrue(m.entry()['url'].startswith('https://orbit.test/orbit-session?ticket='))
-            self.assertFalse(m.isolated_host({'Host':'dashboard.test'}))
-    def test_ticket_one_use_and_scope_cookie(self):
-        import orbit_isolation as m
-        class Handler:
-            headers={'Host':'orbit.test'}
-            def __init__(self,path):self.path=path;self.response={}
-            def send_response(self,status):self.status=status
-            def send_header(self,key,value):self.response[key]=value
-            def end_headers(self):pass
-        with patch.dict(os.environ,{'DASHBOARD_PUBLIC_ORIGIN':'https://dashboard.test','ORBIT_ISOLATED_ORIGIN':'https://orbit.test'}):
-            from urllib.parse import urlsplit
-            url=m.entry()['url'];h=Handler('/orbit-session?'+urlsplit(url).query);self.assertTrue(m.handle_entry(h));self.assertEqual(h.status,303)
-            cookie=h.response['Set-Cookie'];self.assertIn('HttpOnly; Secure; SameSite=Lax',cookie)
-            self.assertTrue(m.valid({'Host':'orbit.test','Cookie':cookie.split(';')[0]}))
-            self.assertFalse(m.valid({'Host':'dashboard.test','Cookie':cookie.split(';')[0]}))
-            second=Handler(h.path);m.handle_entry(second);self.assertEqual(second.status,403)

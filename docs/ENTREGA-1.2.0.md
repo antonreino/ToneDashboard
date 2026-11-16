@@ -20,7 +20,7 @@ La instantánea conserva las prioridades siguientes: separar handlers del servid
 ## Validación realizada
 
 - 234 pruebas Python del servidor y 74 del tracker: correctas.
-- JavaScript: sintaxis, navegación, formularios únicos, conservación de estado, aMule, ofertas, Orbit, operaciones y transporte común: correcto.
+- JavaScript: sintaxis, navegación, formularios únicos, conservación de estado, aMule, ofertas, operaciones y transporte común: correcto.
 - Navegador real con datos ficticios: todas las vistas, anchos 320–2560 px, tarjetas alineadas, ausencia de desbordes, errores de conexión, contenido escapado, avisos y registros que mantienen su apertura. Sin excepciones JavaScript.
 - Pruebas Swift de autenticación/origen y persistencia de cookies: correctas. Compilaciones macOS, simulador iOS e iPhone firmado: correctas.
 - Instalación Mac e iPhone 1.2.0; iPhone arrancado con devicectl. Dashboard actualizado y APIs reales de versión, tareas, inicio y calendario HTTP 200; tareas sin autenticación HTTP 401.

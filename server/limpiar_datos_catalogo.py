@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Purgado opcional y con copia de seguridad de las tablas del catálogo PS5 anterior.
 
-No toca el estado de Orbit Zero ni las tablas del dashboard principal.
+No toca las tablas del dashboard principal.
 """
 from __future__ import annotations
 import argparse
@@ -65,7 +65,7 @@ def main():
     print('Tablas de catálogo antiguo:', ', '.join(found) if found else '(ninguna)')
     if args.apply:
         print('Copia SQLite:',backup if found else 'no necesaria')
-        print('OK. Emby, Telegram, historial y Orbit intactos.')
+        print('OK. Emby, Telegram e historial intactos.')
     else:print('SIMULACIÓN. Ninguna tabla eliminada.')
 
 if __name__=='__main__':main()

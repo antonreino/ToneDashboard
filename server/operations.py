@@ -12,7 +12,6 @@ from runtime_support import backup_database
 
 def diagnostics(services,price_db):
     from amule_dashboard import handle
-    from orbit_dashboard_control import get_status
     amule,status=handle('GET','/api/amule')
     def reading(value):
         # Deliberately omit filesystem locations, raw logs and exception strings.
@@ -26,7 +25,6 @@ def diagnostics(services,price_db):
     return {'version':(Path(__file__).resolve().parent.parent/'VERSION').read_text().strip(),
             'checked_at':state_db.utc_now(),'services':services,
             'amule':{'available':status==200,'kad_nodes':amule.get('kad_nodes',0),'downloads':len(amule.get('downloads',[]))},
-            'orbit':{'running':bool(get_status().get('running'))},
             'emby_system':reading(state_db.emby_system_snapshot()),'emby_storage':reading(state_db.emby_storage_snapshot()),
             'organizer':state_db.get_runtime_state('organizer_heartbeat'),
             'backups':state_db.get_runtime_state('backup_status')}

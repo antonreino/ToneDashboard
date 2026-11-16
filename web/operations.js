@@ -30,7 +30,6 @@ window.ToneOperations=(()=>{
         node('diagnosticResults').innerHTML=table([
           ...Object.entries(diagnostic.services||{}).map(([name,v])=>({name:serviceLabel(name),state:v.running?'Proceso en ejecución':'Proceso detenido'})),
           {name:'aMule',state:diagnostic.amule.available?`${diagnostic.amule.kad_nodes} nodos Kad · ${diagnostic.amule.downloads} archivos`:'Sin respuesta EC'},
-          {name:'Orbit',state:diagnostic.orbit.running?'Proceso en ejecución':'Detenido'},
           ...['emby_system','emby_storage'].map(key=>({name:key==='emby_system'?'Métricas Emby':'Almacenamiento Emby',state:diagnostic[key].available?`${diagnostic[key].stale?'Último dato válido':'Lectura disponible'} · ${diagnostic[key].updated_at||'Sin fecha'}`:'Sin lectura'})),
           {name:'Copias SQLite',state:diagnostic.backups?.ok?`Verificadas · ${diagnostic.backups.checked_at}`:'Todavía no hay una copia correcta registrada'}
         ],[['Servicio',r=>esc(r.name)],['Estado',r=>esc(r.state)]]);

@@ -2,7 +2,7 @@ import Foundation
 @main struct ContainerTests {
     @MainActor static func main() async {
         let base = URL(string:"https://dashboard.test")!
-        for value in ["https://dashboard.test/","https://dashboard.test/orbit-bridge/zero/","https://DASHBOARD.test/api/deals"] {
+        for value in ["https://dashboard.test/","https://dashboard.test/api/deals","https://DASHBOARD.test/api/deals"] {
             precondition(DashboardOrigin.trusted(URL(string:value)!,baseURL:base))
         }
         for value in ["http://dashboard.test/","https://dashboard.test.evil/","https://other.test/","https://dashboard.test:444/","https://user:secret@dashboard.test/","file:///etc/passwd","javascript:alert(1)"] {
@@ -26,13 +26,13 @@ import Foundation
         precondition(!session.usesLegacyWebStore)
         session.username = "existing-user"
         precondition(session.usesLegacyWebStore)
-        precondition(DashboardOrigin.permitsFrame(URL(string:"https://orbit.test/entry")!,sourceURL:base,baseURL:base))
-        precondition(DashboardOrigin.permitsFrame(URL(string:"https://orbit.test/path")!,sourceURL:URL(string:"https://orbit.test/")!,baseURL:base))
-        precondition(!DashboardOrigin.permitsFrame(URL(string:"http://orbit.test/")!,sourceURL:base,baseURL:base))
-        precondition(!DashboardOrigin.permitsFrame(URL(string:"https://evil.test/")!,sourceURL:URL(string:"https://orbit.test/")!,baseURL:base))
+        precondition(DashboardOrigin.permitsFrame(URL(string:"https://frame.test/entry")!,sourceURL:base,baseURL:base))
+        precondition(DashboardOrigin.permitsFrame(URL(string:"https://frame.test/path")!,sourceURL:URL(string:"https://frame.test/")!,baseURL:base))
+        precondition(!DashboardOrigin.permitsFrame(URL(string:"http://frame.test/")!,sourceURL:base,baseURL:base))
+        precondition(!DashboardOrigin.permitsFrame(URL(string:"https://evil.test/")!,sourceURL:URL(string:"https://frame.test/")!,baseURL:base))
         precondition(DashboardOrigin.diagnosticBlob(URL(string:"blob:https://dashboard.test/uuid")!,sourceURL:base,baseURL:base))
         precondition(!DashboardOrigin.diagnosticBlob(URL(string:"blob:https://evil.test/uuid")!,sourceURL:base,baseURL:base))
-        precondition(!DashboardOrigin.diagnosticBlob(URL(string:"blob:https://dashboard.test/uuid")!,sourceURL:URL(string:"https://orbit.test/")!,baseURL:base))
+        precondition(!DashboardOrigin.diagnosticBlob(URL(string:"blob:https://dashboard.test/uuid")!,sourceURL:URL(string:"https://frame.test/")!,baseURL:base))
         precondition(DashboardOrigin.chatAttachment(URL(string:"https://dashboard.test/api/tonetti/attachment/"+String(repeating:"a",count:32))!,baseURL:base))
         for value in ["https://evil.test/api/tonetti/attachment/"+String(repeating:"a",count:32),"https://dashboard.test/api/tonetti/attachment/../secret","https://dashboard.test/api/tonetti/attachment/"+String(repeating:"a",count:32)+"?preview=1"] {
             precondition(!DashboardOrigin.chatAttachment(URL(string:value)!,baseURL:base))

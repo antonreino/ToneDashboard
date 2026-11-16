@@ -296,9 +296,6 @@ PWA_MANIFEST = json.dumps({
 
 class Handler(BaseHTTPRequestHandler):
     def _authorized(self) -> bool:
-        from orbit_isolation import isolated_host,valid
-        if isolated_host(self.headers):
-            return self.path.startswith('/orbit-bridge/zero/') and valid(self.headers)
         if not DASHBOARD_USER and not DASHBOARD_PASSWORD:
             return True
         raw = self.headers.get("Authorization", "")
@@ -314,10 +311,6 @@ class Handler(BaseHTTPRequestHandler):
     def _require_auth(self) -> bool:
         if self._authorized():
             return True
-        from orbit_isolation import isolated_host
-        if isolated_host(self.headers):
-            self.send_bytes(b'{"error":"Acceso Orbit no autorizado"}','application/json',403)
-            return False
         body = b"Authentication required"
         self.send_response(401)
         self.send_header("WWW-Authenticate", 'Basic realm="ToneDashboard", charset="UTF-8"')
@@ -338,17 +331,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Referrer-Policy", "same-origin")
         if disposition:self.send_header('Content-Disposition',disposition)
         if content_type.startswith('text/html'):
-            from orbit_isolation import origins
-            configured=origins()
-            frame= (' '+configured[1]) if configured else ''
-            self.send_header('Content-Security-Policy',"frame-src 'self'"+frame+"; object-src 'none'; base-uri 'self'; frame-ancestors 'self'")
+            self.send_header('Content-Security-Policy',"frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
-        from orbit_isolation import handle_entry
-        if handle_entry(self):return
         if urlparse(self.path).path.startswith('/calendar/anime/'):
             import anime_calendar
             token=urlparse(self.path).path.removeprefix('/calendar/anime/').removesuffix('.ics')
@@ -358,9 +346,6 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_bytes(anime_calendar.calendar(),'text/calendar; charset=utf-8')
             return
         if not self._require_auth():
-            return
-        from orbit_dashboard_proxy import serve as orbit_serve
-        if orbit_serve(self):
             return
         parsed = urlparse(self.path)
         if parsed.path == '/api/tonetti':
@@ -424,11 +409,6 @@ class Handler(BaseHTTPRequestHandler):
             result,code=handle('GET',parsed.path)
             self.send_bytes(json.dumps(result,ensure_ascii=False).encode(), 'application/json; charset=utf-8',code)
             return
-        if parsed.path == '/api/orbit/status':
-            from orbit_dashboard_control import get_status
-            from orbit_isolation import origins
-            self.send_bytes(json.dumps(dict(get_status(),isolated=bool(origins())),ensure_ascii=False).encode('utf-8'),'application/json; charset=utf-8')
-            return
         if parsed.path == '/api/version':
             self.send_bytes(json.dumps({'name': 'Tone Dashboard', 'version': VERSION}).encode(), 'application/json')
             return
@@ -468,11 +448,6 @@ class Handler(BaseHTTPRequestHandler):
             data = price_bot_snapshot(lines)
             self.send_bytes(json.dumps(data, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
             return
-        if parsed.path == '/api/orbit/device':
-            from orbit_devices import token, valid
-            remembered = bool(DASHBOARD_USER and DASHBOARD_PASSWORD and valid(token(self.headers)))
-            self.send_bytes(json.dumps({'remembered': remembered}).encode(), 'application/json; charset=utf-8')
-            return
         if parsed.path in ('/api/downloads','/api/history'):
             try:
                 q=parse_qs(parsed.query)
@@ -505,9 +480,6 @@ class Handler(BaseHTTPRequestHandler):
             return
         if not allowed_mutation(self.headers):
             self.send_bytes(b'{"error":"Origen no autorizado"}', 'application/json', 403)
-            return
-        from orbit_dashboard_proxy import serve as orbit_serve
-        if orbit_serve(self):
             return
         parsed = urlparse(self.path)
         if parsed.path in ('/api/tonetti/conversations','/api/tonetti/attachments'):
@@ -588,12 +560,6 @@ class Handler(BaseHTTPRequestHandler):
             import anime_calendar
             self.send_bytes(json.dumps({'path':anime_calendar.subscription(rotate=parse_qs(parsed.query).get('rotate')==['1'])}).encode(),'application/json')
             return
-        if parsed.path=='/api/orbit/isolation-ticket':
-            from orbit_isolation import entry
-            try:data,code=entry(),200
-            except ValueError:data,code={'error':'Origen aislado no disponible'},503
-            self.send_bytes(json.dumps(data).encode(),'application/json',code)
-            return
         if parsed.path in ('/api/downloads/control','/api/organizer/review','/api/organizer/rules/remove','/api/deals/preferences'):
             from operations import post
             try:
@@ -641,37 +607,6 @@ class Handler(BaseHTTPRequestHandler):
             except (OSError, sqlite3.Error):
                 self.send_bytes(b'{"error":"No se pudo guardar el producto"}', 'application/json', 503)
             return
-        if parsed.path in ('/api/orbit/remember', '/api/orbit/forget'):
-            from orbit_devices import action
-            if not (DASHBOARD_USER and DASHBOARD_PASSWORD):
-                self.send_bytes(b'{"error":"Configura las credenciales del dashboard"}', 'application/json', 503)
-                return
-            result, status, cookie = action(self.headers, self.client_address, parsed.path.endswith('/forget'))
-            body = json.dumps(result, ensure_ascii=False).encode()
-            self.send_response(status)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.send_header('Cache-Control', 'no-store')
-            self.send_header('Content-Length', str(len(body)))
-            if cookie:
-                self.send_header('Set-Cookie', cookie)
-                self.send_header('Set-Cookie', 'orbitZero=; Max-Age=0; Path=/orbit-bridge/zero/; HttpOnly; Secure; SameSite=Strict')
-            self.end_headers()
-            self.wfile.write(body)
-            return
-        if parsed.path == '/api/orbit/pair-code':
-            from orbit_pairing import reveal_code
-            if not (DASHBOARD_USER and DASHBOARD_PASSWORD):
-                self.send_bytes(b'{"error":"Configura las credenciales del dashboard"}', 'application/json', 503)
-                return
-            result, code = reveal_code(self.headers, self.client_address)
-            self.send_bytes(json.dumps(result, ensure_ascii=False).encode(), 'application/json; charset=utf-8', code)
-            return
-        if parsed.path == '/api/orbit/start':
-            from orbit_dashboard_control import start_app
-            result,code=start_app(self.headers, self.client_address)
-            self.send_bytes(json.dumps(result,ensure_ascii=False).encode('utf-8'),'application/json; charset=utf-8',code)
-            return
-
         if parsed.path == "/api/torrent":
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -757,27 +692,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         self.send_error(404)
-
-    # El proxy permite los métodos que usa Orbit. Fuera de su namespace no hay cambios.
-    def do_HEAD(self):
-        from orbit_dashboard_proxy import serve as orbit_serve
-        if not orbit_serve(self): self.send_error(405)
-
-    def do_DELETE(self):
-        from orbit_dashboard_proxy import serve as orbit_serve
-        if not orbit_serve(self): self.send_error(405)
-
-    def do_PUT(self):
-        from orbit_dashboard_proxy import serve as orbit_serve
-        if not orbit_serve(self): self.send_error(405)
-
-    def do_PATCH(self):
-        from orbit_dashboard_proxy import serve as orbit_serve
-        if not orbit_serve(self): self.send_error(405)
-
-    def do_OPTIONS(self):
-        from orbit_dashboard_proxy import serve as orbit_serve
-        if not orbit_serve(self): self.send_error(405)
 
     def log_message(self, fmt, *args):
         pass

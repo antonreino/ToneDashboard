@@ -10,7 +10,8 @@ import time
 _LOCK=threading.Lock()
 _LAST_ATTEMPT=None
 _STATE={'state':'disabled'}
-APP=Path('/Applications/aMule.app')
+APPS=(Path('/Applications/aMule.app'),Path('/Applications/aMule2.app'),Path('/Volumes/Datos/Apps/aMule.app'),Path('/Volumes/Datos/Apps/aMule2.app'))
+APP=next((app for app in APPS if app.is_dir()),APPS[0])
 
 def status():return dict(_STATE)
 

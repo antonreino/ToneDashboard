@@ -1,4 +1,4 @@
-"""Origin checks shared by dashboard mutations and the Orbit bridge."""
+"""Origin checks for dashboard mutations."""
 from urllib.parse import urlsplit
 
 

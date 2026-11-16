@@ -6,7 +6,7 @@ Esta fotografía corresponde al estado inicial anterior a la revisión visual so
 
 - Repositorio único: `antonreino/ToneDashboard`, rama `main`, commit inicial `2f6136f`. Versión publicada al comenzar: **1.1.9**. La siguiente publicación corresponde a **1.2.0**, según `AGENTS.md`.
 - `web/` es la interfaz funcional común. Un cambio publicado en el servidor llega al navegador y a las apps al recargar; el contenedor Apple solo requiere recompilación para cambios nativos.
-- `server/` mantiene API, seguridad, Organizer, colas, métricas, actividad, diagnóstico, aMule, Orbit y calendario. El listener es el existente, puerto 8765.
+- `server/` mantiene API, seguridad, Organizer, colas, métricas, actividad, diagnóstico, aMule y calendario. El listener es el existente, puerto 8765.
 - `workers/price_tracker/` contiene seguimiento PS5/Switch/EAN, fuentes públicas, preferencias y Telegram. Las bases y destinatarios existentes se conservan.
 - `apple/` es el contenedor SwiftUI/WKWebView de macOS/iOS: llavero, conexión, origen, cookies, archivos y diálogos. No duplica las pantallas del producto.
 - `infra-maintenance/` y `audits/`, fuera del repositorio principal, contienen herramientas e informes privados de infraestructura y PS5. Jarvis sigue siendo un proyecto independiente.
@@ -14,7 +14,7 @@ Esta fotografía corresponde al estado inicial anterior a la revisión visual so
 
 ## Qué funciona y qué información conserva
 
-Inicio resume servicios; Descargas contiene colas e historial y búsqueda aMule; Chollos agrupa productos/ofertas, actividad y alertas; Orbit incluye vinculación protegida y despertar desde reposo; Más reúne calendario, equipos, estadísticas, revisiones, diagnóstico y Logs. La API aplica autenticación y controles de origen a mutaciones. Descargas comprueba destinos y redirecciones; SFTP comprueba host, estabilidad y publicación temporal antes de borrar el origen.
+Inicio resume servicios; Descargas contiene colas e historial y búsqueda aMule; Chollos agrupa productos/ofertas, actividad y alertas; Más reúne calendario, equipos, estadísticas, revisiones, diagnóstico y Logs. La API aplica autenticación y controles de origen a mutaciones. Descargas comprueba destinos y redirecciones; SFTP comprueba host, estabilidad y publicación temporal antes de borrar el origen.
 
 El calendario prioriza Japón (fecha civil JST) y conserva por separado doblajes castellanos. Los animes retirados manualmente siguen fuera de avisos. Archivado significa esperar y vigilar próximas temporadas; no equivale a historia finalizada. Las portadas se guardan localmente y el alta busca su cartel antes de publicar una tarjeta.
 
@@ -84,7 +84,6 @@ No se afirma en esta instantánea que se hayan vuelto a ejecutar todas las prueb
 - Acceso directo a herramientas frecuentes y buscador de navegación, sin duplicar pantallas ni información.
 - Historial estructurado de automatizaciones (inicio, fin, resultado, resumen, fuente), para depender menos de nombres de archivos privados y detectar ejecuciones sin terminar.
 - Alertas de capacidad del almacenamiento Proxmox y plan de migración soportada para el CT Emby; hacer ambas tareas fuera de la entrega visual.
-- Cuando exista un segundo dominio HTTPS, completar pruebas reales del aislamiento Orbit ya preparado y desactivado por decisión del propietario.
 - Pruebas de accesibilidad: foco de teclado, lector de pantalla, texto grande, contraste y movimiento reducido; además de comparaciones visuales en Safari/WKWebView.
 
 La entrega visual debe publicar por separado los cambios, pruebas ejecutadas y limitaciones pendientes de instalación o comprobación física. Esta instantánea conserva el punto de partida para poder comparar.

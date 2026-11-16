@@ -27,8 +27,6 @@ jobs:
       - run: |
           swiftc apple/ToneDashboardApps/APIClient.swift apple/ToneDashboardApps/DashboardSession.swift apple/ToneDashboardApps/KeychainStore.swift apple/tests/ContainerTests.swift -o /tmp/container-tests
           /tmp/container-tests
-          swiftc -parse-as-library apple/tests/OrbitCookiePersistenceTests.swift -o /tmp/cookie-tests
-          /tmp/cookie-tests
       - name: Validate native usage widget
         run: |
           swiftc -swift-version 5 -parse-as-library apple/UsageWidget/UsageModel.swift apple/UsageWidget/ModelTests.swift -o /tmp/usage-model-tests

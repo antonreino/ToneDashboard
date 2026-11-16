@@ -37,7 +37,17 @@ final class UsageClient {
     private var failures = 0
     private var stopping = false
     private let store: UsageStore
-    private let executable = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+    private let executable: String = {
+        let relative = "Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+        let applications = [
+            "/Applications/ChatGPT.app",
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications/ChatGPT.app").path,
+            "/Volumes/Datos/Apps/ChatGPT.app",
+        ]
+        return applications.map { ($0 as NSString).appendingPathComponent(relative) }
+            .first(where: FileManager.default.isExecutableFile(atPath:)) ??
+            (applications[0] as NSString).appendingPathComponent(relative)
+    }()
     init(store: UsageStore) {
         self.store = store
         if let data = try? Data(contentsOf: journal), let operation = try? JSONDecoder().decode(ResetOperation.self, from: data) {
@@ -362,7 +372,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         while reads.count < 2 && Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.1)) }
         client.stop(); subscription.cancel()
         guard reads.count >= 2, let snapshot = store.snapshot, let primary = snapshot.primary, let secondary = snapshot.secondary else {
-            print("Probe failed: no two valid reads"); exit(1)
+            print("Probe failed: no two valid reads; \(store.message)"); exit(1)
         }
         print("Two live reads; reset availability=\(snapshot.resetCount.map(String.init) ?? "unknown"); interval=\(reads[1].timeIntervalSince(reads[0])); remaining=\(primary.remaining)/\(secondary.remaining)")
     }
