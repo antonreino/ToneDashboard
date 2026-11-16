@@ -8,8 +8,9 @@ import Foundation
         for value in ["http://dashboard.test/","https://dashboard.test.evil/","https://other.test/","https://dashboard.test:444/","https://user:secret@dashboard.test/","file:///etc/passwd","javascript:alert(1)"] {
             precondition(!DashboardOrigin.trusted(URL(string:value)!,baseURL:base))
         }
-        precondition(DashboardOrigin.request(baseURL:base).url?.path == "/")
-        precondition(DashboardOrigin.request(baseURL:base).value(forHTTPHeaderField:"Authorization") == nil)
+        let request=DashboardOrigin.request(baseURL:base,username:"existing-user",password:"keychain-secret")
+        precondition(request.url?.path == "/")
+        precondition(request.value(forHTTPHeaderField:"Authorization") == "Basic ZXhpc3RpbmctdXNlcjprZXljaGFpbi1zZWNyZXQ=")
         precondition(DashboardOrigin.acceptsChallenge(host:"dashboard.test",port:443,scheme:"https",method:NSURLAuthenticationMethodHTTPBasic,failures:0,baseURL:base))
         for (host,port,scheme,method,failures) in [("evil.test",443,"https",NSURLAuthenticationMethodHTTPBasic,0),("dashboard.test",80,"http",NSURLAuthenticationMethodHTTPBasic,0),("dashboard.test",443,"https",NSURLAuthenticationMethodHTTPBasic,1),("dashboard.test",443,"https",NSURLAuthenticationMethodServerTrust,0)] {
             precondition(!DashboardOrigin.acceptsChallenge(host:host,port:port,scheme:scheme,method:method,failures:failures,baseURL:base))

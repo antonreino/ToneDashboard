@@ -19,9 +19,11 @@ enum DashboardOrigin {
     static func permitsFrame(_ url: URL, sourceURL: URL, baseURL: URL) -> Bool {
         valid(url) && (trusted(sourceURL,baseURL:baseURL) || trusted(url,baseURL:sourceURL))
     }
-    static func request(baseURL: URL) -> URLRequest {
+    static func request(baseURL: URL, username: String, password: String) -> URLRequest {
         var request = URLRequest(url: URL(string: "/", relativeTo: baseURL)!.absoluteURL)
         request.cachePolicy = .reloadIgnoringLocalCacheData
+        let token = Data("\(username):\(password)".utf8).base64EncodedString()
+        request.setValue("Basic \(token)", forHTTPHeaderField: "Authorization")
         return request
     }
     static func acceptsChallenge(host: String, port: Int, scheme: String?, method: String, failures: Int, baseURL: URL) -> Bool {

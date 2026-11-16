@@ -83,7 +83,12 @@ struct ConnectionSettings: View {
     func configure(_ web: WKWebView) {
         web.navigationDelegate = self; web.uiDelegate = self
         web.allowsBackForwardNavigationGestures = true
-        web.load(DashboardOrigin.request(baseURL:baseURL))
+        if let host=baseURL.host {
+            let space=URLProtectionSpace(host:host,port:baseURL.port ?? 443,protocol:"https",realm:"ToneDashboard",authenticationMethod:NSURLAuthenticationMethodHTTPBasic)
+            let credential=URLCredential(user:session.username,password:session.password,persistence:.forSession)
+            URLCredentialStorage.shared.setDefaultCredential(credential,for:space)
+        }
+        web.load(DashboardOrigin.request(baseURL:baseURL,username:session.username,password:session.password))
     }
     func update(_ web: WKWebView) {
         if lastSuspend != session.suspend {
@@ -95,7 +100,12 @@ struct ConnectionSettings: View {
     func webView(_ webView: WKWebView,didReceive challenge: URLAuthenticationChallenge,completionHandler: @escaping (URLSession.AuthChallengeDisposition,URLCredential?) -> Void) {
         let space = challenge.protectionSpace
         if DashboardOrigin.acceptsChallenge(host:space.host,port:space.port,scheme:space.protocol,method:space.authenticationMethod,failures:challenge.previousFailureCount,baseURL:baseURL) {
-            completionHandler(.useCredential,URLCredential(user:session.username,password:session.password,persistence:.none))
+            completionHandler(.useCredential,URLCredential(user:session.username,password:session.password,persistence:.forSession))
+        } else if space.authenticationMethod == NSURLAuthenticationMethodHTTPBasic,
+                  space.host.lowercased() == baseURL.host?.lowercased(),
+                  space.port == (baseURL.port ?? 443) {
+            completionHandler(.cancelAuthenticationChallenge,nil)
+            session.lastError = "El servidor rechazó las credenciales guardadas. Revisa los ajustes."
         } else { completionHandler(.performDefaultHandling,nil) }
     }
     func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
