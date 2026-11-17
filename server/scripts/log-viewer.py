@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import base64
+import hashlib
 import hmac
 import json
 import os
@@ -295,8 +296,23 @@ PWA_MANIFEST = json.dumps({
 }, ensure_ascii=False)
 
 class Handler(BaseHTTPRequestHandler):
+    _session_cookie_name = "tone_dashboard_session"
+
+    @staticmethod
+    def _session_token() -> str:
+        message = ("ToneDashboard session v1:" + DASHBOARD_USER).encode()
+        return hmac.new(DASHBOARD_PASSWORD.encode(), message, hashlib.sha256).hexdigest()
+
     def _authorized(self) -> bool:
         if not DASHBOARD_USER and not DASHBOARD_PASSWORD:
+            return True
+        cookies = {}
+        for part in self.headers.get("Cookie", "").split(";"):
+            name, separator, value = part.strip().partition("=")
+            if separator:
+                cookies[name] = value
+        session = cookies.get(self._session_cookie_name, "")
+        if session and hmac.compare_digest(session, self._session_token()):
             return True
         raw = self.headers.get("Authorization", "")
         if not raw.startswith("Basic "):
@@ -306,7 +322,10 @@ class Handler(BaseHTTPRequestHandler):
             user, password = decoded.split(":", 1)
         except Exception:
             return False
-        return hmac.compare_digest(user.encode(), DASHBOARD_USER.encode()) and hmac.compare_digest(password.encode(), DASHBOARD_PASSWORD.encode())
+        authorized = hmac.compare_digest(user.encode(), DASHBOARD_USER.encode()) and hmac.compare_digest(password.encode(), DASHBOARD_PASSWORD.encode())
+        if authorized:
+            self._set_session_cookie = True
+        return authorized
 
     def _require_auth(self) -> bool:
         if self._authorized():
@@ -329,6 +348,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "same-origin")
+        if getattr(self, "_set_session_cookie", False):
+            self.send_header("Set-Cookie", f"{self._session_cookie_name}={self._session_token()}; Path=/; Secure; HttpOnly; SameSite=Strict")
         if disposition:self.send_header('Content-Disposition',disposition)
         if content_type.startswith('text/html'):
             self.send_header('Content-Security-Policy',"frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'")

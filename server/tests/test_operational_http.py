@@ -48,6 +48,16 @@ class OperationalHTTPTests(unittest.TestCase):
     def test_html_security_headers_preserve_current_embed(self):
         status,headers,body=self.request('GET','/')
         self.assertEqual(status,200);self.assertEqual(headers['X-Content-Type-Options'],'nosniff');self.assertIn("frame-src 'self'",headers['Content-Security-Policy']);self.assertIn(b'operationsDialog',body)
+
+    def test_basic_auth_issues_scoped_http_only_session_cookie(self):
+        status,headers,_=self.request('GET','/')
+        self.assertEqual(status,200)
+        cookie=headers['Set-Cookie']
+        self.assertIn('tone_dashboard_session=',cookie)
+        self.assertIn('Path=/',cookie);self.assertIn('Secure',cookie);self.assertIn('HttpOnly',cookie);self.assertIn('SameSite=Strict',cookie)
+        session=cookie.split(';',1)[0]
+        self.assertEqual(self.request('GET','/api/version',Authorization='',Cookie=session)[0],200)
+        self.assertEqual(self.request('GET','/api/version',Authorization='',Cookie=session+'x')[0],401)
     def test_diagnostics_deny_unauthenticated_export(self):
         with patch('operations.get',return_value=({'ok':True},200)) as get:
             self.assertEqual(self.request('GET','/api/diagnostics',Authorization='')[0],401);get.assert_not_called()
